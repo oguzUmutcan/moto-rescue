@@ -1,39 +1,16 @@
-import "@/global.css";
-import { Link } from "expo-router";
-import { Text, View } from "react-native";
+import React from "react";
+// In Expo, install and import from 'lucide-react-native'
+import { useRouter } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import WelcomeScreen from "./onboarding/welcome";
 
 export default function App() {
-  return (
-    <View className="flex-1 items-center justify-center bg-background">
-      <Text className="text-xl font-bold text-success">
-        Welcome to Nativewind!
-      </Text>
-      <Link
-        href="/onboarding"
-        className="mt-4 rounded bg-primary text-white p-4"
-      >
-        Go to Onboarding
-      </Link>
-      <Link
-        href="/(auth)/sign-in"
-        className="mt-4 rounded bg-primary text-white p-4"
-      >
-        Go to Sign In
-      </Link>
-      <Link
-        href="/(auth)/sign-up"
-        className="mt-4 rounded bg-primary text-white p-4"
-      >
-        Go to Sign Up
-      </Link>
+  const router = useRouter();
+  const insets = useSafeAreaInsets(); // Hook to get safe area insets for padding
+  // When we set up navigation later, we will use Expo Router here
+  const handleNext = () => {
+    router.push("/onboarding/passenger");
+  };
 
-      <Link href="/subscriptions/spotify">Spotify Subscription</Link>
-
-      <Link
-        href={{ pathname: "/subscriptions/[id]", params: { id: "claude" } }}
-      >
-        Claude Max Subscription
-      </Link>
-    </View>
-  );
+  return <WelcomeScreen onNext={handleNext} insets={insets} />;
 }
