@@ -1,189 +1,290 @@
 import { useRouter } from "expo-router";
+import { ArrowLeft, Eye, EyeOff, Lock, Mail } from "lucide-react-native";
 import React, { useState } from "react";
 import {
-  FlatList,
+  Alert,
   Keyboard,
   KeyboardAvoidingView,
   Modal,
   Platform,
+  StatusBar,
   Text,
   TextInput,
   TouchableOpacity,
-  TouchableWithoutFeedback,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-// Make sure to import these native icons!
-import { ChevronDown, X } from "lucide-react-native";
-import { COUNTRIES } from "../../constants/countries"; // Import the countries data
 
-COUNTRIES.sort((a, b) => a.name.localeCompare(b.name)); // Sort countries alphabetically
+// --- CENTRAL FIREBASE IMPORTS ---
+import {
+  sendPasswordResetEmail,
+  signInWithEmailAndPassword,
+} from "firebase/auth";
+import { doc, getDoc } from "firebase/firestore";
+import { auth, db } from "../../config/firebase";
 
 export default function LoginScreen() {
-  const [phone, setPhone] = useState("");
-  const [isFocused, setIsFocused] = useState(false);
-
-  // 2. Add state for the country picker
-  const [selectedCountry, setSelectedCountry] = useState(COUNTRIES[0]); // Defaults to Turkey
-  const [isModalVisible, setIsModalVisible] = useState(false);
-
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
-  const isPhoneValid = phone.length >= selectedCountry.minLength;
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSendCode = () => {
-    // Navigate to OTP Screen
-    router.push({
-      pathname: "/(auth)/otp",
-      params: { phone, dialCode: selectedCountry.dialCode },
-    });
-    // console.log("Send code to:", phone);
+  // Modal specific state
+  const [showForgotModal, setShowForgotModal] = useState(false);
+  const [resetEmail, setResetEmail] = useState("");
+
+  const handleLogin = async () => {
+    if (!email.trim() || !password.trim()) {
+      Alert.alert(
+        "Missing Fields",
+        "Please enter both your email and password.",
+      );
+      return;
+    }
+
+    Keyboard.dismiss();
+    setIsLoading(true);
+
+    try {
+      const userCredential = await signInWithEmailAndPassword(
+        auth,
+        email.trim(),
+        password,
+      );
+      const user = userCredential.user;
+
+      const userDocRef = doc(db, "users", user.uid);
+      const userDocSnap = await getDoc(userDocRef);
+
+      if (userDocSnap.exists()) {
+        const userData = userDocSnap.data();
+
+        if (userData.role === "passenger") {
+          router.replace("/(passenger)/(tabs)/dashboard");
+        } else if (userData.role === "biker") {
+          router.replace("/(biker)/(tabs)/dashboard");
+        } else {
+          router.replace("/(auth)/profile-select");
+        }
+      } else {
+        router.replace("/(auth)/profile-select");
+      }
+    } catch (error: any) {
+      console.error("Login Error:", error);
+      let friendlyError = "An error occurred during login.";
+
+      if (
+        error.code === "auth/user-not-found" ||
+        error.code === "auth/wrong-password" ||
+        error.code === "auth/invalid-credential"
+      ) {
+        friendlyError = "Incorrect email or password.";
+      } else if (error.code === "auth/invalid-email") {
+        friendlyError = "Please enter a valid email address.";
+      }
+
+      Alert.alert("Login Failed", friendlyError);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const renderCountryItem = ({ item }: { item: (typeof COUNTRIES)[0] }) => (
-    <TouchableOpacity
-      onPress={() => {
-        setSelectedCountry(item);
-        setIsModalVisible(false);
-        setPhone(""); // Clear phone when switching countries to prevent length bugs
-      }}
-      className="flex-row items-center justify-between py-4 border-b border-[#F2F2F7]"
-    >
-      <View className="flex-row items-center">
-        <Text className="text-[24px] mr-3">{item.flag}</Text>
-        <Text className="text-[17px] font-semibold text-[#1C1C1E]">
-          {item.name}
-        </Text>
-      </View>
-      <Text className="text-[15px] font-bold text-[#8E8E93]">
-        {item.dialCode}
-      </Text>
-    </TouchableOpacity>
-  );
+  const handleSubmitEmail = async () => {
+    if (!resetEmail.trim()) return;
+
+    Keyboard.dismiss();
+
+    try {
+      await sendPasswordResetEmail(auth, resetEmail.trim());
+      setShowForgotModal(false);
+      setResetEmail(""); // clear the input
+
+      setTimeout(() => {
+        Alert.alert(
+          "Reset Link Sent",
+          "If an account exists for that email, we've sent instructions to reset your password.",
+        );
+      }, 500); // Slight delay so the modal closes smoothly before the alert pops up
+    } catch (error: any) {
+      console.error("Password Reset Error:", error);
+      let friendlyError = "Could not send password reset email.";
+      if (error.code === "auth/invalid-email")
+        friendlyError = "Please enter a valid email address.";
+
+      Alert.alert("Error", friendlyError);
+    }
+  };
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
+    <View
       className="flex-1 bg-white"
+      style={{
+        paddingTop: insets.top,
+        paddingBottom: insets.bottom > 0 ? insets.bottom : 24,
+      }}
     >
-      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-        <View
-          className="flex-1 bg-white"
-          style={{
-            paddingTop: insets?.top ? insets.top + 20 : 60,
-            paddingBottom: insets?.bottom > 0 ? insets.bottom : 24,
-          }}
-        >
-          {/* Main Content */}
-          <View className="flex-1 px-6 pt-4">
-            <View className="w-[52px] h-[52px] rounded-2xl bg-[#007AFF] items-center justify-center mb-5">
-              <Text className="text-[26px]">🏍</Text>
-            </View>
+      <StatusBar barStyle="dark-content" />
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        className="flex-1"
+      >
+        <View className="px-6 pt-4 mb-6">
+          <TouchableOpacity
+            onPress={() => router.back()}
+            className="p-2 -ml-2 w-12"
+            disabled={isLoading}
+          >
+            <ArrowLeft size={24} color="#1C1C1E" />
+          </TouchableOpacity>
+        </View>
 
-            <Text className="text-[30px] font-black text-[#1C1C1E] tracking-tight mb-1.5">
-              Welcome back
+        <View className="flex-1 px-6 justify-center">
+          <View className="mb-10">
+            <Text className="text-[32px] font-black text-[#1C1C1E] mb-2">
+              Welcome Back
             </Text>
-            <Text className="text-[15px] text-[#8E8E93] mb-7">
-              Enter your number to continue
+            <Text className="text-[16px] text-[#8E8E93]">
+              Sign in to continue your journey.
             </Text>
+          </View>
 
-            <Text className="text-[12px] font-bold text-[#8E8E93] tracking-wider uppercase mb-2">
-              Phone Number
-            </Text>
-
-            <View
-              className={`flex-row items-center bg-[#F2F2F7] rounded-[14px] h-[52px] border-2 overflow-hidden ${
-                isFocused ? "border-[#007AFF]" : "border-transparent"
-              }`}
-            >
-              {/* 3. Make the Country Code Prefix Touchable! */}
-              <TouchableOpacity
-                onPress={() => setIsModalVisible(true)}
-                activeOpacity={0.7}
-                className="flex-row items-center px-3.5 h-full border-r border-black/5 bg-[#E5E5EA]/30"
-              >
-                <Text className="text-[20px] mr-1.5">
-                  {selectedCountry.flag}
-                </Text>
-                <Text className="text-[15px] font-bold text-[#1C1C1E] mr-1.5">
-                  {selectedCountry.dialCode}
-                </Text>
-                <ChevronDown size={16} color="#8E8E93" />
-              </TouchableOpacity>
-
-              {/* Actual Text Input */}
+          <View className="space-y-4 mb-8">
+            <View className="flex-row items-center bg-[#F2F2F7] rounded-2xl px-4 h-14">
+              <Mail size={20} color="#8E8E93" />
               <TextInput
-                className="flex-1 h-full px-3.5 text-[17px] font-medium text-[#1C1C1E]"
-                keyboardType="phone-pad"
-                value={phone}
-                onChangeText={(val) => {
-                  const cleaned = val
-                    .replace(/\D/g, "")
-                    .slice(0, selectedCountry.maxLength);
-                  setPhone(cleaned);
-                }}
-                onFocus={() => setIsFocused(true)}
-                onBlur={() => setIsFocused(false)}
-                maxLength={selectedCountry.maxLength}
+                placeholder="Email Address"
+                value={email}
+                onChangeText={setEmail}
+                className="flex-1 ml-3 text-[16px] text-[#1C1C1E]"
+                keyboardType="email-address"
+                autoCapitalize="none"
+                editable={!isLoading}
               />
             </View>
+            <View style={{ height: 16 }} />
+            <View className="flex-row items-center bg-[#F2F2F7] rounded-2xl px-4 h-14">
+              <Lock size={20} color="#8E8E93" />
+              <TextInput
+                placeholder="Password"
+                value={password}
+                onChangeText={setPassword}
+                className="flex-1 ml-3 text-[16px] text-[#1C1C1E]"
+                secureTextEntry={!showPassword}
+                editable={!isLoading}
+              />
+              <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+                {showPassword ? (
+                  <EyeOff size={20} color="#8E8E93" />
+                ) : (
+                  <Eye size={20} color="#8E8E93" />
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
 
-            <Text className="text-[13px] text-[#8E8E93] leading-relaxed mt-2.5 mb-7">
-              We'll send a 6-digit code to confirm your number.
+          <TouchableOpacity
+            onPress={handleLogin}
+            activeOpacity={0.8}
+            disabled={isLoading}
+            className={`w-full h-14 rounded-2xl items-center justify-center shadow-sm ${
+              isLoading ? "bg-[#007AFF]/60" : "bg-[#007AFF]"
+            }`}
+          >
+            <Text className="text-[17px] font-extrabold text-white">
+              {isLoading ? "Signing In..." : "Sign In"}
             </Text>
+          </TouchableOpacity>
 
-            {/* Submit Button */}
-            <TouchableOpacity
-              onPress={handleSendCode}
-              activeOpacity={0.8}
-              disabled={!isPhoneValid}
-              className={`w-full h-14 rounded-2xl items-center justify-center ${
-                isPhoneValid ? "bg-[#007AFF]" : "bg-[#007AFF]/50"
-              }`}
-            >
-              <Text className="text-white text-[17px] font-extrabold">
-                Send Code
+          <TouchableOpacity
+            className="mt-6 items-center p-2"
+            onPress={() => setShowForgotModal(true)}
+            disabled={isLoading}
+          >
+            <Text className="text-[#007AFF] font-semibold text-[15px]">
+              Forgot Password?
+            </Text>
+          </TouchableOpacity>
+
+          <View className="flex-row justify-center mt-auto mb-4 pt-6">
+            <Text className="text-[#8E8E93] text-[15px]">
+              Don't have an account?{" "}
+            </Text>
+            <TouchableOpacity onPress={() => router.push("/(auth)/register")}>
+              <Text className="text-[#007AFF] text-[15px] font-bold">
+                Sign Up
               </Text>
             </TouchableOpacity>
           </View>
         </View>
-      </TouchableWithoutFeedback>
+      </KeyboardAvoidingView>
 
-      {/* 4. The Country Picker Modal (Bottom Sheet Style) */}
+      {}
       <Modal
-        visible={isModalVisible}
-        animationType="slide"
+        visible={showForgotModal}
+        animationType="fade"
         transparent={true}
-        onRequestClose={() => setIsModalVisible(false)}
+        onRequestClose={() => setShowForgotModal(false)}
       >
-        {/* Dark Background Overlay */}
-        <View className="flex-1 bg-black/40 justify-end">
-          {/* White Bottom Sheet */}
-          <View className="bg-white rounded-t-[32px] max-h-[70%] min-h-[50%] px-6 pt-4 pb-8">
-            {/* Modal Header */}
-            <View className="flex-row items-center justify-between mb-4 border-b border-[#F2F2F7] pb-4">
-              <Text className="text-[20px] font-black text-[#1C1C1E]">
-                Select Country
-              </Text>
-              <TouchableOpacity
-                onPress={() => setIsModalVisible(false)}
-                className="w-8 h-8 bg-[#F2F2F7] rounded-full items-center justify-center"
-              >
-                <X size={18} color="#8E8E93" />
-              </TouchableOpacity>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          className="flex-1 justify-center items-center bg-black/50 px-6"
+        >
+          <View className="bg-white w-full max-w-[400px] rounded-[24px] p-6 shadow-xl">
+            <Text className="text-[20px] font-black text-[#1C1C1E] mb-2 text-center">
+              Reset Password
+            </Text>
+            <Text className="text-[14px] text-[#8E8E93] text-center mb-6 leading-relaxed">
+              Enter your registered email address to receive a password reset
+              link.
+            </Text>
+
+            <View className="flex-row items-center bg-[#F2F2F7] rounded-xl px-4 h-14 mb-6">
+              <Mail size={20} color="#8E8E93" />
+              <TextInput
+                className="flex-1 ml-3 text-[16px] text-[#1C1C1E]"
+                placeholder="email@example.com"
+                placeholderTextColor="#C7C7CC"
+                keyboardType="email-address"
+                autoCapitalize="none"
+                value={resetEmail}
+                onChangeText={setResetEmail}
+                autoFocus={true}
+              />
             </View>
 
-            {/* Country List */}
-            <FlatList
-              data={COUNTRIES}
-              keyExtractor={(item) => item.id}
-              renderItem={renderCountryItem}
-              showsVerticalScrollIndicator={false}
-            />
+            <View className="flex-row justify-between gap-3">
+              <TouchableOpacity
+                onPress={() => {
+                  setShowForgotModal(false);
+                  setResetEmail("");
+                }}
+                activeOpacity={0.7}
+                className="flex-1 h-12 bg-[#F2F2F7] rounded-xl items-center justify-center"
+              >
+                <Text className="text-[#8E8E93] text-[16px] font-bold">
+                  Cancel
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={handleSubmitEmail}
+                activeOpacity={0.8}
+                disabled={!resetEmail.trim()}
+                className={`flex-1 h-12 rounded-xl items-center justify-center ${
+                  resetEmail.trim() ? "bg-[#007AFF]" : "bg-[#007AFF]/50"
+                }`}
+              >
+                <Text className="text-white text-[16px] font-bold">
+                  Send Link
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
-    </KeyboardAvoidingView>
+    </View>
   );
 }

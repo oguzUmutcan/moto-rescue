@@ -1,13 +1,19 @@
 import { useRouter } from "expo-router";
 import { ArrowLeft, Check } from "lucide-react-native";
 import React, { useState } from "react";
-import { Text, TouchableOpacity, View } from "react-native";
+import { Alert, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+
+// --- FIREBASE IMPORTS ---
+import { doc, updateDoc } from "firebase/firestore";
+import { auth, db } from "../../config/firebase";
 
 export default function ProfileSelectScreen() {
   const [selectedRole, setSelectedRole] = useState<
     "passenger" | "biker" | null
   >(null);
+  const [isLoading, setIsLoading] = useState(false);
+
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
@@ -30,11 +36,38 @@ export default function ProfileSelectScreen() {
     },
   ] as const;
 
-  const handleContinue = () => {
-    if (selectedRole === "passenger") {
-      router.push("/(auth)/profile-passenger");
-    } else if (selectedRole === "biker") {
-      router.push("/(auth)/profile-biker");
+  const handleContinue = async () => {
+    if (!selectedRole) return;
+
+    setIsLoading(true);
+    try {
+      // 1. Get the currently authenticated user
+      const user = auth.currentUser;
+
+      if (user) {
+        // 2. Update their role in the Firestore database
+        const userDocRef = doc(db, "users", user.uid);
+        await updateDoc(userDocRef, {
+          role: selectedRole,
+        });
+        console.log(`✅ Successfully updated role to: ${selectedRole}`);
+      } else {
+        console.warn(
+          "⚠️ No authenticated user found. Skipping database update.",
+        );
+      }
+
+      // 3. Navigate to their respective profile setup screen
+      if (selectedRole === "passenger") {
+        router.push("/(auth)/profile-passenger");
+      } else if (selectedRole === "biker") {
+        router.push("/(auth)/profile-biker");
+      }
+    } catch (error: any) {
+      console.error("Error updating role:", error);
+      Alert.alert("Error", "Could not save your role. Please try again.");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -52,6 +85,7 @@ export default function ProfileSelectScreen() {
           onPress={() => router.back()}
           className="p-3 w-14"
           activeOpacity={0.7}
+          disabled={isLoading}
         >
           <ArrowLeft size={24} color="#007AFF" />
         </TouchableOpacity>
@@ -73,7 +107,7 @@ export default function ProfileSelectScreen() {
           return (
             <TouchableOpacity
               key={option.id}
-              onPress={() => setSelectedRole(option.id)}
+              onPress={() => !isLoading && setSelectedRole(option.id)}
               activeOpacity={0.8}
               className={`flex-row items-center p-4 mb-4 rounded-[20px] border-2 transition-all ${
                 isSelected
@@ -131,23 +165,27 @@ export default function ProfileSelectScreen() {
         <TouchableOpacity
           onPress={handleContinue}
           activeOpacity={0.8}
-          disabled={!selectedRole}
+          disabled={!selectedRole || isLoading}
           className={`w-full h-14 rounded-2xl items-center justify-center ${
-            selectedRole === "passenger"
-              ? "bg-[#007AFF]"
-              : selectedRole === "biker"
-                ? "bg-[#34C759]"
-                : "bg-[#F2F2F7]"
+            isLoading
+              ? "bg-[#C7C7CC]"
+              : selectedRole === "passenger"
+                ? "bg-[#007AFF]"
+                : selectedRole === "biker"
+                  ? "bg-[#34C759]"
+                  : "bg-[#F2F2F7]"
           }`}
         >
           <Text
             className={`text-[17px] font-extrabold ${selectedRole ? "text-white" : "text-[#AEAEB2]"}`}
           >
-            {selectedRole === "passenger"
-              ? "Continue as Passenger"
-              : selectedRole === "biker"
-                ? "Continue as Biker"
-                : "Select a role"}
+            {isLoading
+              ? "Saving..."
+              : selectedRole === "passenger"
+                ? "Continue as Passenger"
+                : selectedRole === "biker"
+                  ? "Continue as Biker"
+                  : "Select a role"}
           </Text>
         </TouchableOpacity>
       </View>
