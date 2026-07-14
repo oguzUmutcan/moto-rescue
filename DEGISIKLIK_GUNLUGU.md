@@ -467,3 +467,27 @@ git diff --check     başarılı
 ```
 
 Frontend kaynaklarında doğrudan Firestore veya Firebase Storage çağrısı kalmadığı doğrulandı. Çalışma `feat/backend-api-consolidation` branch'inde yapıldı.
+
+## 14 Temmuz 2026 — Backend portunun 8083'e taşınması
+
+### Sorun neydi?
+
+Spring Boot backend varsayılan `8080` portunda başlamaya çalışıyordu fakat bu port başka bir süreç tarafından kullanıldığı için uygulama başlatılamıyordu.
+
+### Neden bu sorun çıktı?
+
+TCP üzerinde aynı IP ve port birleşimini aynı anda yalnızca bir süreç dinleyebilir. Spring Boot'ta ayrıca bir port belirtilmezse gömülü web sunucusu varsayılan olarak `8080` kullanır. Port dolu olduğunda sunucu bind işlemi başarısız olur.
+
+### Çözüm yöntemi neler?
+
+- `8080` portunu kullanan süreci kapatmak.
+- Backend'i boş bir porta taşımak.
+- Portu environment değişkeniyle yapılandırılabilir tutmak.
+- Frontend API adreslerini backend'in yeni portuyla eşlemek.
+
+### Nasıl Çözüldü?
+
+- Backend varsayılan portu `server.port=${SERVER_PORT:8083}` ile `8083` yapıldı.
+- Gerektiğinde `SERVER_PORT` environment değişkeniyle farklı port kullanılabilmesi sağlandı.
+- Frontend'in web/iOS, Android emulator ve örnek environment API adresleri `8083` olarak güncellendi.
+- Backend README yapılandırma bilgisi yeni portu gösterecek şekilde düzeltildi.
