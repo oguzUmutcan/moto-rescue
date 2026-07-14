@@ -5,8 +5,7 @@ import { Alert, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 // --- FIREBASE IMPORTS ---
-import { doc, updateDoc } from "firebase/firestore";
-import { auth, db } from "../../config/firebase";
+import { userApi } from "../../api/users";
 
 export default function ProfileSelectScreen() {
   const [selectedRole, setSelectedRole] = useState<
@@ -41,23 +40,9 @@ export default function ProfileSelectScreen() {
 
     setIsLoading(true);
     try {
-      // 1. Get the currently authenticated user
-      const user = auth.currentUser;
+      await userApi.setRole(selectedRole);
 
-      if (user) {
-        // 2. Update their role in the Firestore database
-        const userDocRef = doc(db, "users", user.uid);
-        await updateDoc(userDocRef, {
-          role: selectedRole,
-        });
-        console.log(`✅ Successfully updated role to: ${selectedRole}`);
-      } else {
-        console.warn(
-          "⚠️ No authenticated user found. Skipping database update.",
-        );
-      }
-
-      // 3. Navigate to their respective profile setup screen
+      // Navigate to the selected profile setup screen.
       if (selectedRole === "passenger") {
         router.push("/(auth)/profile-passenger");
       } else if (selectedRole === "biker") {

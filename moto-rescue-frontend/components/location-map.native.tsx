@@ -1,10 +1,10 @@
 import React, { forwardRef, useImperativeHandle, useRef } from "react";
 import { StyleSheet } from "react-native";
-import MapView, { PROVIDER_GOOGLE } from "react-native-maps";
+import MapView, { MapPressEvent, Marker, PROVIDER_GOOGLE } from "react-native-maps";
 import type { LocationMapHandle, LocationMapProps } from "./location-map.types";
 
 const LocationMap = forwardRef<LocationMapHandle, LocationMapProps>(
-  ({ initialRegion }, ref) => {
+  ({ initialRegion, selectedCoordinate, onCoordinateSelect }, ref) => {
     const mapRef = useRef<MapView>(null);
     useImperativeHandle(ref, () => ({
       animateToRegion: (region, duration) => mapRef.current?.animateToRegion(region, duration),
@@ -18,7 +18,10 @@ const LocationMap = forwardRef<LocationMapHandle, LocationMapProps>(
         showsUserLocation
         showsMyLocationButton={false}
         initialRegion={initialRegion}
-      />
+        onPress={(event: MapPressEvent) => onCoordinateSelect?.(event.nativeEvent.coordinate)}
+      >
+        {selectedCoordinate && <Marker coordinate={selectedCoordinate} pinColor="#FF3B30" />}
+      </MapView>
     );
   },
 );

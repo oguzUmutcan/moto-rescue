@@ -20,8 +20,8 @@ import {
   sendPasswordResetEmail,
   signInWithEmailAndPassword,
 } from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore";
-import { auth, db } from "../../config/firebase";
+import { auth } from "../../config/firebase";
+import { userApi } from "../../api/users";
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -37,11 +37,16 @@ export default function LoginScreen() {
   const [resetEmail, setResetEmail] = useState("");
 
   const handleLogin = async () => {
-    if (!email.trim() || !password.trim()) {
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!normalizedEmail || !password) {
       Alert.alert(
         "Missing Fields",
         "Please enter both your email and password.",
       );
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+      Alert.alert("Invalid Email", "Enter a complete email address such as biker@example.com.");
       return;
     }
 
@@ -49,18 +54,14 @@ export default function LoginScreen() {
     setIsLoading(true);
 
     try {
-      const userCredential = await signInWithEmailAndPassword(
+      await signInWithEmailAndPassword(
         auth,
-        email.trim(),
+        normalizedEmail,
         password,
       );
-      const user = userCredential.user;
+      const userData = await userApi.get();
 
-      const userDocRef = doc(db, "users", user.uid);
-      const userDocSnap = await getDoc(userDocRef);
-
-      if (userDocSnap.exists()) {
-        const userData = userDocSnap.data();
+      if (userData) {
 
         if (userData.role === "passenger") {
           router.replace("/(passenger)/(tabs)/dashboard");
@@ -73,7 +74,6 @@ export default function LoginScreen() {
         router.replace("/(auth)/profile-select");
       }
     } catch (error: any) {
-      console.error("Login Error:", error);
       let friendlyError = "An error occurred during login.";
 
       if (
@@ -81,9 +81,11 @@ export default function LoginScreen() {
         error.code === "auth/wrong-password" ||
         error.code === "auth/invalid-credential"
       ) {
-        friendlyError = "Incorrect email or password.";
+        friendlyError = "No account matches this email and password. Check the biker account credentials or reset its password.";
       } else if (error.code === "auth/invalid-email") {
         friendlyError = "Please enter a valid email address.";
+      } else if (error instanceof Error) {
+        friendlyError = error.message;
       }
 
       Alert.alert("Login Failed", friendlyError);

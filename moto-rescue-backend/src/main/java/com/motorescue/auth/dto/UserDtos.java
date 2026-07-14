@@ -1,0 +1,41 @@
+package com.motorescue.auth.dto;
+
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
+
+import java.time.Instant;
+import java.util.List;
+
+public final class UserDtos {
+    private UserDtos() {}
+
+    public record CreateProfileRequest(
+            @NotBlank @Size(max = 100) String name,
+            @NotBlank @Size(max = 30) String phone
+    ) {}
+
+    public record RoleRequest(@Pattern(regexp = "passenger|biker") String role) {}
+
+    public record UpdateProfileRequest(
+            @Size(max = 100) String name,
+            @Size(max = 30) String emergencyContact,
+            @Size(max = 10) String profileEmoji,
+            @Size(max = 500) String bio,
+            @Size(max = 50) String plateNumber,
+            @Size(max = 100) String motorcycleModel,
+            @Size(max = 50) String motorcycleColor,
+            List<Boolean> availableDays,
+            Boolean online,
+            Boolean notificationsEnabled
+    ) {}
+
+    public record UserProfileResponse(
+            String uid, String name, String email, String phone, boolean phoneVerified,
+            String role, String emergencyContact, String profileEmoji, String bio,
+            String plateNumber, String motorcycleModel, String motorcycleColor,
+            List<Boolean> availableDays, boolean online, boolean notificationsEnabled,
+            String identityDocumentStatus, double rating, long totalRescues,
+            Instant createdAt
+    ) {}
+}

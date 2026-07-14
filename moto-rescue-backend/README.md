@@ -21,10 +21,12 @@ In Google Cloud deployments, attach a least-privilege service account to the run
 
 ```text
 FIREBASE_ENABLED=true
+FIREBASE_PROJECT_ID=motorescue-d4abc
+SERVER_PORT=8083
 CORS_ALLOWED_ORIGINS=http://localhost:8081,http://localhost:19006
 ```
 
-The server listens on port `8080` by default.
+The server listens on port `8083` by default. Override it with the `SERVER_PORT` environment variable when needed.
 
 ## Rescue API
 

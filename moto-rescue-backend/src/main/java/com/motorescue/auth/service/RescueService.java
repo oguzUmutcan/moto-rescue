@@ -4,6 +4,7 @@ import com.google.cloud.Timestamp;
 import com.google.cloud.firestore.DocumentReference;
 import com.google.cloud.firestore.DocumentSnapshot;
 import com.google.cloud.firestore.Firestore;
+import com.google.cloud.firestore.FieldValue;
 import com.google.cloud.firestore.GeoPoint;
 import com.google.cloud.firestore.QueryDocumentSnapshot;
 import com.google.firebase.auth.FirebaseToken;
@@ -40,7 +41,9 @@ public class RescueService {
         data.put("passengerId", token.getUid());
         data.put("passengerName", displayName(token));
         data.put("pickup", new GeoPoint(request.latitude(), request.longitude()));
+        data.put("pickupLabel", request.pickupLabel().trim());
         data.put("destinationLabel", request.destinationLabel().trim());
+        data.put("destination", new GeoPoint(request.destinationLatitude(), request.destinationLongitude()));
         data.put("urgency", request.urgency().trim());
         data.put("needsHelmet", request.needsHelmet());
         data.put("status", "searching");
@@ -57,7 +60,11 @@ public class RescueService {
         DocumentSnapshot snapshot = getDocument(requestId);
         String passengerId = snapshot.getString("passengerId");
         String bikerId = snapshot.getString("bikerId");
-        if (!token.getUid().equals(passengerId) && !token.getUid().equals(bikerId)) {
+        boolean participant = token.getUid().equals(passengerId) || token.getUid().equals(bikerId);
+        boolean availableToBiker = "searching".equals(snapshot.getString("status"))
+                && !isExpired(snapshot)
+                && hasRole(token.getUid(), "biker");
+        if (!participant && !availableToBiker) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You are not a participant in this rescue");
         }
         return from(snapshot);
@@ -73,6 +80,51 @@ public class RescueService {
                     .filter(document -> !isExpired(document))
                     .map(this::from)
                     .toList();
+        } catch (InterruptedException exception) {
+            Thread.currentThread().interrupt();
+            throw unavailable(exception);
+        } catch (ExecutionException exception) {
+            throw unavailable(exception);
+        }
+    }
+
+    public List<RescueResponse> history(FirebaseToken token) {
+        DocumentSnapshot user = userProfile(token.getUid());
+        String role = user.getString("role");
+        String ownerField = "biker".equals(role) ? "bikerId" : "passengerId";
+        try {
+            return firestore.collection(REQUESTS)
+                    .whereEqualTo(ownerField, token.getUid())
+                    .limit(100)
+                    .get().get().getDocuments().stream()
+                    .map(this::from)
+                    .sorted((left, right) -> right.createdAt().compareTo(left.createdAt()))
+                    .toList();
+        } catch (InterruptedException exception) {
+            Thread.currentThread().interrupt();
+            throw unavailable(exception);
+        } catch (ExecutionException exception) {
+            throw unavailable(exception);
+        }
+    }
+
+    public RescueResponse active(FirebaseToken token) {
+        DocumentSnapshot user = userProfile(token.getUid());
+        String role = user.getString("role");
+        String ownerField = "biker".equals(role) ? "bikerId" : "passengerId";
+        try {
+            return firestore.collection(REQUESTS)
+                    .whereEqualTo(ownerField, token.getUid())
+                    .limit(100)
+                    .get().get().getDocuments().stream()
+                    .filter(document -> {
+                        String status = document.getString("status");
+                        return "searching".equals(status) || "accepted".equals(status) || "in_progress".equals(status);
+                    })
+                    .filter(document -> !"searching".equals(document.getString("status")) || !isExpired(document))
+                    .map(this::from)
+                    .max((left, right) -> left.createdAt().compareTo(right.createdAt()))
+                    .orElse(null);
         } catch (InterruptedException exception) {
             Thread.currentThread().interrupt();
             throw unavailable(exception);
@@ -143,12 +195,62 @@ public class RescueService {
         }
     }
 
+    public RescueResponse start(FirebaseToken token, String requestId) {
+        return transitionByBiker(token, requestId, "accepted", "in_progress", "startedAt");
+    }
+
+    public RescueResponse complete(FirebaseToken token, String requestId) {
+        return transitionByBiker(token, requestId, "in_progress", "completed", "completedAt");
+    }
+
+    private RescueResponse transitionByBiker(FirebaseToken token, String requestId,
+                                              String expectedStatus, String nextStatus, String timestampField) {
+        requireRole(token.getUid(), "biker");
+        DocumentReference reference = firestore.collection(REQUESTS).document(requestId);
+        try {
+            firestore.runTransaction(transaction -> {
+                DocumentSnapshot snapshot = transaction.get(reference).get();
+                if (!snapshot.exists()) {
+                    throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Rescue request not found");
+                }
+                if (!token.getUid().equals(snapshot.getString("bikerId"))) {
+                    throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only the assigned biker can update this rescue");
+                }
+                if (!expectedStatus.equals(snapshot.getString("status"))) {
+                    throw new ResponseStatusException(HttpStatus.CONFLICT, "Invalid rescue status transition");
+                }
+                transaction.update(reference, Map.of("status", nextStatus, timestampField, Timestamp.now()));
+                if ("completed".equals(nextStatus)) {
+                    transaction.update(firestore.collection(USERS).document(token.getUid()),
+                            "totalRescues", FieldValue.increment(1));
+                }
+                return null;
+            }).get();
+            return from(getDocument(requestId));
+        } catch (InterruptedException exception) {
+            Thread.currentThread().interrupt();
+            throw unavailable(exception);
+        } catch (ExecutionException exception) {
+            if (exception.getCause() instanceof ResponseStatusException statusException) throw statusException;
+            throw unavailable(exception);
+        }
+    }
+
     private void requireRole(String uid, String expectedRole) {
+        if (!hasRole(uid, expectedRole)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "The " + expectedRole + " role is required");
+        }
+    }
+
+    private boolean hasRole(String uid, String expectedRole) {
+        return expectedRole.equalsIgnoreCase(userProfile(uid).getString("role"));
+    }
+
+    private DocumentSnapshot userProfile(String uid) {
         try {
             DocumentSnapshot profile = firestore.collection(USERS).document(uid).get().get();
-            if (!profile.exists() || !expectedRole.equalsIgnoreCase(profile.getString("role"))) {
-                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "The " + expectedRole + " role is required");
-            }
+            if (!profile.exists()) throw new ResponseStatusException(HttpStatus.FORBIDDEN, "User profile is required");
+            return profile;
         } catch (InterruptedException exception) {
             Thread.currentThread().interrupt();
             throw unavailable(exception);
@@ -183,13 +285,19 @@ public class RescueService {
 
     private RescueResponse from(String id, Map<String, Object> data) {
         GeoPoint pickup = (GeoPoint) data.get("pickup");
+        GeoPoint destination = (GeoPoint) data.get("destination");
         return new RescueResponse(
                 id,
                 (String) data.get("passengerId"),
                 (String) data.get("passengerName"),
                 pickup.getLatitude(),
                 pickup.getLongitude(),
+                data.get("pickupLabel") == null
+                        ? String.format("%.5f, %.5f", pickup.getLatitude(), pickup.getLongitude())
+                        : (String) data.get("pickupLabel"),
                 (String) data.get("destinationLabel"),
+                destination == null ? 0 : destination.getLatitude(),
+                destination == null ? 0 : destination.getLongitude(),
                 (String) data.get("urgency"),
                 Boolean.TRUE.equals(data.get("needsHelmet")),
                 (String) data.get("status"),
@@ -197,7 +305,9 @@ public class RescueService {
                 (String) data.get("bikerName"),
                 instant((Timestamp) data.get("createdAt")),
                 instant((Timestamp) data.get("expiresAt")),
-                instant((Timestamp) data.get("acceptedAt"))
+                instant((Timestamp) data.get("acceptedAt")),
+                instant((Timestamp) data.get("startedAt")),
+                instant((Timestamp) data.get("completedAt"))
         );
     }
 

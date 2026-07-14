@@ -56,6 +56,20 @@ public class RescueController {
         return rescueService.open(authService.authenticate(authorization));
     }
 
+    @GetMapping("/history")
+    public List<RescueResponse> history(
+            @RequestHeader(value = "Authorization", required = false) String authorization
+    ) {
+        return rescueService.history(authService.authenticate(authorization));
+    }
+
+    @GetMapping("/active")
+    public RescueResponse active(
+            @RequestHeader(value = "Authorization", required = false) String authorization
+    ) {
+        return rescueService.active(authService.authenticate(authorization));
+    }
+
     @PostMapping("/{requestId}/accept")
     public RescueResponse accept(
             @RequestHeader(value = "Authorization", required = false) String authorization,
@@ -71,5 +85,21 @@ public class RescueController {
             @PathVariable String requestId
     ) {
         return rescueService.cancel(authService.authenticate(authorization), requestId);
+    }
+
+    @PostMapping("/{requestId}/start")
+    public RescueResponse start(
+            @RequestHeader(value = "Authorization", required = false) String authorization,
+            @PathVariable String requestId
+    ) {
+        return rescueService.start(authService.authenticate(authorization), requestId);
+    }
+
+    @PostMapping("/{requestId}/complete")
+    public RescueResponse complete(
+            @RequestHeader(value = "Authorization", required = false) String authorization,
+            @PathVariable String requestId
+    ) {
+        return rescueService.complete(authService.authenticate(authorization), requestId);
     }
 }

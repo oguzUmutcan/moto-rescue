@@ -15,9 +15,9 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 // --- FIREBASE IMPORTS ---
-import { deleteUser, signOut } from "firebase/auth";
-import { deleteDoc, doc, getDoc } from "firebase/firestore";
-import { auth, db } from "../../../config/firebase";
+import { signOut } from "firebase/auth";
+import { auth } from "../../../config/firebase";
+import { userApi } from "../../../api/users";
 
 export default function PassengerProfileScreen() {
   const router = useRouter();
@@ -38,11 +38,8 @@ export default function PassengerProfileScreen() {
     const fetchUserData = async () => {
       if (auth.currentUser) {
         try {
-          const userDocRef = doc(db, "users", auth.currentUser.uid);
-          const userDocSnap = await getDoc(userDocRef);
-
-          if (userDocSnap.exists()) {
-            const data = userDocSnap.data();
+          const data = await userApi.get();
+          if (data) {
             setName(data.name || auth.currentUser.displayName || "Passenger");
             setEmail(data.email || auth.currentUser.email || "");
             setPhone(data.phone || "");
@@ -85,14 +82,7 @@ export default function PassengerProfileScreen() {
     if (!auth.currentUser) return;
 
     try {
-      // Delete user document from Firestore
-      const userDocRef = doc(db, "users", auth.currentUser.uid);
-      await deleteDoc(userDocRef);
-
-      // Delete user from Firebase Authentication
-      await deleteUser(auth.currentUser);
-
-      // Sign out the user
+      await userApi.delete();
       await signOut(auth);
       router.replace("/(auth)/login");
     } catch (error: any) {

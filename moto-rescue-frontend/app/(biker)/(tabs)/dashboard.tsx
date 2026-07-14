@@ -2,20 +2,21 @@ import * as Location from "expo-location";
 import { useRouter } from "expo-router";
 import * as SecureStore from "expo-secure-store";
 import { onAuthStateChanged } from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore";
 import { Navigation2 } from "lucide-react-native";
 import React, { useEffect, useRef, useState } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { auth, db } from "../../../config/firebase";
+import { auth } from "../../../config/firebase";
 import LocationMap from "../../../components/location-map";
 import type { LocationMapHandle, MapRegion } from "../../../components/location-map.types";
 import { rescueApi } from "../../../api/rescues";
+import { userApi } from "../../../api/users";
 
 export default function BikerDashboardScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const mapRef = useRef<LocationMapHandle>(null);
+  const presentedRequestId = useRef<string | null>(null);
 
   const [online, setOnline] = useState(true);
   const [name, setName] = useState("Loading...");
@@ -27,6 +28,14 @@ export default function BikerDashboardScreen() {
   const [totalRescues, setTotalRescues] = useState("0");
 
   const [initialRegion, setInitialRegion] = useState<MapRegion | null>(null);
+
+  useEffect(() => {
+    rescueApi.active().then((request) => {
+      if (request && (request.status === "accepted" || request.status === "in_progress")) {
+        router.replace({ pathname: "/(biker)/navigation", params: { requestId: request.id } });
+      }
+    }).catch((error) => console.error("Could not restore active rescue", error));
+  }, [router]);
 
   const handleSimulateIncoming = () => {
     if (pendingRequestId) {
@@ -91,7 +100,14 @@ export default function BikerDashboardScreen() {
     const refresh = async () => {
       try {
         const requests = await rescueApi.open();
-        if (active) setPendingRequestId(requests[0]?.id ?? null);
+        const nextRequestId = requests[0]?.id ?? null;
+        if (active) {
+          setPendingRequestId(nextRequestId);
+          if (nextRequestId && presentedRequestId.current !== nextRequestId) {
+            presentedRequestId.current = nextRequestId;
+            router.push({ pathname: "/(biker)/incoming", params: { requestId: nextRequestId } });
+          }
+        }
       } catch (error) {
         console.error("Could not load open rescue requests", error);
       }
@@ -102,20 +118,19 @@ export default function BikerDashboardScreen() {
       active = false;
       clearInterval(timer);
     };
-  }, [online]);
+  }, [online, router]);
 
   // 2. Fetch User Data
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         try {
-          const userDoc = await getDoc(doc(db, "users", user.uid));
-          if (userDoc.exists()) {
-            const data = userDoc.data();
+          const data = await userApi.get();
+          if (data) {
             setName(data.name || user.displayName || "Biker");
 
             // FETCH STATS FROM FIRESTORE (with safe fallbacks)
-            setTodayRescues(data.todayRescues?.toString() || "0");
+            setTodayRescues("0");
             setRating(data.rating?.toString() || "5.0");
             setTotalRescues(data.totalRescues?.toString() || "0");
           } else {
@@ -302,7 +317,7 @@ export default function BikerDashboardScreen() {
             className="w-full h-12 rounded-xl bg-[#FF9500] items-center justify-center shadow-sm"
           >
             <Text className="text-white text-[15px] font-bold">
-              🔔 Simulate Incoming Request
+              🔔 View Rescue Request
             </Text>
           </TouchableOpacity>
         </View>

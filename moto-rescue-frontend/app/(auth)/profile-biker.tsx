@@ -20,12 +20,10 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import * as ImagePicker from "expo-image-picker";
 
 // --- FIREBASE IMPORTS ---
-import { doc, getDoc, updateDoc } from "firebase/firestore";
-import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
-import { auth, db, storage } from "../../config/firebase";
+import { auth } from "../../config/firebase";
+import { userApi } from "../../api/users";
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
@@ -88,9 +86,8 @@ export default function ProfileBikerScreen() {
       if (auth.currentUser) {
         setName(auth.currentUser.displayName || "");
 
-        const userDoc = await getDoc(doc(db, "users", auth.currentUser.uid));
-        if (userDoc.exists()) {
-          const data = userDoc.data();
+        const data = await userApi.get();
+        if (data) {
           if (data.name) setName(data.name);
           if (data.plateNumber) setPlateNumber(data.plateNumber);
           if (data.bio) setBio(data.bio);
@@ -113,8 +110,7 @@ export default function ProfileBikerScreen() {
     setIsLoading(true);
 
     try {
-      const userRef = doc(db, "users", auth.currentUser.uid);
-      await updateDoc(userRef, {
+      await userApi.update({
         name: name.trim(),
         plateNumber: plateNumber.trim().toUpperCase(),
         bio: bio.trim(),
@@ -135,42 +131,10 @@ export default function ProfileBikerScreen() {
   };
 
   const handleDocumentUpload = async () => {
-    const user = auth.currentUser;
-    if (!user) return;
-
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) {
-      Alert.alert("Permission required", "Photo access is required to upload your license.");
-      return;
-    }
-
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ["images"],
-      allowsEditing: true,
-      quality: 0.8,
-    });
-    if (result.canceled) return;
-
-    setIsLoading(true);
-    try {
-      const asset = result.assets[0];
-      const response = await fetch(asset.uri);
-      const blob = await response.blob();
-      const extension = asset.fileName?.split(".").pop() || "jpg";
-      const documentRef = ref(storage, `identityDocuments/${user.uid}/license.${extension}`);
-      await uploadBytes(documentRef, blob, { contentType: asset.mimeType || "image/jpeg" });
-      const documentUrl = await getDownloadURL(documentRef);
-      await updateDoc(doc(db, "users", user.uid), {
-        identityDocumentUrl: documentUrl,
-        identityDocumentStatus: "pending",
-      });
-      setHasUploadedID(true);
-    } catch (error) {
-      console.error("Document upload failed", error);
-      Alert.alert("Upload failed", "The document could not be uploaded. Please try again.");
-    } finally {
-      setIsLoading(false);
-    }
+    Alert.alert(
+      "Coming later",
+      "Secure document upload will be enabled after the storage provider is configured.",
+    );
   };
 
   const toggleDay = (index: number) => {

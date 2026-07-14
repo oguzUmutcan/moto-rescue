@@ -415,3 +415,492 @@ npx expo export --platform web  başarılı
 ```
 
 Token header reddetme ve rescue controller delegasyonu için yeni backend testleri eklendi. Çalışma ayrı `feat/backend-rescue-workflow` branch'inde yapıldı.
+
+## 14 Temmuz 2026 — Profil, geçmiş ve sürüş durumlarının backend'de merkezileştirilmesi
+
+### Sorun neydi?
+
+Kurtarma isteği backend'e taşınmış olmasına rağmen kullanıcı profili oluşturma, rol seçme, profil güncelleme ve hesap silme işlemleri mobil uygulamadan doğrudan Firestore'a yapılıyordu. Geçmiş ekranları örnek veri gösteriyordu. Sürüşü başlatma/tamamlama ve yolcunun sürüş ekranındaki iptal işlemleri yalnızca yerel ekran durumunu değiştiriyordu.
+
+### Neden bu sorun çıktı?
+
+Prototip geliştirme sırasında Firebase istemci SDK'sı ve ekran içi state hızlı sonuç verdi. Ancak istemci tarafındaki kontrol güvenlik sınırı değildir: değiştirilmiş bir uygulama iş kurallarını aşabilir ve UI ile kalıcı veri birbirinden kopabilir. İş akışının tek doğruluk kaynağı backend olmadığında farklı cihazlarda tutarsız durumlar oluşur.
+
+Teorik olarak bu problem “server-authoritative state” yaklaşımıyla çözülür. Kimlik doğrulama istemcide başlayabilir fakat yetkilendirme, sahiplik ve durum makinesi geçişleri güvenilir sunucuda uygulanır. Bu sürümde durum akışı `searching -> accepted -> in_progress -> completed` şeklindedir; uygun aşamalarda yolcu `cancelled` durumuna geçebilir.
+
+### Çözüm yöntemi neler?
+
+- Firebase Authentication'ı koruyup profil verilerini Admin SDK kullanan backend üzerinden yönetmek.
+- Token, header ve hata işleme kodunu ortak frontend API istemcisinde toplamak.
+- Kullanıcı kimliğini yalnızca doğrulanmış Firebase token'ından almak.
+- Geçmişi role göre backend'de sorgulamak.
+- Sürüş geçişlerinde rol, atanmış biker ve mevcut durum kontrollerini transaction içinde yapmak.
+- Ücretli Firebase Storage yerine sağlayıcı seçilene kadar kimlik görseli yüklemeyi kapalı tutmak.
+
+### Nasıl Çözüldü?
+
+Backend'e kullanıcı profil servisi ve şu API işlemleri eklendi:
+
+```text
+POST/GET/PATCH/DELETE /api/users/me
+PATCH  /api/users/me/role
+GET    /api/rescues/history
+POST   /api/rescues/{requestId}/start
+POST   /api/rescues/{requestId}/complete
+```
+
+- Kayıt, rol seçimi, girişte rol okuma, profil düzenleme ve hesap silme `userApi` üzerinden backend'e geçirildi.
+- Frontend'deki doğrudan Firestore/Storage kullanımı kaldırıldı; Firebase istemcisinde yalnızca Authentication bırakıldı.
+- `api/client.ts` güncel ID token'ını Bearer header'a ekliyor ve API hatalarını merkezileştiriyor.
+- Yolcu ve biker geçmiş ekranları backend verisini gösteriyor.
+- Biker'ın başlatma/tamamlama işlemleri backend durum makinesine bağlandı; yalnızca atanmış biker geçiş yapabiliyor.
+- Yolcu sürüş ekranı durumu yeniliyor ve gerçek cancel endpoint'ini çağırıyor.
+- Kimlik görseli yükleme, ücretsiz ve güvenli bir obje depolama sağlayıcısı seçilene kadar devre dışı bırakıldı; Firestore dosya deposu olarak kullanılmadı.
+
+### Test ve doğrulama
+
+```text
+mvnw.cmd clean test  başarılı — 5 test
+npx tsc --noEmit     başarılı
+npm run lint         başarılı — 0 hata, 0 uyarı
+git diff --check     başarılı
+```
+
+## 15 Temmuz 2026 — Model geçişi için session handoff dokümanı
+
+### Sorun neydi?
+
+Uzun geliştirme oturumunda repo mimarisi, kullanıcı çalışma kuralları, environment ayarları, tamamlanan akışlar ve bilinen sınırlamalar birçok konuşma adımına dağılmıştı. Farklı bir modele geçildiğinde bu bağlamın kaybolma riski vardı.
+
+### Neden bu sorun çıktı?
+
+Commit geçmişi yapılan değişiklikleri gösterse de kararların gerekçesini, yerel çalıştırma koşullarını, test senaryosunu ve sıradaki teknik borçları tek başına açıklamaz. Sohbet bağlamı da yeni model oturumuna eksiksiz aktarılmayabilir.
+
+### Çözüm yöntemi neler?
+
+- Repo kökünde tek bir handoff dokümanı oluşturmak.
+- Git durumu, mimari, endpoint'ler, environment ve test komutlarını belgelemek.
+- Tamamlanan özelliklerle bilinen sınırlamaları ayrı listelemek.
+- Secret veya credential içeriğini dokümana koymamak.
+
+### Nasıl Çözüldü?
+
+- Repo kökünde `session_handoff.md` oluşturuldu.
+- Aktif branch/commit, monorepo yapısı, backend/frontend çalıştırma adımları ve Firebase ADC gereksinimi kaydedildi.
+- Users, rescues, reviews ve badges API sözleşmeleri özetlendi.
+- İki cihazlı passenger/biker test akışı ve tamamlanan frontend davranışları aktarıldı.
+- Place autocomplete, canlı GPS, safety code, storage, pagination ve entegrasyon testi gibi bilinen sınırlamalar kaydedildi.
+- Yeni modelin işe başlama sırası ve kullanıcının her değişikliği günlüğe kaydetme/feature branch'e push etme kuralları açıkça belirtildi.
+- Dokümana hiçbir API key, Firebase credential veya secret eklenmedi.
+
+## 15 Temmuz 2026 — Backend kontrollü rider badge ve seviye sistemi
+
+### Sorun neydi?
+
+Biker badges ekranındaki kazanımlar, 127 rescue, XP, level ve tarihler sabit örnek verilerdi. Gerçek sürüş tamamlandığında ilerleme değişmiyor ve badge kazanımı backend tarafından doğrulanmıyordu.
+
+### Neden bu sorun çıktı?
+
+Badge kriterlerini hesaplayan veri modeli ve API bulunmuyordu. UI prototipi gerçek rescue geçmişi ve review rating verileriyle bağlantı kurulmadan hazırlanmıştı. İstemci tarafında hesaplama yapılması da değiştirilmiş uygulamanın sahte badge göstermesine yol açabilirdi.
+
+### Çözüm yöntemi neler?
+
+- Badge kriterlerini tamamlanmış rescue ve rider rating verilerinden backend'de deterministik hesaplamak.
+- Her badge için progress, target, earned ve earnedAt döndürmek.
+- XP ve seviyeyi tamamlanan rescue sayısından üretmek.
+- Eski tamamlanmış rescue kayıtlarını da hesaplamaya dahil etmek.
+- Frontend statik listelerini gerçek badge API response'uyla değiştirmek.
+
+### Nasıl Çözüldü?
+
+- Backend'e `BadgeController`, `BadgeService` ve badge DTO'ları eklendi.
+- `GET /api/badges/me` yalnızca biker rolü için badge özeti döndürüyor.
+- Sekiz gerçek kriter tanımlandı: ilk rescue, 5/25/100 rescue, 5 exam rescue, helmet gereken 10 rescue, 10 gece rescue ve en az 5 review ile 4.8+ rating.
+- Gece rescue hesabı uygulamanın `Europe/Istanbul` saat dilimine göre 20:00–06:00 aralığında yapılıyor.
+- Kazanım tarihi, ilgili hedefi tamamlayan rescue'nun `completedAt` timestamp'inden hesaplanıyor.
+- Her tamamlanmış rescue 50 XP sağlıyor; Bronze, Silver, Gold ve Platinum seviyeleri sırasıyla 0, 500, 1500 ve 3000 XP eşiklerini kullanıyor.
+- Statik badge ekranı kaldırıldı; kazanılmış kartlar, kilitli kriterler, gerçek progress bar, XP ve level bilgisi API'den gösteriliyor.
+- Rating kriterinde review sayısı tamamlanıp ortalama düşükse ekran açıkça `Raise rating to 4.8+` mesajı gösteriyor.
+- Sürüş completion'ından sonra badge özeti yenileniyor; son 60 saniyede kazanılan badge varsa rider'a adı ve açıklamasıyla unlock penceresi gösteriliyor.
+
+### Test ve doğrulama
+
+```text
+mvnw.cmd clean test  başarılı — 5 test
+npx tsc --noEmit     başarılı
+npm run lint         başarılı — 0 hata, 0 uyarı
+git diff --check     başarılı
+```
+
+## 14 Temmuz 2026 — Google Maps turn-by-turn rota ve login doğrulaması
+
+### Sorun neydi?
+
+Biker ekranında pickup ve destination haritada marker olarak görünse de sürücünün mevcut konumundan hedefe gerçek yol tarifi başlatılamıyordu. Emülatör login denemelerinde de hatalı e-posta biçimi `auth/invalid-email`, yanlış hesap/şifre ise `auth/invalid-credential` olarak Firebase stack trace üretiyordu.
+
+### Neden bu sorun çıktı?
+
+Uygulama içindeki MapView yalnızca hedefi görselleştiriyordu; Google Maps navigasyonuna deep link bağlantısı kurulmamıştı. Login formu e-posta biçimini Firebase çağrısından önce doğrulamıyor ve beklenen kullanıcı hatalarını console error olarak yazıyordu.
+
+### Çözüm yöntemi neler?
+
+- Aktif hedef koordinatını Google Maps navigation URI ile açmak.
+- Google Maps uygulaması bulunmadığında web directions URL'ine düşmek.
+- Pickup ve destination aşamalarında aynı düğmenin farklı aktif hedefi kullanmasını sağlamak.
+- E-postayı trim/lowercase ile normalize edip Firebase öncesi biçim doğrulaması yapmak.
+- Yanlış credential durumunda biker hesabına özel anlaşılır mesaj göstermek.
+
+### Nasıl Çözüldü?
+
+- Biker navigasyonuna `Open in Google Maps` düğmesi eklendi.
+- `accepted` aşamasında route destination olarak passenger pickup koordinatı kullanılıyor.
+- `in_progress` aşamasında aynı düğme rescue destination koordinatına rota başlatıyor.
+- Android'de `google.navigation:q=<lat>,<lng>&mode=d`, iOS'ta Google Maps scheme kullanılıyor; uygulama açılamazsa Google Maps web directions fallback'i devreye giriyor.
+- Login e-postası küçük harfe çevriliyor ve eksik/bozuk biçim Firebase'e gönderilmeden reddediliyor.
+- `invalid-credential` artık biker e-posta/şifresini veya password reset seçeneğini kontrol etmeyi söyleyen açık mesaj gösteriyor.
+- Beklenen credential hatası console'a gereksiz stack trace olarak yazılmıyor.
+
+## 15 Temmuz 2026 — Yakın place sonuçları ve dengeli klavye yerleşimi
+
+### Sorun neydi?
+
+Destination aramasında çoğunlukla tek sonuç çıkıyor, sonuç kullanıcıya en yakın şube olacak şekilde sıralanmıyor ve birden fazla sonuç geldiğinde ayrı bir kaydırılabilir liste alanı bulunmuyordu. Android klavyesi açıldığında bottom sheet klavyenin arkasında kalmıyordu ancak bu kez ekranın fazla yukarısına taşınıyordu.
+
+### Neden bu sorun çıktı?
+
+Cihaz geocoder'ı yalnızca ham sorguyla bir kez çağrılıyor ve dönen sıra doğrudan kullanılıyordu. Kullanıcının mevcut bölgesi arama bağlamına eklenmiyor, sonuçlara mesafe hesaplanmıyordu. Klavye düzeltmesinde sheet'in maksimum yüksekliği klavye üstündeki alanın neredeyse tamamını kapladığı için form görsel olarak tepeye yaslanıyordu.
+
+### Çözüm yöntemi neler?
+
+- Ham place sorgusu ile mevcut şehir/bölge bağlamı eklenmiş sorgunun sonuçlarını birleştirmek.
+- Yinelenen koordinatları temizlemek ve Haversine mesafesiyle kullanıcıya yakınlığa göre sıralamak.
+- Sonuçları sabit maksimum yüksekliğe sahip nested ScrollView içinde göstermek.
+- Her sonuçta place adı, açık adres ve metre/kilometre uzaklığını ayrı göstermek.
+- Klavye açıkken sheet yüksekliğini kullanılabilir alanın bir bölümünde sınırlamak.
+
+### Nasıl Çözüldü?
+
+- Arama, kullanıcının reverse-geocode edilmiş yerel bölgesini ikinci bir bağlam sorgusu olarak kullanıyor ve sonuçları tek listede birleştiriyor.
+- Yakınlık mevcut pickup koordinatına göre hesaplanıyor; en yakın sonuç en üstte gösteriliyor.
+- En fazla sekiz benzersiz sonuç 220–240 px yüksekliğinde bağımsız kaydırılabilir listede gösteriliyor.
+- Place adı ana satırda, açık adres alt satırda, mesafe sağ tarafta gösteriliyor.
+- Klavye açık sheet maksimum yüksekliği, klavye üstünde kalan alanın `%82`si yapıldı; böylece alan klavyenin arkasında kalmadan daha dengeli konumlanıyor.
+- Ücretsiz public Nominatim servisi, resmî politikasında client-side autocomplete'i yasakladığı için projeye eklenmedi. Google Places entegrasyonu billing/API anahtarı kararı verilene kadar opsiyonel sonraki adım olarak bırakıldı.
+
+### Test ve doğrulama
+
+```text
+npx tsc --noEmit  başarılı
+npm run lint      başarılı — 0 hata, 0 uyarı
+git diff --check  başarılı
+```
+
+## 15 Temmuz 2026 — Tamamlanan sürüş için rider review ve yıldız sistemi
+
+### Sorun neydi?
+
+Sürüş tamamlandıktan sonra passenger rider'ı değerlendiremiyor, reviews sekmesi yalnızca statik örnek yorumlar gösteriyor ve rider profilindeki rating gerçek sürüşlerden güncellenmiyordu.
+
+### Neden bu sorun çıktı?
+
+Review için backend veri modeli, yetkilendirme kuralları ve API endpoint'i bulunmuyordu. Completion akışı doğrudan history/dashboard'a dönüyor, rescue ile review arasında tekillik ilişkisi kurulmamıştı.
+
+### Çözüm yöntemi neler?
+
+- Yalnızca tamamlanmış rescue'nun passenger'ına review oluşturma yetkisi vermek.
+- Rescue ID'yi review belge ID'si yaparak sürüş başına tek review'u atomik garanti etmek.
+- 1–5 yıldız doğrulaması ve sınırlı opsiyonel yorum alanı eklemek.
+- Rider puan toplamı, puan sayısı ve ortalamasını Firestore transaction içinde güncellemek.
+- Completion sonrasında passenger'ı review formuna yönlendirmek.
+- Reviews sekmesini gerçek backend verisine bağlamak.
+
+### Nasıl Çözüldü?
+
+- Backend'e `ReviewController`, `ReviewService` ve review DTO'ları eklendi.
+- `POST /api/reviews/rescue/{rescueId}` endpoint'i 1–5 yıldız ve en fazla 500 karakter yorum kabul ediyor.
+- Backend rescue'nun `completed` olduğunu, token sahibinin passenger olduğunu ve atanmış rider bulunduğunu doğruluyor.
+- Aynı rescue için ikinci review HTTP 409 ile reddediliyor.
+- Rider'ın `ratingTotal`, `ratingCount` ve `rating` alanları review ile aynı transaction içinde güncelleniyor.
+- Sürüş tamamlanınca rider'ın `totalRescues` değeri atomik artırılıyor.
+- `GET /api/reviews/mine` passenger'ın gönderdiği rider değerlendirmelerini listeliyor.
+- Passenger completion akışı yıldız ve yorum formuna yönlendiriliyor; yorum opsiyonel, yıldız zorunlu ve `Not now` seçeneği mevcut.
+- Statik reviews sekmesi kaldırılıp rider adı, yıldız, yorum ve tarih gösteren gerçek API ekranına dönüştürüldü.
+
+### Test ve doğrulama
+
+```text
+mvnw.cmd clean test  başarılı — 5 test
+npx tsc --noEmit     başarılı
+npm run lint         başarılı — 0 hata, 0 uyarı
+git diff --check     başarılı
+```
+
+### Test ve doğrulama
+
+```text
+npx tsc --noEmit  başarılı
+npm run lint      başarılı — 0 hata, 0 uyarı
+git diff --check  başarılı
+```
+
+## 14 Temmuz 2026 — Adres önerileri ve haritadan konum seçimi
+
+### Sorun neydi?
+
+Destination metin alanı klavye açıldığında ekranın altında kalabiliyordu. Ayrıca kullanıcı pickup veya destination için adresin tamamını kendisi yazmak zorundaydı; arama önerisi ya da haritada nokta seçme seçeneği bulunmuyordu.
+
+### Neden bu sorun çıktı?
+
+Formun scroll alanı Android klavyesine göre yeniden boyutlandırılmıyordu. Adres alanları yalnızca submit sırasında geocode ediliyor, yazma sırasında sonuç üretilmiyordu. Ortak harita bileşeni de dokunma koordinatı ve seçili marker desteğine sahip değildi.
+
+### Çözüm yöntemi neler?
+
+- Keyboard-aware form yüksekliği ve otomatik scroll kullanmak.
+- Kullanıcı yazarken debounce ile geocoding çalıştırıp reverse geocoding sonucunu öneri olarak göstermek.
+- Her konum alanına harita seçimi eklemek.
+- Harita dokunuşunu koordinat olarak alıp marker göstermek ve seçimi okunabilir adrese çevirmek.
+
+### Nasıl Çözüldü?
+
+- Android'de `KeyboardAvoidingView` height davranışı, iOS'ta padding davranışı etkinleştirildi; ScrollView klavye inset'lerini otomatik ayarlıyor.
+- Üç karakterden sonra 550 ms debounce ile en fazla beş konum sonucu aranıyor ve yinelenen sonuçlar eleniyor.
+- Öneriye dokunulduğunda hem adres etiketi hem koordinat saklanıyor; submit sırasında tekrar belirsiz arama yapılmıyor.
+- Pickup ve destination alanlarına harita butonu eklendi.
+- Tam ekran harita seçiminde kullanıcı istediği noktaya dokunabiliyor, marker ile seçimi görüyor ve `Use this location` ile onaylıyor.
+- Ortak native harita bileşeni seçili koordinat, marker ve harita dokunma callback'i destekleyecek şekilde genişletildi.
+
+### Ek düzeltme — Android klavye yüksekliğinin doğrudan uygulanması
+
+İlk keyboard-aware düzen bazı Android cihazlarda transparent modal pencerenin yeniden boyutlandırılmaması nedeniyle yeterli olmadı. Klavyenin gerçek yüksekliği `keyboardDidShow` olayıyla ölçülüp formun alt boşluğuna doğrudan uygulanarak bottom sheet klavyenin üzerine taşındı. Görünür form yüksekliği ekran yüksekliği eksi klavye yüksekliği olarak sınırlandı ve destination odaklandığında ScrollView ilgili alana programatik olarak kaydırılıyor. Standalone Android build'leri için `softwareKeyboardLayoutMode: resize` da etkinleştirildi.
+
+### Ek düzeltme — Place adının korunması
+
+Adres önerisinde reverse-geocode sonucu ana etiket yapıldığı için `Erasta AVM` gibi bir place araması seçildiğinde textbox'a işletme/yer adı yerine uzun açık adres yazılıyordu. Aranan ifade artık place adı olarak korunuyor ve önerinin ana satırında gösteriliyor; açık adres yalnızca aynı isimli sonuçları ayırt etmek için ikinci satırda yardımcı bilgi olarak sunuluyor. Öneri seçildiğinde textbox ve rescue kaydında place adı kalıyor, koordinat ise seçilen sonuca ait oluyor.
+
+## 14 Temmuz 2026 — Biker onay ekranının otomatik açılması
+
+### Sorun neydi?
+
+Biker dashboard backend'deki açık rescue isteğini algılıyor ve “A passenger needs help nearby” yazısını gösteriyordu fakat incoming/onay ekranı açılmıyordu. Ekrandaki işlem düğmesi de hâlâ prototipten kalan “Simulate Incoming Request” metnini taşıyordu. Incoming ekranındaki yolcu ve rota bilgileri sabit örnek veriydi.
+
+### Neden bu sorun çıktı?
+
+Polling sonucu yalnızca `pendingRequestId` state'ine yazılmıştı. Incoming route'una yönlendirme sadece manuel simülasyon düğmesinin `onPress` fonksiyonunda bulunuyordu; yeni istek algılanmasına bağlı bir yönlendirme yoktu.
+
+### Çözüm yöntemi neler?
+
+- Yeni bir request ID ilk kez görüldüğünde incoming ekranını otomatik açmak.
+- Polling devam ederken aynı ekranın tekrar tekrar açılmasını request ID ile engellemek.
+- Manuel tekrar görüntüleme düğmesini korumak.
+- Incoming ekranında rescue detayını API'den getirip gerçek veriyi göstermek.
+
+### Nasıl Çözüldü?
+
+- Dashboard polling akışı yeni request ID için `/(biker)/incoming` route'una otomatik yönlendirme yapıyor.
+- Son gösterilen ID ref içinde tutulduğu için aynı istek yalnızca bir kez otomatik açılıyor.
+- Düğme adı `View Rescue Request` olarak değiştirildi ve manuel yeniden açma davranışı korundu.
+- Incoming ekranı `/api/rescues/{requestId}` üzerinden gerçek yolcu adı, pickup koordinatı, destination place adı, urgency ve helmet ihtiyacını gösteriyor.
+- Kabul süresi daha kullanılabilir olması için 15 saniyeden 30 saniyeye çıkarıldı.
+- Kabul hataları ekranı sessizce kapatmak yerine kullanıcıya gerçek API hata mesajını gösteriyor.
+
+### Test ve doğrulama
+
+```text
+npx tsc --noEmit  başarılı
+npm run lint      başarılı — 0 hata, 0 uyarı
+git diff --check  başarılı
+```
+
+## 14 Temmuz 2026 — Aday biker'ın incoming rescue detayına erişimi
+
+### Sorun neydi?
+
+Biker dashboard açık rescue isteğini listeleyebiliyor ve incoming ekranını açabiliyordu ancak ekran `/api/rescues/{requestId}` detayını istediğinde backend HTTP 403 Forbidden dönüyordu.
+
+### Neden bu sorun çıktı?
+
+Rescue detay endpoint'i yalnızca `passengerId` veya `bikerId` ile eşleşen katılımcılara izin veriyordu. İstek henüz `searching` durumundayken hiçbir biker atanmamış olduğu için `bikerId` null'dı. Böylece backend bir taraftan biker'a açık isteği listeliyor, diğer taraftan karar vermesi için gereken detayı yasaklıyordu.
+
+### Çözüm yöntemi neler?
+
+- Incoming ekranına liste response'unu route parametresiyle taşımak.
+- Açık isteğin detayını tüm kimliği doğrulanmış kullanıcılara açmak.
+- Yalnızca biker rolündeki kullanıcıya, yalnızca `searching` ve süresi dolmamış istek için kontrollü detay erişimi vermek.
+
+### Nasıl Çözüldü?
+
+- Detay yetkilendirmesine sınırlı “candidate biker” kuralı eklendi.
+- Passenger ve atanmış biker katılımcı olarak her zamanki erişimini koruyor.
+- Katılımcı olmayan kullanıcı ancak profili `biker` rolündeyse, istek hâlâ `searching` durumundaysa ve süresi dolmamışsa detayı görebiliyor.
+- Kabul, başlatma ve tamamlama sahiplik kuralları değiştirilmedi; detay görmek isteği kabul etme yetkisi sağlamıyor.
+
+## 14 Temmuz 2026 — Kabul sonrası rescue akışının iki taraf için tamamlanması
+
+### Sorun neydi?
+
+Backend kabul, başlatma ve tamamlama durumlarını desteklese de passenger ve biker ekranları bu durumları tam yansıtmıyordu. Passenger ekranında sabit biker, rota, süre ve sahte safety code vardı. Biker navigasyonu sabit pickup/destination metinleri gösteriyordu. Uygulama yenilenirse aktif rescue kayboluyor, geçmiş ekranları devam eden istekleri yanlışlıkla iptal edilmiş gibi gösteriyordu.
+
+### Neden bu sorun çıktı?
+
+Backend durum makinesi ile ilk UI prototipinde kullanılan `arriving/active` state adları eşleşmiyordu. Ekranlar API response'unun yalnızca küçük bir bölümünü kullanıyor ve route state'inin uygulama ömrü boyunca korunacağını varsayıyordu. Pickup için okunabilir etiket backend modelinde ayrıca saklanmıyordu.
+
+### Çözüm yöntemi neler?
+
+- Frontend'i backend'in `searching -> accepted -> in_progress -> completed` durum makinesiyle birebir eşlemek.
+- Her iki cihazın rescue detayını düzenli yenileyerek durum değişikliklerini algılamasını sağlamak.
+- Pickup ve destination etiket/koordinatlarını gerçek haritalarda göstermek.
+- Kritik start/complete işlemlerinden önce kullanıcı onayı almak.
+- Uygulama yeniden açıldığında kullanıcıya ait aktif rescue'yu backend'den geri yüklemek.
+- Geçmişte yalnızca terminal durumları göstermek ve süreyi backend timestamp'lerinden hesaplamak.
+
+### Nasıl Çözüldü?
+
+- Rescue modeline `pickupLabel` eklendi; eski kayıtlar koordinat etiketiyle geriye uyumlu okunuyor.
+- Passenger arama ekranı gerçek biker adını gösteriyor ve `in_progress` durumunda ride ekranına geçiyor.
+- Passenger ride ekranı biker'ın geliş/sürüş durumunu, gerçek destination place adını ve harita marker'ını gösteriyor.
+- Biker navigasyonu önce gerçek pickup'a, start işleminden sonra gerçek destination'a geçiyor.
+- Start ve complete düğmelerine yanlış dokunmayı önleyen doğrulama pencereleri eklendi.
+- Passenger iptali biker ekranında algılanıyor; completed durumu iki tarafta da başarı mesajı ve history/dashboard seçeneği gösteriyor.
+- `GET /api/rescues/active` endpoint'i eklendi. Passenger ve biker dashboard uygulama yenilendiğinde devam eden akışı otomatik geri yüklüyor.
+- Devam eden rescue kayıtları geçmişten filtrelendi; tamamlanan sürüş süresi `startedAt` ve `completedAt` farkından hesaplanıyor.
+- API istemcisi boş başarılı response gövdelerini güvenli işliyor.
+
+### Test ve doğrulama
+
+```text
+mvnw.cmd clean test  başarılı — 5 test
+npx tsc --noEmit     başarılı
+npm run lint         başarılı — 0 hata, 0 uyarı
+git diff --check     başarılı
+```
+
+### Test ve doğrulama
+
+```text
+npx tsc --noEmit  başarılı
+npm run lint      başarılı — 0 hata, 0 uyarı
+git diff --check  başarılı
+```
+
+Frontend kaynaklarında doğrudan Firestore veya Firebase Storage çağrısı kalmadığı doğrulandı. Çalışma `feat/backend-api-consolidation` branch'inde yapıldı.
+
+## 14 Temmuz 2026 — Backend portunun 8083'e taşınması
+
+### Sorun neydi?
+
+Spring Boot backend varsayılan `8080` portunda başlamaya çalışıyordu fakat bu port başka bir süreç tarafından kullanıldığı için uygulama başlatılamıyordu.
+
+### Neden bu sorun çıktı?
+
+TCP üzerinde aynı IP ve port birleşimini aynı anda yalnızca bir süreç dinleyebilir. Spring Boot'ta ayrıca bir port belirtilmezse gömülü web sunucusu varsayılan olarak `8080` kullanır. Port dolu olduğunda sunucu bind işlemi başarısız olur.
+
+### Çözüm yöntemi neler?
+
+- `8080` portunu kullanan süreci kapatmak.
+- Backend'i boş bir porta taşımak.
+- Portu environment değişkeniyle yapılandırılabilir tutmak.
+- Frontend API adreslerini backend'in yeni portuyla eşlemek.
+
+### Nasıl Çözüldü?
+
+- Backend varsayılan portu `server.port=${SERVER_PORT:8083}` ile `8083` yapıldı.
+- Gerektiğinde `SERVER_PORT` environment değişkeniyle farklı port kullanılabilmesi sağlandı.
+- Frontend'in web/iOS, Android emulator ve örnek environment API adresleri `8083` olarak güncellendi.
+- Backend README yapılandırma bilgisi yeni portu gösterecek şekilde düzeltildi.
+
+## 14 Temmuz 2026 — Firebase Admin proje kimliğinin açıkça yapılandırılması
+
+### Sorun neydi?
+
+Application Default Credentials oluşturulduktan sonra backend kimlik bilgisini bulabiliyor, fakat Firestore istemcisi hangi Google Cloud/Firebase projesine bağlanacağını belirleyemediği için uygulama başlangıcı duruyordu.
+
+### Neden bu sorun çıktı?
+
+`gcloud config set project` yalnızca gcloud CLI'ın aktif yapılandırmasını değiştirir. Firebase Admin SDK tarafından okunan Application Default Credentials dosyasının her türü proje ID bilgisini doğrudan taşımaz. Bu nedenle geçerli kimlik bilgisi bulunmasına rağmen Firestore için ayrıca proje ID gerekir.
+
+### Çözüm yöntemi neler?
+
+- Her terminal oturumunda `GOOGLE_CLOUD_PROJECT` environment değişkenini tanımlamak.
+- Service account kimliği kullanarak proje bilgisinin credential üzerinden gelmesini sağlamak.
+- Proje ID'sini uygulama yapılandırmasından `FirebaseOptions` nesnesine açıkça aktarmak.
+
+### Nasıl Çözüldü?
+
+- `firebase.project-id` ayarı eklendi ve varsayılan değer `motorescue-d4abc` olarak tanımlandı.
+- Ayar sırasıyla `FIREBASE_PROJECT_ID`, `GOOGLE_CLOUD_PROJECT` veya varsayılan proje ID değerinden okunacak şekilde yapılandırıldı.
+- `FirebaseConfig`, proje ID'sini `FirebaseOptions.setProjectId` ile Admin SDK'ya açıkça iletiyor.
+- README içine `FIREBASE_PROJECT_ID` yapılandırması eklendi.
+
+## 14 Temmuz 2026 — Fiziksel cihazdan backend'e erişim hatasının düzeltilmesi
+
+### Sorun neydi?
+
+Firebase ile giriş tamamlandıktan sonra profil rolünü okumak için yapılan backend isteği `TypeError: Network request failed` hatası veriyordu. Backend `8083` portunda çalışmasına ve bilgisayardan erişilebilmesine rağmen mobil uygulama API'ye ulaşamıyordu.
+
+### Neden bu sorun çıktı?
+
+Frontend Android için varsayılan olarak `10.0.2.2:8083` kullanıyordu. `10.0.2.2`, yalnızca Android emülatörünün ana bilgisayara erişmek için sunduğu özel adrestir. Expo Go ile çalışan fiziksel telefonda bu adres bilgisayarı göstermez. Benzer şekilde telefondaki `localhost` da geliştirme bilgisayarı değil telefonun kendisidir.
+
+### Çözüm yöntemi neler?
+
+- Fiziksel cihazda bilgisayarın LAN IP adresini `EXPO_PUBLIC_API_URL` ile açıkça vermek.
+- Geliştirme ortamında Expo Metro sunucusunun host adresini okuyup backend adresini otomatik üretmek.
+- Web, Android emülatörü ve production ortamı için güvenli fallback adreslerini korumak.
+- Ham `Network request failed` yerine denenen API adresini içeren açıklayıcı hata göstermek.
+
+### Nasıl Çözüldü?
+
+- API adres çözümleyicisi Expo'nun `hostUri` bilgisinden geliştirme bilgisayarının erişilebilir adresini alıp `http://<metro-host>:8083` oluşturacak şekilde güncellendi.
+- `EXPO_PUBLIC_API_URL` tanımlıysa en yüksek öncelikle kullanılmaya devam ediyor.
+- Web için `localhost:8083`, Android emülatörü için `10.0.2.2:8083` fallback'leri korundu.
+- Ağ hataları artık kullanılan backend adresini ve aynı ağ kontrolünü kullanıcıya bildiriyor.
+- Login ekranı backend kaynaklı hata mesajını genel giriş hatasıyla gizlemek yerine gösteriyor.
+- Backend'in hem localhost hem LAN arayüzünden `8083` üzerinde yanıt verdiği doğrulandı.
+- Kullanıcı ve rescue API çağrıları yeniden tarandı; frontend ve backend endpoint sözleşmelerinin eşleştiği doğrulandı.
+
+### Test ve doğrulama
+
+```text
+mvnw.cmd clean test  başarılı — 5 test
+npx tsc --noEmit     başarılı
+npm run lint         başarılı — 0 hata, 0 uyarı
+LAN :8083 erişimi    başarılı
+git diff --check     başarılı
+```
+
+## 14 Temmuz 2026 — Rescue konum ve urgency seçimlerinin işlevsel hâle getirilmesi
+
+### Sorun neydi?
+
+Passenger rescue formundaki pickup ve destination alanları sabit metinlerden oluşuyordu ve kullanıcı tarafından değiştirilemiyordu. Form gönderildiğinde pickup her zaman cihaz GPS'inden yeniden alınıyor, destination ise kod içine yazılmış sabit bir ad olarak backend'e gönderiliyordu. Urgency alanına dokunulduğunda seçenek listesi açılmak yerine iki değer arasında anında geçiş yapıyordu.
+
+### Neden bu sorun çıktı?
+
+Form ilk aşamada görsel prototip olarak hazırlanmış, alanların seçim state'i ve adres çözümleme davranışı uygulanmamıştı. Backend modeli de destination için yalnızca açıklama metni saklıyor, hedef koordinatlarını taşımıyordu. Bu nedenle UI gerçek bir rota talebi üretemiyordu.
+
+### Çözüm yöntemi neler?
+
+- Pickup için mevcut GPS konumu ile manuel adres arasında açık seçim sunmak.
+- GPS koordinatını reverse geocoding ile okunabilir adrese dönüştürmek.
+- Manuel pickup ve destination adreslerini geocoding ile koordinata çevirmek.
+- Urgency alanında seçenekleri görünür bir liste olarak göstermek ve yalnızca seçilen değeri kaydetmek.
+- Destination koordinatlarını API ve Firestore modeline eklemek.
+
+### Nasıl Çözüldü?
+
+- Pickup bölümüne `My location` ve `Enter address` seçenekleri eklendi.
+- Mevcut konum seçildiğinde GPS koordinatı ve okunabilir adres gösteriliyor.
+- Manuel pickup ve destination için düzenlenebilir metin alanları eklendi; belirsiz veya bulunamayan adreslerde istek gönderilmiyor ve açıklayıcı hata gösteriliyor.
+- Urgency alanı altı seçenekli açılır listeye dönüştürüldü: akademik, sağlık, iş/görüşme, seyahat, resmi randevu ve diğer acil ihtiyaç.
+- Form gönderimi sırasında pickup ve destination koordinatları çözülüp backend'e gönderiliyor.
+- `CreateRescueRequest`, `RescueResponse` ve Firestore rescue belgesi destination koordinatlarını içerecek şekilde genişletildi.
+- Eski Firestore kayıtlarında destination koordinatı bulunmaması response dönüşümünde geriye uyumlu olarak ele alındı.
+
+### Test ve doğrulama
+
+```text
+mvnw.cmd clean test  başarılı — 5 test
+npx tsc --noEmit     başarılı
+npm run lint         başarılı — 0 hata, 0 uyarı
+git diff --check     başarılı
+```

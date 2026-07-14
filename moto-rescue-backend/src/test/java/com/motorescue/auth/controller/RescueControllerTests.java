@@ -33,7 +33,9 @@ class RescueControllerTests {
 
     @Test
     void createUsesAuthenticatedTokenInsteadOfClientIdentity() {
-        CreateRescueRequest request = new CreateRescueRequest(36.75, 3.05, "Campus", "Exam", true);
+        CreateRescueRequest request = new CreateRescueRequest(
+                36.75, 3.05, "Pickup", "Campus", 36.76, 3.06, "Exam", true
+        );
         RescueResponse response = response("request-1", "searching");
         when(rescueService.create(token, request)).thenReturn(response);
 
@@ -57,8 +59,8 @@ class RescueControllerTests {
     private RescueResponse response(String id, String status) {
         Instant now = Instant.now();
         return new RescueResponse(
-                id, "passenger", "Passenger", 36.75, 3.05, "Campus", "Exam", true,
-                status, null, null, now, now.plusSeconds(300), null
+                id, "passenger", "Passenger", 36.75, 3.05, "Pickup", "Campus", 36.76, 3.06, "Exam", true,
+                status, null, null, now, now.plusSeconds(300), null, null, null
         );
     }
 }

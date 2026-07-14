@@ -1,9 +1,17 @@
 import { MapPin, Star } from "lucide-react-native";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { rescueApi } from "../../../api/rescues";
 
-const P_RIDES = [
+type PassengerRide = {
+  date: string; from: string; to: string; biker: string | null;
+  bikerE: string | null; status: "completed" | "cancelled";
+  dur: string | null; rating: number | null;
+};
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const RIDE_SHAPE: PassengerRide[] = [
   {
     date: "Thu Jun 12 · 8:14 AM",
     from: "Rue Didouche Mourad",
@@ -37,12 +45,30 @@ const P_RIDES = [
 ];
 
 export default function PassengerHistoryScreen() {
+  const [rides, setRides] = useState<typeof RIDE_SHAPE>([]);
   const [filter, setFilter] = useState<"all" | "completed" | "cancelled">(
     "all",
   );
   const visibleRides =
-    filter === "all" ? P_RIDES : P_RIDES.filter((r) => r.status === filter);
+    filter === "all" ? rides : rides.filter((r) => r.status === filter);
   const insets = useSafeAreaInsets();
+
+  useEffect(() => {
+    rescueApi.history().then((items) => setRides(items.filter((item) =>
+      item.status === "completed" || item.status === "cancelled",
+    ).map((item) => ({
+      date: new Date(item.createdAt).toLocaleString(),
+      from: item.pickupLabel,
+      to: item.destinationLabel,
+      biker: item.bikerName,
+      bikerE: item.bikerId ? "🏍️" : null,
+      status: item.status === "completed" ? "completed" : "cancelled",
+      dur: item.startedAt && item.completedAt
+        ? `${Math.max(1, Math.round((new Date(item.completedAt).getTime() - new Date(item.startedAt).getTime()) / 60000))} min`
+        : null,
+      rating: null,
+    })))).catch((error) => console.error("Could not load ride history", error));
+  }, []);
 
   return (
     <View className="flex-1 bg-[#F2F2F7]">
