@@ -1,5 +1,5 @@
 import { MapPin } from "lucide-react-native";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
     ScrollView,
     Text,
@@ -7,8 +7,16 @@ import {
     View
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { rescueApi } from "../../../api/rescues";
 
-const B_RIDES = [
+type BikerRide = {
+  date: string; passenger: string; e: string; from: string; to: string;
+  dur: string | null; urgency: string | null; status: "completed" | "cancelled";
+  pts: number;
+};
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const RIDE_SHAPE: BikerRide[] = [
   {
     date: "Today · 8:14 AM",
     passenger: "Yacine B.",
@@ -56,12 +64,27 @@ const B_RIDES = [
 ];
 
 export default function BikerHistoryScreen() {
+  const [rides, setRides] = useState<typeof RIDE_SHAPE>([]);
   const [filter, setFilter] = useState<"all" | "completed" | "cancelled">(
     "all",
   );
   const visibleRides =
-    filter === "all" ? B_RIDES : B_RIDES.filter((r) => r.status === filter);
+    filter === "all" ? rides : rides.filter((r) => r.status === filter);
   const insets = useSafeAreaInsets(); // Hook to get safe area insets for padding
+
+  useEffect(() => {
+    rescueApi.history().then((items) => setRides(items.map((item) => ({
+      date: new Date(item.createdAt).toLocaleString(),
+      passenger: item.passengerName,
+      e: "🙋",
+      from: `${item.latitude.toFixed(4)}, ${item.longitude.toFixed(4)}`,
+      to: item.destinationLabel,
+      dur: null,
+      urgency: item.urgency,
+      status: item.status === "completed" ? "completed" : "cancelled",
+      pts: item.status === "completed" ? 45 : 0,
+    })))).catch((error) => console.error("Could not load rescue history", error));
+  }, []);
 
   return (
     <View className="flex-1 bg-[#F2F2F7]">

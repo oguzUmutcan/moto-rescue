@@ -18,8 +18,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { COUNTRIES } from "../../constants/countries";
 
 // --- FIREBASE IMPORTS ---
-import { doc, getDoc, updateDoc } from "firebase/firestore";
-import { auth, db } from "../../config/firebase";
+import { auth } from "../../config/firebase";
+import { userApi } from "../../api/users";
 
 const AVATAR_EMOJIS = [
   "🙋",
@@ -68,23 +68,23 @@ export default function ProfilePassengerScreen() {
         setName(auth.currentUser.displayName || "");
         setEmail(auth.currentUser.email || "");
 
-        const userDoc = await getDoc(doc(db, "users", auth.currentUser.uid));
-        if (userDoc.exists()) {
-          const data = userDoc.data();
+        const data = await userApi.get();
+        if (data) {
           if (data.name) setName(data.name);
           if (data.email) setEmail(data.email);
           if (data.profileEmoji) setProfileEmoji(data.profileEmoji);
-          if (data.emergencyContact) {
+          const emergency = data.emergencyContact;
+          if (emergency) {
             const match = COUNTRIES.find((c) =>
-              data.emergencyContact.startsWith(c.dialCode),
+              emergency.startsWith(c.dialCode),
             );
             if (match) {
               setSelectedCountry(match);
               setEmergencyContact(
-                data.emergencyContact.slice(match.dialCode.length),
+                emergency.slice(match.dialCode.length),
               );
             } else {
-              setEmergencyContact(data.emergencyContact);
+              setEmergencyContact(emergency);
             }
           }
         }
@@ -103,10 +103,8 @@ export default function ProfilePassengerScreen() {
         ? `${selectedCountry.dialCode}${emergencyContact}`
         : "";
 
-      const userRef = doc(db, "users", auth.currentUser.uid);
-      await updateDoc(userRef, {
+      await userApi.update({
         name: name.trim(),
-        email: email.trim().toLowerCase(),
         emergencyContact: fullEmergencyContact,
         profileEmoji: profileEmoji, // Save the emoji string directly!
       });

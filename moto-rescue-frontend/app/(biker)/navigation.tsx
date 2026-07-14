@@ -1,24 +1,48 @@
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { MapPin, PhoneCall } from "lucide-react-native";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
-    StyleSheet,
+    Alert, StyleSheet,
     Text,
     TouchableOpacity,
     View
 } from "react-native";
+import { rescueApi, RescueRequest } from "../../api/rescues";
 
 export default function BikerNavigationScreen() {
   const router = useRouter();
+  const { requestId } = useLocalSearchParams<{ requestId: string }>();
   const [phase, setPhase] = useState<"pickup" | "dest">("pickup");
+  const [request, setRequest] = useState<RescueRequest | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (!requestId) return;
+    rescueApi.get(requestId).then((data) => {
+      setRequest(data);
+      if (data.status === "in_progress") setPhase("dest");
+    }).catch((error) => Alert.alert("Ride unavailable", error.message));
+  }, [requestId]);
 
   const isPickup = phase === "pickup";
   const headerColor = isPickup ? "bg-[#007AFF]" : "bg-[#34C759]";
 
-  const handleAction = () => {
-    if (isPickup)
-      setPhase("dest"); // Change UI to green when passenger gets on
-    else router.replace("/(biker)/(tabs)/dashboard"); // Finish ride
+  const handleAction = async () => {
+    if (!requestId || busy) return;
+    setBusy(true);
+    try {
+      if (isPickup) {
+        setRequest(await rescueApi.start(requestId));
+        setPhase("dest");
+      } else {
+        await rescueApi.complete(requestId);
+        router.replace("/(biker)/(tabs)/dashboard");
+      }
+    } catch (error) {
+      Alert.alert("Could not update ride", error instanceof Error ? error.message : "Please try again");
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
@@ -76,7 +100,7 @@ export default function BikerNavigationScreen() {
           </View>
           <View className="flex-1">
             <Text className="text-[17px] font-black text-[#1C1C1E]">
-              Yacine Benamar
+              {request?.passengerName ?? "Passenger"}
             </Text>
             <Text className="text-[14px] text-[#8E8E93] mt-0.5">
               {isPickup ? "Waiting at pickup point" : "On board · En route"}
@@ -101,6 +125,7 @@ export default function BikerNavigationScreen() {
 
         <TouchableOpacity
           onPress={handleAction}
+          disabled={busy || !request}
           className={`w-full h-14 rounded-2xl items-center justify-center flex-row shadow-sm ${headerColor}`}
         >
           <Text className="text-white text-[18px] font-black mr-2">

@@ -6,9 +6,9 @@ import { Alert, StatusBar, Text, TouchableOpacity, View } from "react-native";
 
 // --- CENTRAL FIREBASE IMPORTS ---
 import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
-import { doc, serverTimestamp, setDoc } from "firebase/firestore";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { auth, db } from "../../config/firebase";
+import { auth } from "../../config/firebase";
+import { userApi } from "../../api/users";
 import { useRegistration } from "../../contexts/registration";
 
 export default function ConfirmPhoneScreen() {
@@ -45,14 +45,7 @@ export default function ConfirmPhoneScreen() {
 
       // 3. IMPORTANT: Save their complete profile to the Firestore Database
       const fullPhoneNumber = `${dialCode}${phone}`;
-      await setDoc(doc(db, "users", user.uid), {
-        name: name.trim(),
-        email: email.trim().toLowerCase(),
-        phone: fullPhoneNumber,
-        phoneVerified: false, // Set to false initially, can be changed if you add OTP later
-        role: null, // They haven't picked a role yet
-        createdAt: serverTimestamp(),
-      });
+      await userApi.create({ name: name.trim(), phone: fullPhoneNumber });
 
       console.log("✅ User created in Auth & Firestore successfully!");
 

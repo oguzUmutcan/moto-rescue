@@ -13,9 +13,9 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 // --- FIREBASE IMPORTS ---
-import { deleteUser, signOut } from "firebase/auth";
-import { deleteDoc, doc, getDoc, updateDoc } from "firebase/firestore";
-import { auth, db } from "../../../config/firebase";
+import { signOut } from "firebase/auth";
+import { auth } from "../../../config/firebase";
+import { userApi } from "../../../api/users";
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
@@ -44,11 +44,8 @@ export default function BikerProfileScreen() {
     const fetchUserData = async () => {
       if (auth.currentUser) {
         try {
-          const userDocRef = doc(db, "users", auth.currentUser.uid);
-          const userDocSnap = await getDoc(userDocRef);
-
-          if (userDocSnap.exists()) {
-            const data = userDocSnap.data();
+          const data = await userApi.get();
+          if (data) {
             setName(data.name || auth.currentUser.displayName || "Biker");
             setPlateNumber(data.plateNumber || "Not provided");
             setBio(data.bio || "No bio available");
@@ -99,14 +96,7 @@ export default function BikerProfileScreen() {
     if (!auth.currentUser) return;
 
     try {
-      // Delete user document from Firestore
-      const userDocRef = doc(db, "users", auth.currentUser.uid);
-      await deleteDoc(userDocRef);
-
-      // Delete user from Firebase Authentication
-      await deleteUser(auth.currentUser);
-
-      // Sign out the user
+      await userApi.delete();
       await signOut(auth);
       router.replace("/(auth)/login");
     } catch (error: any) {
@@ -128,10 +118,7 @@ export default function BikerProfileScreen() {
 
     // 3. Update Firestore in the background
     try {
-      const userDocRef = doc(db, "users", auth.currentUser.uid);
-      await updateDoc(userDocRef, {
-        availableDays: newAvailableDays,
-      });
+      await userApi.update({ availableDays: newAvailableDays });
     } catch (error) {
       console.error("Error updating available days:", error);
       // Revert the UI back if the network request fails

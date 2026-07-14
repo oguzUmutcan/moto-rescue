@@ -20,8 +20,8 @@ import {
   sendPasswordResetEmail,
   signInWithEmailAndPassword,
 } from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore";
-import { auth, db } from "../../config/firebase";
+import { auth } from "../../config/firebase";
+import { userApi } from "../../api/users";
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -49,18 +49,14 @@ export default function LoginScreen() {
     setIsLoading(true);
 
     try {
-      const userCredential = await signInWithEmailAndPassword(
+      await signInWithEmailAndPassword(
         auth,
         email.trim(),
         password,
       );
-      const user = userCredential.user;
+      const userData = await userApi.get();
 
-      const userDocRef = doc(db, "users", user.uid);
-      const userDocSnap = await getDoc(userDocRef);
-
-      if (userDocSnap.exists()) {
-        const userData = userDocSnap.data();
+      if (userData) {
 
         if (userData.role === "passenger") {
           router.replace("/(passenger)/(tabs)/dashboard");

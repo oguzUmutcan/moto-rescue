@@ -2,15 +2,15 @@ import * as Location from "expo-location";
 import { useRouter } from "expo-router";
 import * as SecureStore from "expo-secure-store";
 import { onAuthStateChanged } from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore";
 import { Navigation2 } from "lucide-react-native";
 import React, { useEffect, useRef, useState } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { auth, db } from "../../../config/firebase";
+import { auth } from "../../../config/firebase";
 import LocationMap from "../../../components/location-map";
 import type { LocationMapHandle, MapRegion } from "../../../components/location-map.types";
 import { rescueApi } from "../../../api/rescues";
+import { userApi } from "../../../api/users";
 
 export default function BikerDashboardScreen() {
   const router = useRouter();
@@ -109,13 +109,12 @@ export default function BikerDashboardScreen() {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         try {
-          const userDoc = await getDoc(doc(db, "users", user.uid));
-          if (userDoc.exists()) {
-            const data = userDoc.data();
+          const data = await userApi.get();
+          if (data) {
             setName(data.name || user.displayName || "Biker");
 
             // FETCH STATS FROM FIRESTORE (with safe fallbacks)
-            setTodayRescues(data.todayRescues?.toString() || "0");
+            setTodayRescues("0");
             setRating(data.rating?.toString() || "5.0");
             setTotalRescues(data.totalRescues?.toString() || "0");
           } else {

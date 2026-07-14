@@ -1,18 +1,40 @@
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { MapPin, PhoneCall, Shield, Star } from "lucide-react-native";
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
-  StyleSheet,
+  Alert, StyleSheet,
   Text,
   TouchableOpacity,
   View
 } from "react-native";
+import { rescueApi, RescueRequest } from "../../api/rescues";
 
 export default function PassengerRideScreen() {
   const router = useRouter();
+  const { requestId } = useLocalSearchParams<{ requestId: string }>();
+  const [request, setRequest] = useState<RescueRequest | null>(null);
 
-  const handleCancel = () => {
-    router.replace("/(passenger)/(tabs)/dashboard");
+  useEffect(() => {
+    if (!requestId) return;
+    const load = () => rescueApi.get(requestId).then((data) => {
+      setRequest(data);
+      if (data.status === "completed" || data.status === "cancelled") {
+        router.replace("/(passenger)/(tabs)/dashboard");
+      }
+    }).catch((error) => console.error("Could not refresh ride", error));
+    load();
+    const timer = setInterval(load, 3000);
+    return () => clearInterval(timer);
+  }, [requestId, router]);
+
+  const handleCancel = async () => {
+    if (!requestId) return;
+    try {
+      await rescueApi.cancel(requestId);
+      router.replace("/(passenger)/(tabs)/dashboard");
+    } catch (error) {
+      Alert.alert("Could not cancel", error instanceof Error ? error.message : "Please try again");
+    }
   };
 
   return (
@@ -52,7 +74,7 @@ export default function PassengerRideScreen() {
 
           <View className="flex-1 ml-3">
             <Text className="text-[17px] font-black text-[#1C1C1E]">
-              Khaled Messaoud
+              {request?.bikerName ?? "Assigned biker"}
             </Text>
             <View className="flex-row items-center mt-0.5">
               <Star size={14} color="#FF9500" fill="#FF9500" />

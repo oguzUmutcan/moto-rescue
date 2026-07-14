@@ -58,7 +58,7 @@ class RescueControllerTests {
         Instant now = Instant.now();
         return new RescueResponse(
                 id, "passenger", "Passenger", 36.75, 3.05, "Campus", "Exam", true,
-                status, null, null, now, now.plusSeconds(300), null
+                status, null, null, now, now.plusSeconds(300), null, null, null
         );
     }
 }

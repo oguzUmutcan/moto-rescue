@@ -415,3 +415,55 @@ npx expo export --platform web  başarılı
 ```
 
 Token header reddetme ve rescue controller delegasyonu için yeni backend testleri eklendi. Çalışma ayrı `feat/backend-rescue-workflow` branch'inde yapıldı.
+
+## 14 Temmuz 2026 — Profil, geçmiş ve sürüş durumlarının backend'de merkezileştirilmesi
+
+### Sorun neydi?
+
+Kurtarma isteği backend'e taşınmış olmasına rağmen kullanıcı profili oluşturma, rol seçme, profil güncelleme ve hesap silme işlemleri mobil uygulamadan doğrudan Firestore'a yapılıyordu. Geçmiş ekranları örnek veri gösteriyordu. Sürüşü başlatma/tamamlama ve yolcunun sürüş ekranındaki iptal işlemleri yalnızca yerel ekran durumunu değiştiriyordu.
+
+### Neden bu sorun çıktı?
+
+Prototip geliştirme sırasında Firebase istemci SDK'sı ve ekran içi state hızlı sonuç verdi. Ancak istemci tarafındaki kontrol güvenlik sınırı değildir: değiştirilmiş bir uygulama iş kurallarını aşabilir ve UI ile kalıcı veri birbirinden kopabilir. İş akışının tek doğruluk kaynağı backend olmadığında farklı cihazlarda tutarsız durumlar oluşur.
+
+Teorik olarak bu problem “server-authoritative state” yaklaşımıyla çözülür. Kimlik doğrulama istemcide başlayabilir fakat yetkilendirme, sahiplik ve durum makinesi geçişleri güvenilir sunucuda uygulanır. Bu sürümde durum akışı `searching -> accepted -> in_progress -> completed` şeklindedir; uygun aşamalarda yolcu `cancelled` durumuna geçebilir.
+
+### Çözüm yöntemi neler?
+
+- Firebase Authentication'ı koruyup profil verilerini Admin SDK kullanan backend üzerinden yönetmek.
+- Token, header ve hata işleme kodunu ortak frontend API istemcisinde toplamak.
+- Kullanıcı kimliğini yalnızca doğrulanmış Firebase token'ından almak.
+- Geçmişi role göre backend'de sorgulamak.
+- Sürüş geçişlerinde rol, atanmış biker ve mevcut durum kontrollerini transaction içinde yapmak.
+- Ücretli Firebase Storage yerine sağlayıcı seçilene kadar kimlik görseli yüklemeyi kapalı tutmak.
+
+### Nasıl Çözüldü?
+
+Backend'e kullanıcı profil servisi ve şu API işlemleri eklendi:
+
+```text
+POST/GET/PATCH/DELETE /api/users/me
+PATCH  /api/users/me/role
+GET    /api/rescues/history
+POST   /api/rescues/{requestId}/start
+POST   /api/rescues/{requestId}/complete
+```
+
+- Kayıt, rol seçimi, girişte rol okuma, profil düzenleme ve hesap silme `userApi` üzerinden backend'e geçirildi.
+- Frontend'deki doğrudan Firestore/Storage kullanımı kaldırıldı; Firebase istemcisinde yalnızca Authentication bırakıldı.
+- `api/client.ts` güncel ID token'ını Bearer header'a ekliyor ve API hatalarını merkezileştiriyor.
+- Yolcu ve biker geçmiş ekranları backend verisini gösteriyor.
+- Biker'ın başlatma/tamamlama işlemleri backend durum makinesine bağlandı; yalnızca atanmış biker geçiş yapabiliyor.
+- Yolcu sürüş ekranı durumu yeniliyor ve gerçek cancel endpoint'ini çağırıyor.
+- Kimlik görseli yükleme, ücretsiz ve güvenli bir obje depolama sağlayıcısı seçilene kadar devre dışı bırakıldı; Firestore dosya deposu olarak kullanılmadı.
+
+### Test ve doğrulama
+
+```text
+mvnw.cmd clean test  başarılı — 5 test
+npx tsc --noEmit     başarılı
+npm run lint         başarılı — 0 hata, 0 uyarı
+git diff --check     başarılı
+```
+
+Frontend kaynaklarında doğrudan Firestore veya Firebase Storage çağrısı kalmadığı doğrulandı. Çalışma `feat/backend-api-consolidation` branch'inde yapıldı.

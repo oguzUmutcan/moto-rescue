@@ -81,6 +81,26 @@ public class RescueService {
         }
     }
 
+    public List<RescueResponse> history(FirebaseToken token) {
+        DocumentSnapshot user = userProfile(token.getUid());
+        String role = user.getString("role");
+        String ownerField = "biker".equals(role) ? "bikerId" : "passengerId";
+        try {
+            return firestore.collection(REQUESTS)
+                    .whereEqualTo(ownerField, token.getUid())
+                    .limit(100)
+                    .get().get().getDocuments().stream()
+                    .map(this::from)
+                    .sorted((left, right) -> right.createdAt().compareTo(left.createdAt()))
+                    .toList();
+        } catch (InterruptedException exception) {
+            Thread.currentThread().interrupt();
+            throw unavailable(exception);
+        } catch (ExecutionException exception) {
+            throw unavailable(exception);
+        }
+    }
+
     public RescueResponse accept(FirebaseToken token, String requestId) {
         requireRole(token.getUid(), "biker");
         DocumentReference reference = firestore.collection(REQUESTS).document(requestId);
@@ -143,12 +163,55 @@ public class RescueService {
         }
     }
 
+    public RescueResponse start(FirebaseToken token, String requestId) {
+        return transitionByBiker(token, requestId, "accepted", "in_progress", "startedAt");
+    }
+
+    public RescueResponse complete(FirebaseToken token, String requestId) {
+        return transitionByBiker(token, requestId, "in_progress", "completed", "completedAt");
+    }
+
+    private RescueResponse transitionByBiker(FirebaseToken token, String requestId,
+                                              String expectedStatus, String nextStatus, String timestampField) {
+        requireRole(token.getUid(), "biker");
+        DocumentReference reference = firestore.collection(REQUESTS).document(requestId);
+        try {
+            firestore.runTransaction(transaction -> {
+                DocumentSnapshot snapshot = transaction.get(reference).get();
+                if (!snapshot.exists()) {
+                    throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Rescue request not found");
+                }
+                if (!token.getUid().equals(snapshot.getString("bikerId"))) {
+                    throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only the assigned biker can update this rescue");
+                }
+                if (!expectedStatus.equals(snapshot.getString("status"))) {
+                    throw new ResponseStatusException(HttpStatus.CONFLICT, "Invalid rescue status transition");
+                }
+                transaction.update(reference, Map.of("status", nextStatus, timestampField, Timestamp.now()));
+                return null;
+            }).get();
+            return from(getDocument(requestId));
+        } catch (InterruptedException exception) {
+            Thread.currentThread().interrupt();
+            throw unavailable(exception);
+        } catch (ExecutionException exception) {
+            if (exception.getCause() instanceof ResponseStatusException statusException) throw statusException;
+            throw unavailable(exception);
+        }
+    }
+
     private void requireRole(String uid, String expectedRole) {
+        DocumentSnapshot profile = userProfile(uid);
+        if (!expectedRole.equalsIgnoreCase(profile.getString("role"))) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "The " + expectedRole + " role is required");
+        }
+    }
+
+    private DocumentSnapshot userProfile(String uid) {
         try {
             DocumentSnapshot profile = firestore.collection(USERS).document(uid).get().get();
-            if (!profile.exists() || !expectedRole.equalsIgnoreCase(profile.getString("role"))) {
-                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "The " + expectedRole + " role is required");
-            }
+            if (!profile.exists()) throw new ResponseStatusException(HttpStatus.FORBIDDEN, "User profile is required");
+            return profile;
         } catch (InterruptedException exception) {
             Thread.currentThread().interrupt();
             throw unavailable(exception);
@@ -197,7 +260,9 @@ public class RescueService {
                 (String) data.get("bikerName"),
                 instant((Timestamp) data.get("createdAt")),
                 instant((Timestamp) data.get("expiresAt")),
-                instant((Timestamp) data.get("acceptedAt"))
+                instant((Timestamp) data.get("acceptedAt")),
+                instant((Timestamp) data.get("startedAt")),
+                instant((Timestamp) data.get("completedAt"))
         );
     }
 

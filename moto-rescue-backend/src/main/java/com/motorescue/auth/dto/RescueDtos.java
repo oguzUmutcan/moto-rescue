@@ -33,6 +33,8 @@ public final class RescueDtos {
             String bikerName,
             Instant createdAt,
             Instant expiresAt,
-            Instant acceptedAt
+            Instant acceptedAt,
+            Instant startedAt,
+            Instant completedAt
     ) {}
 }
