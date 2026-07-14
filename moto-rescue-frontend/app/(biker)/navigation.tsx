@@ -3,6 +3,7 @@ import { ExternalLink, MapPin } from "lucide-react-native";
 import React, { useEffect, useRef, useState } from "react";
 import { Alert, Linking, Platform, Text, TouchableOpacity, View } from "react-native";
 import { rescueApi, RescueRequest } from "../../api/rescues";
+import { badgeApi } from "../../api/badges";
 import LocationMap from "../../components/location-map";
 import type { LocationMapHandle } from "../../components/location-map.types";
 
@@ -56,9 +57,15 @@ export default function BikerNavigationScreen() {
         setRequest(await rescueApi.start(requestId));
       } else if (request.status === "in_progress") {
         await rescueApi.complete(requestId);
-        Alert.alert("Rescue completed", "The ride has been added to your history.", [
+        const badges = await badgeApi.mine().catch(() => null);
+        const justEarned = badges?.badges.find((badge) =>
+          badge.earnedAt && Date.now() - new Date(badge.earnedAt).getTime() < 60_000,
+        );
+        Alert.alert(
+          justEarned ? `${justEarned.emoji} Badge unlocked!` : "Rescue completed",
+          justEarned ? `${justEarned.name}\n${justEarned.description}` : "The ride has been added to your history.", [
           { text: "View history", onPress: () => router.replace("/(biker)/(tabs)/history") },
-          { text: "Done", onPress: () => router.replace("/(biker)/(tabs)/dashboard") },
+          { text: justEarned ? "View badges" : "Done", onPress: () => router.replace(justEarned ? "/(biker)/(tabs)/badges" : "/(biker)/(tabs)/dashboard") },
         ]);
       }
     } catch (error) {

@@ -466,6 +466,45 @@ npm run lint         başarılı — 0 hata, 0 uyarı
 git diff --check     başarılı
 ```
 
+## 15 Temmuz 2026 — Backend kontrollü rider badge ve seviye sistemi
+
+### Sorun neydi?
+
+Biker badges ekranındaki kazanımlar, 127 rescue, XP, level ve tarihler sabit örnek verilerdi. Gerçek sürüş tamamlandığında ilerleme değişmiyor ve badge kazanımı backend tarafından doğrulanmıyordu.
+
+### Neden bu sorun çıktı?
+
+Badge kriterlerini hesaplayan veri modeli ve API bulunmuyordu. UI prototipi gerçek rescue geçmişi ve review rating verileriyle bağlantı kurulmadan hazırlanmıştı. İstemci tarafında hesaplama yapılması da değiştirilmiş uygulamanın sahte badge göstermesine yol açabilirdi.
+
+### Çözüm yöntemi neler?
+
+- Badge kriterlerini tamamlanmış rescue ve rider rating verilerinden backend'de deterministik hesaplamak.
+- Her badge için progress, target, earned ve earnedAt döndürmek.
+- XP ve seviyeyi tamamlanan rescue sayısından üretmek.
+- Eski tamamlanmış rescue kayıtlarını da hesaplamaya dahil etmek.
+- Frontend statik listelerini gerçek badge API response'uyla değiştirmek.
+
+### Nasıl Çözüldü?
+
+- Backend'e `BadgeController`, `BadgeService` ve badge DTO'ları eklendi.
+- `GET /api/badges/me` yalnızca biker rolü için badge özeti döndürüyor.
+- Sekiz gerçek kriter tanımlandı: ilk rescue, 5/25/100 rescue, 5 exam rescue, helmet gereken 10 rescue, 10 gece rescue ve en az 5 review ile 4.8+ rating.
+- Gece rescue hesabı uygulamanın `Europe/Istanbul` saat dilimine göre 20:00–06:00 aralığında yapılıyor.
+- Kazanım tarihi, ilgili hedefi tamamlayan rescue'nun `completedAt` timestamp'inden hesaplanıyor.
+- Her tamamlanmış rescue 50 XP sağlıyor; Bronze, Silver, Gold ve Platinum seviyeleri sırasıyla 0, 500, 1500 ve 3000 XP eşiklerini kullanıyor.
+- Statik badge ekranı kaldırıldı; kazanılmış kartlar, kilitli kriterler, gerçek progress bar, XP ve level bilgisi API'den gösteriliyor.
+- Rating kriterinde review sayısı tamamlanıp ortalama düşükse ekran açıkça `Raise rating to 4.8+` mesajı gösteriyor.
+- Sürüş completion'ından sonra badge özeti yenileniyor; son 60 saniyede kazanılan badge varsa rider'a adı ve açıklamasıyla unlock penceresi gösteriliyor.
+
+### Test ve doğrulama
+
+```text
+mvnw.cmd clean test  başarılı — 5 test
+npx tsc --noEmit     başarılı
+npm run lint         başarılı — 0 hata, 0 uyarı
+git diff --check     başarılı
+```
+
 ## 14 Temmuz 2026 — Google Maps turn-by-turn rota ve login doğrulaması
 
 ### Sorun neydi?
