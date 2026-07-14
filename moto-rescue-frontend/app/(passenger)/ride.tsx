@@ -22,10 +22,7 @@ export default function PassengerRideScreen() {
         if (data.status === "cancelled") router.replace("/(passenger)/(tabs)/dashboard");
         if (data.status === "completed" && !completionHandled.current) {
           completionHandled.current = true;
-          Alert.alert("Ride completed", "You arrived at your destination safely.", [
-            { text: "View history", onPress: () => router.replace("/(passenger)/(tabs)/history") },
-            { text: "Done", onPress: () => router.replace("/(passenger)/(tabs)/dashboard") },
-          ]);
+          router.replace({ pathname: "/(passenger)/review", params: { requestId } });
         }
       } catch (error) {
         console.error("Could not refresh ride", error);

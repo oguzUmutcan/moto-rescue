@@ -4,6 +4,7 @@ import com.google.cloud.Timestamp;
 import com.google.cloud.firestore.DocumentReference;
 import com.google.cloud.firestore.DocumentSnapshot;
 import com.google.cloud.firestore.Firestore;
+import com.google.cloud.firestore.FieldValue;
 import com.google.cloud.firestore.GeoPoint;
 import com.google.cloud.firestore.QueryDocumentSnapshot;
 import com.google.firebase.auth.FirebaseToken;
@@ -219,6 +220,10 @@ public class RescueService {
                     throw new ResponseStatusException(HttpStatus.CONFLICT, "Invalid rescue status transition");
                 }
                 transaction.update(reference, Map.of("status", nextStatus, timestampField, Timestamp.now()));
+                if ("completed".equals(nextStatus)) {
+                    transaction.update(firestore.collection(USERS).document(token.getUid()),
+                            "totalRescues", FieldValue.increment(1));
+                }
                 return null;
             }).get();
             return from(getDocument(requestId));

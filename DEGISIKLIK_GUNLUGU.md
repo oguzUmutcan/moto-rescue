@@ -529,6 +529,46 @@ npm run lint      başarılı — 0 hata, 0 uyarı
 git diff --check  başarılı
 ```
 
+## 15 Temmuz 2026 — Tamamlanan sürüş için rider review ve yıldız sistemi
+
+### Sorun neydi?
+
+Sürüş tamamlandıktan sonra passenger rider'ı değerlendiremiyor, reviews sekmesi yalnızca statik örnek yorumlar gösteriyor ve rider profilindeki rating gerçek sürüşlerden güncellenmiyordu.
+
+### Neden bu sorun çıktı?
+
+Review için backend veri modeli, yetkilendirme kuralları ve API endpoint'i bulunmuyordu. Completion akışı doğrudan history/dashboard'a dönüyor, rescue ile review arasında tekillik ilişkisi kurulmamıştı.
+
+### Çözüm yöntemi neler?
+
+- Yalnızca tamamlanmış rescue'nun passenger'ına review oluşturma yetkisi vermek.
+- Rescue ID'yi review belge ID'si yaparak sürüş başına tek review'u atomik garanti etmek.
+- 1–5 yıldız doğrulaması ve sınırlı opsiyonel yorum alanı eklemek.
+- Rider puan toplamı, puan sayısı ve ortalamasını Firestore transaction içinde güncellemek.
+- Completion sonrasında passenger'ı review formuna yönlendirmek.
+- Reviews sekmesini gerçek backend verisine bağlamak.
+
+### Nasıl Çözüldü?
+
+- Backend'e `ReviewController`, `ReviewService` ve review DTO'ları eklendi.
+- `POST /api/reviews/rescue/{rescueId}` endpoint'i 1–5 yıldız ve en fazla 500 karakter yorum kabul ediyor.
+- Backend rescue'nun `completed` olduğunu, token sahibinin passenger olduğunu ve atanmış rider bulunduğunu doğruluyor.
+- Aynı rescue için ikinci review HTTP 409 ile reddediliyor.
+- Rider'ın `ratingTotal`, `ratingCount` ve `rating` alanları review ile aynı transaction içinde güncelleniyor.
+- Sürüş tamamlanınca rider'ın `totalRescues` değeri atomik artırılıyor.
+- `GET /api/reviews/mine` passenger'ın gönderdiği rider değerlendirmelerini listeliyor.
+- Passenger completion akışı yıldız ve yorum formuna yönlendiriliyor; yorum opsiyonel, yıldız zorunlu ve `Not now` seçeneği mevcut.
+- Statik reviews sekmesi kaldırılıp rider adı, yıldız, yorum ve tarih gösteren gerçek API ekranına dönüştürüldü.
+
+### Test ve doğrulama
+
+```text
+mvnw.cmd clean test  başarılı — 5 test
+npx tsc --noEmit     başarılı
+npm run lint         başarılı — 0 hata, 0 uyarı
+git diff --check     başarılı
+```
+
 ### Test ve doğrulama
 
 ```text
