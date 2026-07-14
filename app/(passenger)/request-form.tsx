@@ -1,16 +1,54 @@
 import { useRouter } from "expo-router";
+import * as Location from "expo-location";
+import { addDoc, collection, GeoPoint, serverTimestamp, Timestamp } from "firebase/firestore";
 import { ChevronDown, MapPin, X, Zap } from "lucide-react-native";
 import React, { useState } from "react";
-import { Platform, Switch, Text, TouchableOpacity, View } from "react-native";
+import { Alert, Platform, Switch, Text, TouchableOpacity, View } from "react-native";
+import { auth, db } from "../../config/firebase";
 
 export default function RequestFormScreen() {
   const router = useRouter();
   const [needsHelmet, setNeedsHelmet] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [urgency, setUrgency] = useState("🎓 Exam / Academic");
 
-  const handleSubmit = () => {
-    // Navigate to the "Searching / Radar" screen
-    router.replace("/(passenger)/searching");
+  const handleSubmit = async () => {
+    const user = auth.currentUser;
+    if (!user || isSubmitting) return;
+
+    setIsSubmitting(true);
+    try {
+      const permission = await Location.requestForegroundPermissionsAsync();
+      if (permission.status !== "granted") {
+        throw new Error("Location permission is required to request a rescue.");
+      }
+      const location = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced,
+      });
+      const request = await addDoc(collection(db, "rescueRequests"), {
+        passengerId: user.uid,
+        passengerName: user.displayName || "Passenger",
+        pickup: new GeoPoint(location.coords.latitude, location.coords.longitude),
+        destinationLabel: "Faculté de Droit, Ben Aknoun",
+        urgency,
+        needsHelmet,
+        status: "searching",
+        bikerId: null,
+        createdAt: serverTimestamp(),
+        expiresAt: Timestamp.fromMillis(Date.now() + 5 * 60 * 1000),
+      });
+      router.replace({
+        pathname: "/(passenger)/searching",
+        params: { requestId: request.id },
+      });
+    } catch (error) {
+      Alert.alert(
+        "Request failed",
+        error instanceof Error ? error.message : "Please try again.",
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleClose = () => {
@@ -71,6 +109,13 @@ export default function RequestFormScreen() {
           </Text>
           <TouchableOpacity
             activeOpacity={0.7}
+            onPress={() =>
+              setUrgency((current) =>
+                current === "🎓 Exam / Academic"
+                  ? "🏥 Medical"
+                  : "🎓 Exam / Academic",
+              )
+            }
             className="flex-row items-center justify-between bg-[#F2F2F7] rounded-xl px-3.5 py-3.5"
           >
             <Text className="text-[14px] text-[#1C1C1E] font-bold">
@@ -108,6 +153,7 @@ export default function RequestFormScreen() {
         {/* CTA Button */}
         <TouchableOpacity
           onPress={handleSubmit}
+          disabled={isSubmitting}
           activeOpacity={0.8}
           className="w-full h-14 rounded-2xl bg-[#FF9500] items-center justify-center flex-row shadow-lg"
           style={{
@@ -120,7 +166,7 @@ export default function RequestFormScreen() {
         >
           <Zap size={20} color="white" fill="white" className="mr-2" />
           <Text className="text-white text-[18px] font-black tracking-wide">
-            Request Rescue
+            {isSubmitting ? "Sending Request..." : "Request Rescue"}
           </Text>
         </TouchableOpacity>
       </View>

@@ -138,7 +138,7 @@ export default function PassengerReviewsScreen() {
               <Text className="text-[12px] text-[#AEAEB2]">{r.date}</Text>
             </View>
             <Text className="text-[14px] text-[#3C3C43] leading-relaxed">
-              "{r.comment}"
+              &ldquo;{r.comment}&rdquo;
             </Text>
           </View>
         ))}

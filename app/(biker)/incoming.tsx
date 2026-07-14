@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 // Pure React Native implementation
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { doc, runTransaction, serverTimestamp } from "firebase/firestore";
 import { AlertCircle, MapPin, Star } from "lucide-react-native";
 import {
   StyleSheet,
@@ -8,6 +9,7 @@ import {
   TouchableOpacity,
   View
 } from "react-native";
+import { auth, db } from "../../config/firebase";
 
 // --- Minimal Map Background ---
 function MapBg() {
@@ -95,10 +97,31 @@ function HomeBar() {
 // --- The Exact Figma Biker Incoming Component ---
 export default function IncomingRequestScreen() {
   const router = useRouter();
+  const { requestId } = useLocalSearchParams<{ requestId: string }>();
   const [secs, setSecs] = useState(15);
 
-  const handleAccept = () => {
-    router.replace("/(biker)/navigation");
+  const handleAccept = async () => {
+    const biker = auth.currentUser;
+    if (!biker || !requestId) return;
+    try {
+      await runTransaction(db, async (transaction) => {
+        const requestRef = doc(db, "rescueRequests", requestId);
+        const request = await transaction.get(requestRef);
+        if (!request.exists() || request.data().status !== "searching") {
+          throw new Error("This request is no longer available.");
+        }
+        transaction.update(requestRef, {
+          status: "accepted",
+          bikerId: biker.uid,
+          bikerName: biker.displayName || "Biker",
+          acceptedAt: serverTimestamp(),
+        });
+      });
+      router.replace({ pathname: "/(biker)/navigation", params: { requestId } });
+    } catch (error) {
+      console.error("Could not accept request", error);
+      router.back();
+    }
   };
 
   const handleDecline = () => {
@@ -111,14 +134,14 @@ export default function IncomingRequestScreen() {
       setSecs((s) => {
         if (s <= 1) {
           clearInterval(t);
-          handleDecline(); // Auto-decline when timer hits 0
+          router.back(); // Auto-decline when timer hits 0
           return 0;
         }
         return s - 1;
       });
     }, 1000);
     return () => clearInterval(t);
-  }, []);
+  }, [router]);
 
   const pct = (secs / 15) * 100;
 

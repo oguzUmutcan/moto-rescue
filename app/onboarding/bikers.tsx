@@ -67,7 +67,7 @@ export default function BikerPitchScreen() {
         </Text>
         <Text className="text-[14px] text-white/55 leading-relaxed mb-6">
           Join our verified volunteer network. Go online when you have time,
-          accept requests near you, and make someone's worst day a little
+          accept requests near you, and make someone&apos;s worst day a little
           better.
         </Text>
 

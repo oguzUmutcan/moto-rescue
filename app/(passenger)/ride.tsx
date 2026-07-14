@@ -12,7 +12,7 @@ export default function PassengerRideScreen() {
   const router = useRouter();
 
   const handleCancel = () => {
-    router.replace("/(passenger)/dashboard");
+    router.replace("/(passenger)/(tabs)/dashboard");
   };
 
   return (

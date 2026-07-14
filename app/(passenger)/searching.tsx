@@ -1,4 +1,5 @@
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { doc, onSnapshot, updateDoc } from "firebase/firestore";
 import { CheckCircle, Clock } from "lucide-react-native";
 import React, { useEffect, useState } from "react";
 import {
@@ -15,6 +16,7 @@ import Animated, {
     withRepeat,
     withTiming,
 } from "react-native-reanimated";
+import { auth, db } from "../../config/firebase";
 
 // Helper component for the pulsing dots animation
 const AnimatedDot = ({
@@ -36,7 +38,7 @@ const AnimatedDot = ({
       delay,
       withRepeat(withTiming(1, { duration: 600 }), -1, true),
     );
-  }, []);
+  }, [delay, opacity, scale]);
 
   const style = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
@@ -53,6 +55,7 @@ const AnimatedDot = ({
 
 export default function PassengerSearchingScreen() {
   const router = useRouter();
+  const { requestId } = useLocalSearchParams<{ requestId: string }>();
   const [secs, setSecs] = useState(300); // 5 minutes
   const [matched, setMatched] = useState(false);
 
@@ -67,31 +70,50 @@ export default function PassengerSearchingScreen() {
       false,
     );
 
-    // Simulate finding a biker after 7 seconds
-    const matchTimer = setTimeout(() => setMatched(true), 7000);
-
     // Countdown Timer
     const countdownTimer = setInterval(() => {
       setSecs((s) => (s > 0 ? s - 1 : 0));
     }, 1000);
 
     return () => {
-      clearTimeout(matchTimer);
       clearInterval(countdownTimer);
     };
-  }, []);
+  }, [rotation]);
+
+  useEffect(() => {
+    if (!requestId || !auth.currentUser) {
+      router.replace("/(passenger)/(tabs)/dashboard");
+      return;
+    }
+    return onSnapshot(doc(db, "rescueRequests", requestId), (snapshot) => {
+      if (!snapshot.exists()) {
+        router.replace("/(passenger)/(tabs)/dashboard");
+        return;
+      }
+      const status = snapshot.data().status;
+      setMatched(status === "accepted" || status === "arriving" || status === "active");
+      if (status === "cancelled" || status === "expired") {
+        router.replace("/(passenger)/(tabs)/dashboard");
+      }
+    });
+  }, [requestId, router]);
 
   const animatedSpin = useAnimatedStyle(() => ({
     transform: [{ rotate: `${rotation.value}deg` }],
   }));
 
-  const handleCancel = () => {
-    router.replace("/(passenger)/dashboard");
+  const handleCancel = async () => {
+    if (requestId) {
+      await updateDoc(doc(db, "rescueRequests", requestId), {
+        status: "cancelled",
+      });
+    }
+    router.replace("/(passenger)/(tabs)/dashboard");
   };
 
   const handleMatch = () => {
     // Navigate to the Active Ride map!
-    router.replace("/(passenger)/ride");
+    router.replace({ pathname: "/(passenger)/ride", params: { requestId } });
   };
 
   const m = Math.floor(secs / 60);

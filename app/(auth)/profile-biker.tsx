@@ -20,10 +20,12 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import * as ImagePicker from "expo-image-picker";
 
 // --- FIREBASE IMPORTS ---
 import { doc, getDoc, updateDoc } from "firebase/firestore";
-import { auth, db } from "../../config/firebase";
+import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
+import { auth, db, storage } from "../../config/firebase";
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
@@ -95,7 +97,9 @@ export default function ProfileBikerScreen() {
           if (data.motorcycleModel) setMotorcycleModel(data.motorcycleModel);
           if (data.motorcycleColor) setMotorcycleColor(data.motorcycleColor);
           if (data.availableDays) setAvailableDays(data.availableDays);
-          if (data.hasUploadedID) setHasUploadedID(data.hasUploadedID);
+          if (data.identityDocumentStatus === "pending" || data.identityDocumentStatus === "verified") {
+            setHasUploadedID(true);
+          }
           if (data.profileEmoji) setProfileEmoji(data.profileEmoji);
         }
       }
@@ -117,7 +121,6 @@ export default function ProfileBikerScreen() {
         motorcycleModel: motorcycleModel.trim(),
         motorcycleColor: motorcycleColor.trim(),
         availableDays: availableDays,
-        hasUploadedID: hasUploadedID,
         profileEmoji: profileEmoji, // Save Emoji String
       });
 
@@ -131,8 +134,43 @@ export default function ProfileBikerScreen() {
     }
   };
 
-  const handleDocumentUpload = () => {
-    setHasUploadedID(true);
+  const handleDocumentUpload = async () => {
+    const user = auth.currentUser;
+    if (!user) return;
+
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert("Permission required", "Photo access is required to upload your license.");
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      allowsEditing: true,
+      quality: 0.8,
+    });
+    if (result.canceled) return;
+
+    setIsLoading(true);
+    try {
+      const asset = result.assets[0];
+      const response = await fetch(asset.uri);
+      const blob = await response.blob();
+      const extension = asset.fileName?.split(".").pop() || "jpg";
+      const documentRef = ref(storage, `identityDocuments/${user.uid}/license.${extension}`);
+      await uploadBytes(documentRef, blob, { contentType: asset.mimeType || "image/jpeg" });
+      const documentUrl = await getDownloadURL(documentRef);
+      await updateDoc(doc(db, "users", user.uid), {
+        identityDocumentUrl: documentUrl,
+        identityDocumentStatus: "pending",
+      });
+      setHasUploadedID(true);
+    } catch (error) {
+      console.error("Document upload failed", error);
+      Alert.alert("Upload failed", "The document could not be uploaded. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const toggleDay = (index: number) => {

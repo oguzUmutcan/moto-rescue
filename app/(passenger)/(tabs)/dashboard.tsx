@@ -10,18 +10,16 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import MapView, { PROVIDER_GOOGLE } from "react-native-maps";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import LocationMap from "../../../components/location-map";
+import type { LocationMapHandle, MapRegion } from "../../../components/location-map.types";
 
 export default function PassengerDashboardScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const mapRef = useRef<MapView>(null);
+  const mapRef = useRef<LocationMapHandle>(null);
 
-  const [location, setLocation] = useState<Location.LocationObject | null>(
-    null,
-  );
-  const [initialRegion, setInitialRegion] = useState<any>(null);
+  const [initialRegion, setInitialRegion] = useState<MapRegion | null>(null);
 
   // SOS Button Pulse Animation setup
   const scale1 = useRef(new Animated.Value(1)).current;
@@ -46,8 +44,6 @@ export default function PassengerDashboardScreen() {
       }
 
       let currentLoc = await Location.getCurrentPositionAsync({});
-      setLocation(currentLoc);
-
       // Calculate and set the initial region based on real GPS
       setInitialRegion({
         latitude: currentLoc.coords.latitude,
@@ -101,8 +97,6 @@ export default function PassengerDashboardScreen() {
   const handleLocateMe = async () => {
     try {
       let currentLoc = await Location.getCurrentPositionAsync({});
-      setLocation(currentLoc);
-
       // Animate the camera back to the user's location smoothly
       mapRef.current?.animateToRegion(
         {
@@ -130,12 +124,8 @@ export default function PassengerDashboardScreen() {
     >
       {/* MAP LAYER */}
       {initialRegion ? (
-        <MapView
+        <LocationMap
           ref={mapRef}
-          style={StyleSheet.absoluteFillObject}
-          provider={PROVIDER_GOOGLE}
-          showsUserLocation={true}
-          showsMyLocationButton={false}
           initialRegion={initialRegion}
         />
       ) : (

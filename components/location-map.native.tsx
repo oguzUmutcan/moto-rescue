@@ -1,0 +1,27 @@
+import React, { forwardRef, useImperativeHandle, useRef } from "react";
+import { StyleSheet } from "react-native";
+import MapView, { PROVIDER_GOOGLE } from "react-native-maps";
+import type { LocationMapHandle, LocationMapProps } from "./location-map.types";
+
+const LocationMap = forwardRef<LocationMapHandle, LocationMapProps>(
+  ({ initialRegion }, ref) => {
+    const mapRef = useRef<MapView>(null);
+    useImperativeHandle(ref, () => ({
+      animateToRegion: (region, duration) => mapRef.current?.animateToRegion(region, duration),
+    }));
+
+    return (
+      <MapView
+        ref={mapRef}
+        style={StyleSheet.absoluteFillObject}
+        provider={PROVIDER_GOOGLE}
+        showsUserLocation
+        showsMyLocationButton={false}
+        initialRegion={initialRegion}
+      />
+    );
+  },
+);
+
+LocationMap.displayName = "LocationMap";
+export default LocationMap;

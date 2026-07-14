@@ -1,7 +1,7 @@
 // Note: This code is strictly for the Expo React Native environment.
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useRouter } from "expo-router";
 import { ArrowLeft, Edit2, Phone, User } from "lucide-react-native";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Alert, StatusBar, Text, TouchableOpacity, View } from "react-native";
 
 // --- CENTRAL FIREBASE IMPORTS ---
@@ -9,28 +9,25 @@ import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { doc, serverTimestamp, setDoc } from "firebase/firestore";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { auth, db } from "../../config/firebase";
+import { useRegistration } from "../../contexts/registration";
 
 export default function ConfirmPhoneScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams();
   const [isLoading, setIsLoading] = useState(false);
+  const { draft, clearDraft } = useRegistration();
+  const insets = useSafeAreaInsets();
 
-  // Retrieve data passed from previous registration screen
-  const phone = Array.isArray(params.phone)
-    ? params.phone[0]
-    : params.phone || "Not provided";
-  const dialCode = Array.isArray(params.dialCode)
-    ? params.dialCode[0]
-    : params.dialCode || "+90";
-  const name = Array.isArray(params.name)
-    ? params.name[0]
-    : params.name || "User";
-  const email = Array.isArray(params.email)
-    ? params.email[0]
-    : params.email || "Not provided";
-  const password = Array.isArray(params.password)
-    ? params.password[0]
-    : params.password || "Not provided";
+  useEffect(() => {
+    if (!draft) {
+      router.replace("/(auth)/register");
+    }
+  }, [draft, router]);
+
+  if (!draft) {
+    return null;
+  }
+
+  const { phone, dialCode, name, email, password } = draft;
 
   const handleConfirm = async () => {
     setIsLoading(true);
@@ -60,7 +57,8 @@ export default function ConfirmPhoneScreen() {
       console.log("✅ User created in Auth & Firestore successfully!");
 
       // 4. Navigate to Role Selection
-      router.push("/(auth)/profile-select");
+      clearDraft();
+      router.replace("/(auth)/profile-select");
     } catch (error: any) {
       console.error("Registration Error:", error);
       Alert.alert("Registration Failed", error.message);
@@ -68,8 +66,6 @@ export default function ConfirmPhoneScreen() {
       setIsLoading(false);
     }
   };
-
-  const insets = useSafeAreaInsets();
 
   return (
     <View

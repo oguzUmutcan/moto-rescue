@@ -18,7 +18,7 @@ export default function BikerNavigationScreen() {
   const handleAction = () => {
     if (isPickup)
       setPhase("dest"); // Change UI to green when passenger gets on
-    else router.replace("/(biker)/dashboard"); // Finish ride
+    else router.replace("/(biker)/(tabs)/dashboard"); // Finish ride
   };
 
   return (

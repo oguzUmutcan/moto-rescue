@@ -16,6 +16,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { COUNTRIES } from "../../constants/countries";
+import { useRegistration } from "../../contexts/registration";
 
 export default function RegisterScreen() {
   const [name, setName] = useState("");
@@ -25,8 +26,8 @@ export default function RegisterScreen() {
 
   const [selectedCountry, setSelectedCountry] = useState(COUNTRIES[0]);
   const [isModalVisible, setIsModalVisible] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const { setDraft } = useRegistration();
 
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -35,16 +36,14 @@ export default function RegisterScreen() {
     name && email && password && phone.length >= selectedCountry.minLength;
 
   const pushToVerifyCreds = () => {
-    router.push({
-      pathname: "/(auth)/verify-creds",
-      params: {
-        phone,
-        dialCode: selectedCountry.dialCode,
-        name,
-        email,
-        password,
-      },
+    setDraft({
+      phone,
+      dialCode: selectedCountry.dialCode,
+      name: name.trim(),
+      email: email.trim().toLowerCase(),
+      password,
     });
+    router.push("/(auth)/verify-creds");
   };
 
   const renderCountryItem = ({ item }: { item: (typeof COUNTRIES)[0] }) => (
@@ -176,12 +175,12 @@ export default function RegisterScreen() {
 
         <TouchableOpacity
           onPress={pushToVerifyCreds}
-          disabled={isLoading || !isFormValid}
+          disabled={!isFormValid}
           activeOpacity={0.8}
           className={`w-full h-14 rounded-2xl items-center justify-center mb-10 ${isFormValid ? "bg-[#007AFF]" : "bg-[#007AFF]/50"}`}
         >
           <Text className="text-white text-[17px] font-extrabold">
-            {isLoading ? "Creating..." : "Create Account"}
+            Create Account
           </Text>
         </TouchableOpacity>
       </ScrollView>

@@ -2,34 +2,38 @@ import * as Location from "expo-location";
 import { useRouter } from "expo-router";
 import * as SecureStore from "expo-secure-store";
 import { onAuthStateChanged } from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore";
+import { collection, doc, getDoc, limit, onSnapshot, query, where } from "firebase/firestore";
 import { Navigation2 } from "lucide-react-native";
 import React, { useEffect, useRef, useState } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import MapView, { PROVIDER_GOOGLE } from "react-native-maps";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { auth, db } from "../../../config/firebase";
+import LocationMap from "../../../components/location-map";
+import type { LocationMapHandle, MapRegion } from "../../../components/location-map.types";
 
 export default function BikerDashboardScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const mapRef = useRef<MapView>(null);
+  const mapRef = useRef<LocationMapHandle>(null);
 
   const [online, setOnline] = useState(true);
   const [name, setName] = useState("Loading...");
+  const [pendingRequestId, setPendingRequestId] = useState<string | null>(null);
 
   // ADD NEW STATES FOR STATS
   const [todayRescues, setTodayRescues] = useState("0");
   const [rating, setRating] = useState("5.0");
   const [totalRescues, setTotalRescues] = useState("0");
 
-  const [location, setLocation] = useState<Location.LocationObject | null>(
-    null,
-  );
-  const [initialRegion, setInitialRegion] = useState<any>(null);
+  const [initialRegion, setInitialRegion] = useState<MapRegion | null>(null);
 
   const handleSimulateIncoming = () => {
-    router.push("/(biker)/incoming");
+    if (pendingRequestId) {
+      router.push({
+        pathname: "/(biker)/incoming",
+        params: { requestId: pendingRequestId },
+      });
+    }
   };
 
   const handleToggleOnline = async () => {
@@ -46,8 +50,6 @@ export default function BikerDashboardScreen() {
   const handleLocateMe = async () => {
     try {
       let currentLoc = await Location.getCurrentPositionAsync({});
-      setLocation(currentLoc);
-
       mapRef.current?.animateToRegion(
         {
           latitude: currentLoc.coords.latitude,
@@ -78,6 +80,21 @@ export default function BikerDashboardScreen() {
     };
     loadOnlineStatus();
   }, []);
+
+  useEffect(() => {
+    if (!online) {
+      setPendingRequestId(null);
+      return;
+    }
+    const openRequests = query(
+      collection(db, "rescueRequests"),
+      where("status", "==", "searching"),
+      limit(1),
+    );
+    return onSnapshot(openRequests, (snapshot) => {
+      setPendingRequestId(snapshot.docs[0]?.id ?? null);
+    });
+  }, [online]);
 
   // 2. Fetch User Data
   useEffect(() => {
@@ -125,8 +142,6 @@ export default function BikerDashboardScreen() {
       }
 
       let currentLoc = await Location.getCurrentPositionAsync({});
-      setLocation(currentLoc);
-
       // Calculate and set the initial region based on real GPS
       setInitialRegion({
         latitude: currentLoc.coords.latitude,
@@ -144,12 +159,8 @@ export default function BikerDashboardScreen() {
     >
       {/* MAP LAYER */}
       {initialRegion ? (
-        <MapView
+        <LocationMap
           ref={mapRef}
-          style={StyleSheet.absoluteFillObject}
-          provider={PROVIDER_GOOGLE}
-          showsUserLocation={true}
-          showsMyLocationButton={false}
           initialRegion={initialRegion}
         />
       ) : (
@@ -269,13 +280,16 @@ export default function BikerDashboardScreen() {
                 Online · Accepting requests
               </Text>
               <Text className="text-[12px] text-[#34C759] font-bold mt-0.5">
-                3 passengers in your area
+                {pendingRequestId
+                  ? "A passenger needs help nearby"
+                  : "Waiting for nearby requests"}
               </Text>
             </View>
           </View>
 
           <TouchableOpacity
             onPress={handleSimulateIncoming}
+            disabled={!pendingRequestId}
             activeOpacity={0.8}
             className="w-full h-12 rounded-xl bg-[#FF9500] items-center justify-center shadow-sm"
           >

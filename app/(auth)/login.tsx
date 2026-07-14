@@ -210,7 +210,7 @@ export default function LoginScreen() {
 
           <View className="flex-row justify-center mt-auto mb-4 pt-6">
             <Text className="text-[#8E8E93] text-[15px]">
-              Don't have an account?{" "}
+              Don&apos;t have an account?{" "}
             </Text>
             <TouchableOpacity onPress={() => router.push("/(auth)/register")}>
               <Text className="text-[#007AFF] text-[15px] font-bold">
