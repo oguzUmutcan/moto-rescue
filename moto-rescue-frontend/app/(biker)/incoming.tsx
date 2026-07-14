@@ -3,13 +3,14 @@ import React, { useEffect, useState } from "react";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { AlertCircle, MapPin, Star } from "lucide-react-native";
 import {
+  Alert,
   StyleSheet,
   Text,
   TouchableOpacity,
   View
 } from "react-native";
 import { auth } from "../../config/firebase";
-import { rescueApi } from "../../api/rescues";
+import { rescueApi, RescueRequest } from "../../api/rescues";
 
 // --- Minimal Map Background ---
 function MapBg() {
@@ -98,7 +99,18 @@ function HomeBar() {
 export default function IncomingRequestScreen() {
   const router = useRouter();
   const { requestId } = useLocalSearchParams<{ requestId: string }>();
-  const [secs, setSecs] = useState(15);
+  const [secs, setSecs] = useState(30);
+  const [request, setRequest] = useState<RescueRequest | null>(null);
+
+  useEffect(() => {
+    if (!requestId) return;
+    rescueApi.get(requestId)
+      .then(setRequest)
+      .catch((error) => {
+        console.error("Could not load rescue request", error);
+        router.back();
+      });
+  }, [requestId, router]);
 
   const handleAccept = async () => {
     const biker = auth.currentUser;
@@ -107,8 +119,7 @@ export default function IncomingRequestScreen() {
       await rescueApi.accept(requestId);
       router.replace({ pathname: "/(biker)/navigation", params: { requestId } });
     } catch (error) {
-      console.error("Could not accept request", error);
-      router.back();
+      Alert.alert("Could not accept request", error instanceof Error ? error.message : "Please try again");
     }
   };
 
@@ -131,7 +142,7 @@ export default function IncomingRequestScreen() {
     return () => clearInterval(t);
   }, [router]);
 
-  const pct = (secs / 15) * 100;
+  const pct = (secs / 30) * 100;
 
   return (
     <View style={{ flex: 1, backgroundColor: "#0A0F1E" }}>
@@ -257,7 +268,7 @@ export default function IncomingRequestScreen() {
                       color: "#1C1C1E",
                     }}
                   >
-                    Yacine B.
+                    {request?.passengerName ?? "Passenger"}
                   </Text>
                   <View
                     style={{
@@ -291,7 +302,7 @@ export default function IncomingRequestScreen() {
                       color: "#FF3B30",
                     }}
                   >
-                    🎓 EXAM
+                    {request?.urgency ?? "URGENT"}
                   </Text>
                 </View>
               </View>
@@ -325,7 +336,7 @@ export default function IncomingRequestScreen() {
                       color: "#1C1C1E",
                     }}
                   >
-                    Rue Didouche Mourad
+                    {request ? `${request.latitude.toFixed(5)}, ${request.longitude.toFixed(5)}` : "Loading pickup..."}
                   </Text>
                 </View>
                 <Text
@@ -372,7 +383,7 @@ export default function IncomingRequestScreen() {
                       color: "#1C1C1E",
                     }}
                   >
-                    Faculté de Droit, Ben Aknoun
+                    {request?.destinationLabel ?? "Loading destination..."}
                   </Text>
                 </View>
                 <Text
@@ -403,7 +414,7 @@ export default function IncomingRequestScreen() {
               <Text
                 style={{ fontSize: 13, color: "#FF3B30", fontWeight: "700" }}
               >
-                Exam in 35 min · Needs helmet
+                {request?.urgency ?? "Urgent request"} · {request?.needsHelmet ? "Needs helmet" : "Helmet not requested"}
               </Text>
             </View>
 

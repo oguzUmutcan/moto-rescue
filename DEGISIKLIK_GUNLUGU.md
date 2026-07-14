@@ -500,6 +500,40 @@ Formun scroll alanı Android klavyesine göre yeniden boyutlandırılmıyordu. A
 
 Adres önerisinde reverse-geocode sonucu ana etiket yapıldığı için `Erasta AVM` gibi bir place araması seçildiğinde textbox'a işletme/yer adı yerine uzun açık adres yazılıyordu. Aranan ifade artık place adı olarak korunuyor ve önerinin ana satırında gösteriliyor; açık adres yalnızca aynı isimli sonuçları ayırt etmek için ikinci satırda yardımcı bilgi olarak sunuluyor. Öneri seçildiğinde textbox ve rescue kaydında place adı kalıyor, koordinat ise seçilen sonuca ait oluyor.
 
+## 14 Temmuz 2026 — Biker onay ekranının otomatik açılması
+
+### Sorun neydi?
+
+Biker dashboard backend'deki açık rescue isteğini algılıyor ve “A passenger needs help nearby” yazısını gösteriyordu fakat incoming/onay ekranı açılmıyordu. Ekrandaki işlem düğmesi de hâlâ prototipten kalan “Simulate Incoming Request” metnini taşıyordu. Incoming ekranındaki yolcu ve rota bilgileri sabit örnek veriydi.
+
+### Neden bu sorun çıktı?
+
+Polling sonucu yalnızca `pendingRequestId` state'ine yazılmıştı. Incoming route'una yönlendirme sadece manuel simülasyon düğmesinin `onPress` fonksiyonunda bulunuyordu; yeni istek algılanmasına bağlı bir yönlendirme yoktu.
+
+### Çözüm yöntemi neler?
+
+- Yeni bir request ID ilk kez görüldüğünde incoming ekranını otomatik açmak.
+- Polling devam ederken aynı ekranın tekrar tekrar açılmasını request ID ile engellemek.
+- Manuel tekrar görüntüleme düğmesini korumak.
+- Incoming ekranında rescue detayını API'den getirip gerçek veriyi göstermek.
+
+### Nasıl Çözüldü?
+
+- Dashboard polling akışı yeni request ID için `/(biker)/incoming` route'una otomatik yönlendirme yapıyor.
+- Son gösterilen ID ref içinde tutulduğu için aynı istek yalnızca bir kez otomatik açılıyor.
+- Düğme adı `View Rescue Request` olarak değiştirildi ve manuel yeniden açma davranışı korundu.
+- Incoming ekranı `/api/rescues/{requestId}` üzerinden gerçek yolcu adı, pickup koordinatı, destination place adı, urgency ve helmet ihtiyacını gösteriyor.
+- Kabul süresi daha kullanılabilir olması için 15 saniyeden 30 saniyeye çıkarıldı.
+- Kabul hataları ekranı sessizce kapatmak yerine kullanıcıya gerçek API hata mesajını gösteriyor.
+
+### Test ve doğrulama
+
+```text
+npx tsc --noEmit  başarılı
+npm run lint      başarılı — 0 hata, 0 uyarı
+git diff --check  başarılı
+```
+
 ### Test ve doğrulama
 
 ```text

@@ -16,6 +16,7 @@ export default function BikerDashboardScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const mapRef = useRef<LocationMapHandle>(null);
+  const presentedRequestId = useRef<string | null>(null);
 
   const [online, setOnline] = useState(true);
   const [name, setName] = useState("Loading...");
@@ -91,7 +92,14 @@ export default function BikerDashboardScreen() {
     const refresh = async () => {
       try {
         const requests = await rescueApi.open();
-        if (active) setPendingRequestId(requests[0]?.id ?? null);
+        const nextRequestId = requests[0]?.id ?? null;
+        if (active) {
+          setPendingRequestId(nextRequestId);
+          if (nextRequestId && presentedRequestId.current !== nextRequestId) {
+            presentedRequestId.current = nextRequestId;
+            router.push({ pathname: "/(biker)/incoming", params: { requestId: nextRequestId } });
+          }
+        }
       } catch (error) {
         console.error("Could not load open rescue requests", error);
       }
@@ -102,7 +110,7 @@ export default function BikerDashboardScreen() {
       active = false;
       clearInterval(timer);
     };
-  }, [online]);
+  }, [online, router]);
 
   // 2. Fetch User Data
   useEffect(() => {
@@ -301,7 +309,7 @@ export default function BikerDashboardScreen() {
             className="w-full h-12 rounded-xl bg-[#FF9500] items-center justify-center shadow-sm"
           >
             <Text className="text-white text-[15px] font-bold">
-              🔔 Simulate Incoming Request
+              🔔 View Rescue Request
             </Text>
           </TouchableOpacity>
         </View>
