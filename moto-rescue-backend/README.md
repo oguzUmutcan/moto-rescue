@@ -21,6 +21,7 @@ In Google Cloud deployments, attach a least-privilege service account to the run
 
 ```text
 FIREBASE_ENABLED=true
+FIREBASE_PROJECT_ID=motorescue-d4abc
 SERVER_PORT=8083
 CORS_ALLOWED_ORIGINS=http://localhost:8081,http://localhost:19006
 ```

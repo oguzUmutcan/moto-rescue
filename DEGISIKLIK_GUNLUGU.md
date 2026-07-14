@@ -491,3 +491,26 @@ TCP üzerinde aynı IP ve port birleşimini aynı anda yalnızca bir süreç din
 - Gerektiğinde `SERVER_PORT` environment değişkeniyle farklı port kullanılabilmesi sağlandı.
 - Frontend'in web/iOS, Android emulator ve örnek environment API adresleri `8083` olarak güncellendi.
 - Backend README yapılandırma bilgisi yeni portu gösterecek şekilde düzeltildi.
+
+## 14 Temmuz 2026 — Firebase Admin proje kimliğinin açıkça yapılandırılması
+
+### Sorun neydi?
+
+Application Default Credentials oluşturulduktan sonra backend kimlik bilgisini bulabiliyor, fakat Firestore istemcisi hangi Google Cloud/Firebase projesine bağlanacağını belirleyemediği için uygulama başlangıcı duruyordu.
+
+### Neden bu sorun çıktı?
+
+`gcloud config set project` yalnızca gcloud CLI'ın aktif yapılandırmasını değiştirir. Firebase Admin SDK tarafından okunan Application Default Credentials dosyasının her türü proje ID bilgisini doğrudan taşımaz. Bu nedenle geçerli kimlik bilgisi bulunmasına rağmen Firestore için ayrıca proje ID gerekir.
+
+### Çözüm yöntemi neler?
+
+- Her terminal oturumunda `GOOGLE_CLOUD_PROJECT` environment değişkenini tanımlamak.
+- Service account kimliği kullanarak proje bilgisinin credential üzerinden gelmesini sağlamak.
+- Proje ID'sini uygulama yapılandırmasından `FirebaseOptions` nesnesine açıkça aktarmak.
+
+### Nasıl Çözüldü?
+
+- `firebase.project-id` ayarı eklendi ve varsayılan değer `motorescue-d4abc` olarak tanımlandı.
+- Ayar sırasıyla `FIREBASE_PROJECT_ID`, `GOOGLE_CLOUD_PROJECT` veya varsayılan proje ID değerinden okunacak şekilde yapılandırıldı.
+- `FirebaseConfig`, proje ID'sini `FirebaseOptions.setProjectId` ile Admin SDK'ya açıkça iletiyor.
+- README içine `FIREBASE_PROJECT_ID` yapılandırması eklendi.

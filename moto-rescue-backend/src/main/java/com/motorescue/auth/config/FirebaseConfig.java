@@ -8,24 +8,26 @@ import com.google.firebase.cloud.FirestoreClient;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.beans.factory.annotation.Value;
 
 @Configuration
 @ConditionalOnProperty(name = "firebase.enabled", havingValue = "true", matchIfMissing = true)
 public class FirebaseConfig {
 
     @Bean
-    public FirebaseApp firebaseApp() {
+    public FirebaseApp firebaseApp(@Value("${firebase.project-id}") String projectId) {
         if (!FirebaseApp.getApps().isEmpty()) {
             return FirebaseApp.getInstance();
         }
         try {
             FirebaseOptions options = FirebaseOptions.builder()
                     .setCredentials(GoogleCredentials.getApplicationDefault())
+                    .setProjectId(projectId)
                     .build();
             return FirebaseApp.initializeApp(options);
         } catch (Exception exception) {
             throw new IllegalStateException(
-                    "Firebase Admin SDK initialization failed. Configure Application Default Credentials.",
+                    "Firebase Admin SDK initialization failed. Configure credentials and the Firebase project ID.",
                     exception
             );
         }
