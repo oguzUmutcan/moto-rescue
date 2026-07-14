@@ -466,6 +466,40 @@ npm run lint         başarılı — 0 hata, 0 uyarı
 git diff --check     başarılı
 ```
 
+## 14 Temmuz 2026 — Adres önerileri ve haritadan konum seçimi
+
+### Sorun neydi?
+
+Destination metin alanı klavye açıldığında ekranın altında kalabiliyordu. Ayrıca kullanıcı pickup veya destination için adresin tamamını kendisi yazmak zorundaydı; arama önerisi ya da haritada nokta seçme seçeneği bulunmuyordu.
+
+### Neden bu sorun çıktı?
+
+Formun scroll alanı Android klavyesine göre yeniden boyutlandırılmıyordu. Adres alanları yalnızca submit sırasında geocode ediliyor, yazma sırasında sonuç üretilmiyordu. Ortak harita bileşeni de dokunma koordinatı ve seçili marker desteğine sahip değildi.
+
+### Çözüm yöntemi neler?
+
+- Keyboard-aware form yüksekliği ve otomatik scroll kullanmak.
+- Kullanıcı yazarken debounce ile geocoding çalıştırıp reverse geocoding sonucunu öneri olarak göstermek.
+- Her konum alanına harita seçimi eklemek.
+- Harita dokunuşunu koordinat olarak alıp marker göstermek ve seçimi okunabilir adrese çevirmek.
+
+### Nasıl Çözüldü?
+
+- Android'de `KeyboardAvoidingView` height davranışı, iOS'ta padding davranışı etkinleştirildi; ScrollView klavye inset'lerini otomatik ayarlıyor.
+- Üç karakterden sonra 550 ms debounce ile en fazla beş konum sonucu aranıyor ve yinelenen sonuçlar eleniyor.
+- Öneriye dokunulduğunda hem adres etiketi hem koordinat saklanıyor; submit sırasında tekrar belirsiz arama yapılmıyor.
+- Pickup ve destination alanlarına harita butonu eklendi.
+- Tam ekran harita seçiminde kullanıcı istediği noktaya dokunabiliyor, marker ile seçimi görüyor ve `Use this location` ile onaylıyor.
+- Ortak native harita bileşeni seçili koordinat, marker ve harita dokunma callback'i destekleyecek şekilde genişletildi.
+
+### Test ve doğrulama
+
+```text
+npx tsc --noEmit  başarılı
+npm run lint      başarılı — 0 hata, 0 uyarı
+git diff --check  başarılı
+```
+
 Frontend kaynaklarında doğrudan Firestore veya Firebase Storage çağrısı kalmadığı doğrulandı. Çalışma `feat/backend-api-consolidation` branch'inde yapıldı.
 
 ## 14 Temmuz 2026 — Backend portunun 8083'e taşınması
