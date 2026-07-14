@@ -100,7 +100,7 @@ export default function RegisterScreen() {
           </Text>
           <TextInput
             className="w-full h-14 bg-[#F2F2F7] rounded-[14px] px-4 text-[16px] text-[#1C1C1E] font-medium"
-            placeholder="Yacine Benamar"
+            placeholder="Type your full name"
             placeholderTextColor="#C7C7CC"
             value={name}
             onChangeText={setName}
