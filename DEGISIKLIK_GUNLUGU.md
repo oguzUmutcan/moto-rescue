@@ -492,6 +492,10 @@ Formun scroll alanı Android klavyesine göre yeniden boyutlandırılmıyordu. A
 - Tam ekran harita seçiminde kullanıcı istediği noktaya dokunabiliyor, marker ile seçimi görüyor ve `Use this location` ile onaylıyor.
 - Ortak native harita bileşeni seçili koordinat, marker ve harita dokunma callback'i destekleyecek şekilde genişletildi.
 
+### Ek düzeltme — Android klavye yüksekliğinin doğrudan uygulanması
+
+İlk keyboard-aware düzen bazı Android cihazlarda transparent modal pencerenin yeniden boyutlandırılmaması nedeniyle yeterli olmadı. Klavyenin gerçek yüksekliği `keyboardDidShow` olayıyla ölçülüp formun alt boşluğuna doğrudan uygulanarak bottom sheet klavyenin üzerine taşındı. Görünür form yüksekliği ekran yüksekliği eksi klavye yüksekliği olarak sınırlandı ve destination odaklandığında ScrollView ilgili alana programatik olarak kaydırılıyor. Standalone Android build'leri için `softwareKeyboardLayoutMode: resize` da etkinleştirildi.
+
 ### Test ve doğrulama
 
 ```text

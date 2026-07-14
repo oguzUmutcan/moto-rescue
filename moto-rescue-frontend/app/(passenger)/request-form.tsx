@@ -1,10 +1,10 @@
 import * as Location from "expo-location";
 import { useRouter } from "expo-router";
 import { ChevronDown, LocateFixed, Map, MapPin, X, Zap } from "lucide-react-native";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator, Alert,
-  KeyboardAvoidingView,
+  Dimensions, Keyboard, KeyboardAvoidingView,
   Modal, Platform,
   ScrollView,
   Switch,
@@ -86,8 +86,19 @@ export default function RequestFormScreen() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [mapTarget, setMapTarget] = useState<"pickup" | "destination" | null>(null);
   const [mapSelection, setMapSelection] = useState<Coordinates | null>(null);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const formScrollRef = useRef<ScrollView>(null);
   const pickupSearch = useAddressSuggestions(manualPickup, manualPickupCoordinates === null);
   const destinationSearch = useAddressSuggestions(destination, destinationCoordinates === null);
+
+  useEffect(() => {
+    if (Platform.OS !== "android") return;
+    const show = Keyboard.addListener("keyboardDidShow", (event) => {
+      setKeyboardHeight(event.endCoordinates.height);
+    });
+    const hide = Keyboard.addListener("keyboardDidHide", () => setKeyboardHeight(0));
+    return () => { show.remove(); hide.remove(); };
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -187,8 +198,15 @@ export default function RequestFormScreen() {
   };
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} className="flex-1 justify-end bg-black/40">
-      <View className="bg-white rounded-t-[24px] pt-3 px-5 pb-8 shadow-2xl max-h-[92%]">
+    <KeyboardAvoidingView
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      className="flex-1 justify-end bg-black/40"
+      style={{ paddingBottom: Platform.OS === "android" ? keyboardHeight : 0 }}
+    >
+      <View
+        className="bg-white rounded-t-[24px] pt-3 px-5 pb-8 shadow-2xl"
+        style={{ maxHeight: keyboardHeight > 0 ? Dimensions.get("window").height - keyboardHeight - 20 : "92%" }}
+      >
         <View className="w-9 h-1 rounded-full bg-[#D1D1D6] self-center mb-4" />
         <View className="flex-row items-center justify-between mb-4">
           <Text className="text-[21px] font-black text-[#1C1C1E]">Request a Rescue 🚨</Text>
@@ -197,7 +215,7 @@ export default function RequestFormScreen() {
           </TouchableOpacity>
         </View>
 
-        <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} automaticallyAdjustKeyboardInsets contentContainerStyle={{ paddingBottom: 12 }}>
+        <ScrollView ref={formScrollRef} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} automaticallyAdjustKeyboardInsets contentContainerStyle={{ paddingBottom: 12 }}>
           <Text className="text-[11px] font-bold text-[#8E8E93] tracking-widest uppercase mb-1.5">Pickup</Text>
           <View className="flex-row gap-2 mb-2">
             <TouchableOpacity onPress={() => setPickupMode("current")} className={`flex-1 rounded-xl px-3 py-3 flex-row items-center ${pickupMode === "current" ? "bg-[#007AFF]" : "bg-[#F2F2F7]"}`}>
@@ -233,7 +251,14 @@ export default function RequestFormScreen() {
           <Text className="text-[11px] font-bold text-[#8E8E93] tracking-widest uppercase mb-1.5">Destination</Text>
           <View className="flex-row items-center bg-[#F2F2F7] rounded-xl px-3.5 border border-[#D1D1D6]">
             <MapPin size={16} color="#FF3B30" />
-            <TextInput value={destination} onChangeText={(text) => { setDestination(text); setDestinationCoordinates(null); }} placeholder="Search destination" returnKeyType="search" className="flex-1 px-2.5 py-3.5 text-[#1C1C1E]" />
+            <TextInput
+              value={destination}
+              onChangeText={(text) => { setDestination(text); setDestinationCoordinates(null); }}
+              onFocus={() => setTimeout(() => formScrollRef.current?.scrollTo({ y: 210, animated: true }), 250)}
+              placeholder="Search destination"
+              returnKeyType="search"
+              className="flex-1 px-2.5 py-3.5 text-[#1C1C1E]"
+            />
             {destinationSearch.loading && <ActivityIndicator size="small" color="#007AFF" />}
             <TouchableOpacity onPress={() => openMap("destination")} className="ml-1 p-2"><Map size={19} color="#007AFF" /></TouchableOpacity>
           </View>
