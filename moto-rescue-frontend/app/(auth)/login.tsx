@@ -37,11 +37,16 @@ export default function LoginScreen() {
   const [resetEmail, setResetEmail] = useState("");
 
   const handleLogin = async () => {
-    if (!email.trim() || !password.trim()) {
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!normalizedEmail || !password) {
       Alert.alert(
         "Missing Fields",
         "Please enter both your email and password.",
       );
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+      Alert.alert("Invalid Email", "Enter a complete email address such as biker@example.com.");
       return;
     }
 
@@ -51,7 +56,7 @@ export default function LoginScreen() {
     try {
       await signInWithEmailAndPassword(
         auth,
-        email.trim(),
+        normalizedEmail,
         password,
       );
       const userData = await userApi.get();
@@ -69,7 +74,6 @@ export default function LoginScreen() {
         router.replace("/(auth)/profile-select");
       }
     } catch (error: any) {
-      console.error("Login Error:", error);
       let friendlyError = "An error occurred during login.";
 
       if (
@@ -77,7 +81,7 @@ export default function LoginScreen() {
         error.code === "auth/wrong-password" ||
         error.code === "auth/invalid-credential"
       ) {
-        friendlyError = "Incorrect email or password.";
+        friendlyError = "No account matches this email and password. Check the biker account credentials or reset its password.";
       } else if (error.code === "auth/invalid-email") {
         friendlyError = "Please enter a valid email address.";
       } else if (error instanceof Error) {

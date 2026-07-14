@@ -466,6 +466,42 @@ npm run lint         başarılı — 0 hata, 0 uyarı
 git diff --check     başarılı
 ```
 
+## 14 Temmuz 2026 — Google Maps turn-by-turn rota ve login doğrulaması
+
+### Sorun neydi?
+
+Biker ekranında pickup ve destination haritada marker olarak görünse de sürücünün mevcut konumundan hedefe gerçek yol tarifi başlatılamıyordu. Emülatör login denemelerinde de hatalı e-posta biçimi `auth/invalid-email`, yanlış hesap/şifre ise `auth/invalid-credential` olarak Firebase stack trace üretiyordu.
+
+### Neden bu sorun çıktı?
+
+Uygulama içindeki MapView yalnızca hedefi görselleştiriyordu; Google Maps navigasyonuna deep link bağlantısı kurulmamıştı. Login formu e-posta biçimini Firebase çağrısından önce doğrulamıyor ve beklenen kullanıcı hatalarını console error olarak yazıyordu.
+
+### Çözüm yöntemi neler?
+
+- Aktif hedef koordinatını Google Maps navigation URI ile açmak.
+- Google Maps uygulaması bulunmadığında web directions URL'ine düşmek.
+- Pickup ve destination aşamalarında aynı düğmenin farklı aktif hedefi kullanmasını sağlamak.
+- E-postayı trim/lowercase ile normalize edip Firebase öncesi biçim doğrulaması yapmak.
+- Yanlış credential durumunda biker hesabına özel anlaşılır mesaj göstermek.
+
+### Nasıl Çözüldü?
+
+- Biker navigasyonuna `Open in Google Maps` düğmesi eklendi.
+- `accepted` aşamasında route destination olarak passenger pickup koordinatı kullanılıyor.
+- `in_progress` aşamasında aynı düğme rescue destination koordinatına rota başlatıyor.
+- Android'de `google.navigation:q=<lat>,<lng>&mode=d`, iOS'ta Google Maps scheme kullanılıyor; uygulama açılamazsa Google Maps web directions fallback'i devreye giriyor.
+- Login e-postası küçük harfe çevriliyor ve eksik/bozuk biçim Firebase'e gönderilmeden reddediliyor.
+- `invalid-credential` artık biker e-posta/şifresini veya password reset seçeneğini kontrol etmeyi söyleyen açık mesaj gösteriyor.
+- Beklenen credential hatası console'a gereksiz stack trace olarak yazılmıyor.
+
+### Test ve doğrulama
+
+```text
+npx tsc --noEmit  başarılı
+npm run lint      başarılı — 0 hata, 0 uyarı
+git diff --check  başarılı
+```
+
 ## 14 Temmuz 2026 — Adres önerileri ve haritadan konum seçimi
 
 ### Sorun neydi?

@@ -1,7 +1,7 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { MapPin } from "lucide-react-native";
+import { ExternalLink, MapPin } from "lucide-react-native";
 import React, { useEffect, useRef, useState } from "react";
-import { Alert, Text, TouchableOpacity, View } from "react-native";
+import { Alert, Linking, Platform, Text, TouchableOpacity, View } from "react-native";
 import { rescueApi, RescueRequest } from "../../api/rescues";
 import LocationMap from "../../components/location-map";
 import type { LocationMapHandle } from "../../components/location-map.types";
@@ -79,6 +79,24 @@ export default function BikerNavigationScreen() {
     );
   };
 
+  const openGoogleMaps = async () => {
+    if (targetLatitude === null || targetLongitude === null) return;
+    const destination = `${targetLatitude},${targetLongitude}`;
+    const nativeUrl = Platform.OS === "android"
+      ? `google.navigation:q=${destination}&mode=d`
+      : `comgooglemaps://?daddr=${destination}&directionsmode=driving`;
+    const webUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destination)}&travelmode=driving&dir_action=navigate`;
+    try {
+      if (await Linking.canOpenURL(nativeUrl)) {
+        await Linking.openURL(nativeUrl);
+      } else {
+        await Linking.openURL(webUrl);
+      }
+    } catch {
+      Alert.alert("Navigation unavailable", "Google Maps could not be opened on this device.");
+    }
+  };
+
   if (!request || targetLatitude === null || targetLongitude === null) {
     return <View className="flex-1 items-center justify-center bg-[#E5EBF0]"><Text className="font-bold text-[#8E8E93]">Loading rescue...</Text></View>;
   }
@@ -104,6 +122,10 @@ export default function BikerNavigationScreen() {
           <MapPin size={17} color={inProgress ? "#FF3B30" : "#007AFF"} />
           <View className="ml-3 flex-1"><Text className="text-[11px] text-[#8E8E93] font-bold uppercase">{inProgress ? "Destination" : "Pickup"}</Text><Text className="text-[15px] font-black text-[#1C1C1E]">{targetLabel}</Text></View>
         </View>
+        <TouchableOpacity onPress={openGoogleMaps} className="h-12 rounded-2xl border-2 border-[#4285F4] items-center justify-center flex-row mb-3">
+          <ExternalLink size={18} color="#4285F4" />
+          <Text className="text-[#4285F4] text-[16px] font-black ml-2">Open in Google Maps</Text>
+        </TouchableOpacity>
         <TouchableOpacity onPress={confirmAction} disabled={busy} className={`h-14 rounded-2xl items-center justify-center ${inProgress ? "bg-[#34C759]" : "bg-[#007AFF]"}`}>
           <Text className="text-white text-[18px] font-black">{busy ? "Updating..." : inProgress ? "✓ Complete Ride" : "🏍️ Start Ride"}</Text>
         </TouchableOpacity>
