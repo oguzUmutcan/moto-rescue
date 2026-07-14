@@ -7,6 +7,8 @@ export type RescueRequest = {
   latitude: number;
   longitude: number;
   destinationLabel: string;
+  destinationLatitude: number;
+  destinationLongitude: number;
   urgency: string;
   needsHelmet: boolean;
   status: "searching" | "accepted" | "in_progress" | "cancelled" | "completed";
@@ -23,6 +25,8 @@ type CreateRescueInput = {
   latitude: number;
   longitude: number;
   destinationLabel: string;
+  destinationLatitude: number;
+  destinationLongitude: number;
   urgency: string;
   needsHelmet: boolean;
 };

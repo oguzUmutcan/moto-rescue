@@ -41,6 +41,7 @@ public class RescueService {
         data.put("passengerName", displayName(token));
         data.put("pickup", new GeoPoint(request.latitude(), request.longitude()));
         data.put("destinationLabel", request.destinationLabel().trim());
+        data.put("destination", new GeoPoint(request.destinationLatitude(), request.destinationLongitude()));
         data.put("urgency", request.urgency().trim());
         data.put("needsHelmet", request.needsHelmet());
         data.put("status", "searching");
@@ -246,6 +247,7 @@ public class RescueService {
 
     private RescueResponse from(String id, Map<String, Object> data) {
         GeoPoint pickup = (GeoPoint) data.get("pickup");
+        GeoPoint destination = (GeoPoint) data.get("destination");
         return new RescueResponse(
                 id,
                 (String) data.get("passengerId"),
@@ -253,6 +255,8 @@ public class RescueService {
                 pickup.getLatitude(),
                 pickup.getLongitude(),
                 (String) data.get("destinationLabel"),
+                destination == null ? 0 : destination.getLatitude(),
+                destination == null ? 0 : destination.getLongitude(),
                 (String) data.get("urgency"),
                 Boolean.TRUE.equals(data.get("needsHelmet")),
                 (String) data.get("status"),

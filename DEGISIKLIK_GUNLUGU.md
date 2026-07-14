@@ -551,3 +551,40 @@ npm run lint         başarılı — 0 hata, 0 uyarı
 LAN :8083 erişimi    başarılı
 git diff --check     başarılı
 ```
+
+## 14 Temmuz 2026 — Rescue konum ve urgency seçimlerinin işlevsel hâle getirilmesi
+
+### Sorun neydi?
+
+Passenger rescue formundaki pickup ve destination alanları sabit metinlerden oluşuyordu ve kullanıcı tarafından değiştirilemiyordu. Form gönderildiğinde pickup her zaman cihaz GPS'inden yeniden alınıyor, destination ise kod içine yazılmış sabit bir ad olarak backend'e gönderiliyordu. Urgency alanına dokunulduğunda seçenek listesi açılmak yerine iki değer arasında anında geçiş yapıyordu.
+
+### Neden bu sorun çıktı?
+
+Form ilk aşamada görsel prototip olarak hazırlanmış, alanların seçim state'i ve adres çözümleme davranışı uygulanmamıştı. Backend modeli de destination için yalnızca açıklama metni saklıyor, hedef koordinatlarını taşımıyordu. Bu nedenle UI gerçek bir rota talebi üretemiyordu.
+
+### Çözüm yöntemi neler?
+
+- Pickup için mevcut GPS konumu ile manuel adres arasında açık seçim sunmak.
+- GPS koordinatını reverse geocoding ile okunabilir adrese dönüştürmek.
+- Manuel pickup ve destination adreslerini geocoding ile koordinata çevirmek.
+- Urgency alanında seçenekleri görünür bir liste olarak göstermek ve yalnızca seçilen değeri kaydetmek.
+- Destination koordinatlarını API ve Firestore modeline eklemek.
+
+### Nasıl Çözüldü?
+
+- Pickup bölümüne `My location` ve `Enter address` seçenekleri eklendi.
+- Mevcut konum seçildiğinde GPS koordinatı ve okunabilir adres gösteriliyor.
+- Manuel pickup ve destination için düzenlenebilir metin alanları eklendi; belirsiz veya bulunamayan adreslerde istek gönderilmiyor ve açıklayıcı hata gösteriliyor.
+- Urgency alanı altı seçenekli açılır listeye dönüştürüldü: akademik, sağlık, iş/görüşme, seyahat, resmi randevu ve diğer acil ihtiyaç.
+- Form gönderimi sırasında pickup ve destination koordinatları çözülüp backend'e gönderiliyor.
+- `CreateRescueRequest`, `RescueResponse` ve Firestore rescue belgesi destination koordinatlarını içerecek şekilde genişletildi.
+- Eski Firestore kayıtlarında destination koordinatı bulunmaması response dönüşümünde geriye uyumlu olarak ele alındı.
+
+### Test ve doğrulama
+
+```text
+mvnw.cmd clean test  başarılı — 5 test
+npx tsc --noEmit     başarılı
+npm run lint         başarılı — 0 hata, 0 uyarı
+git diff --check     başarılı
+```
