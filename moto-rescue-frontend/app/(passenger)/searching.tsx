@@ -1,5 +1,4 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { doc, onSnapshot, updateDoc } from "firebase/firestore";
 import { CheckCircle, Clock } from "lucide-react-native";
 import React, { useEffect, useState } from "react";
 import {
@@ -16,7 +15,8 @@ import Animated, {
     withRepeat,
     withTiming,
 } from "react-native-reanimated";
-import { auth, db } from "../../config/firebase";
+import { auth } from "../../config/firebase";
+import { rescueApi } from "../../api/rescues";
 
 // Helper component for the pulsing dots animation
 const AnimatedDot = ({
@@ -85,17 +85,25 @@ export default function PassengerSearchingScreen() {
       router.replace("/(passenger)/(tabs)/dashboard");
       return;
     }
-    return onSnapshot(doc(db, "rescueRequests", requestId), (snapshot) => {
-      if (!snapshot.exists()) {
-        router.replace("/(passenger)/(tabs)/dashboard");
-        return;
+    let active = true;
+    const refresh = async () => {
+      try {
+        const request = await rescueApi.get(requestId);
+        if (!active) return;
+        setMatched(["accepted", "arriving", "active"].includes(request.status));
+        if (request.status === "cancelled") {
+          router.replace("/(passenger)/(tabs)/dashboard");
+        }
+      } catch (error) {
+        console.error("Could not refresh rescue request", error);
       }
-      const status = snapshot.data().status;
-      setMatched(status === "accepted" || status === "arriving" || status === "active");
-      if (status === "cancelled" || status === "expired") {
-        router.replace("/(passenger)/(tabs)/dashboard");
-      }
-    });
+    };
+    void refresh();
+    const timer = setInterval(refresh, 3000);
+    return () => {
+      active = false;
+      clearInterval(timer);
+    };
   }, [requestId, router]);
 
   const animatedSpin = useAnimatedStyle(() => ({
@@ -104,9 +112,7 @@ export default function PassengerSearchingScreen() {
 
   const handleCancel = async () => {
     if (requestId) {
-      await updateDoc(doc(db, "rescueRequests", requestId), {
-        status: "cancelled",
-      });
+      await rescueApi.cancel(requestId);
     }
     router.replace("/(passenger)/(tabs)/dashboard");
   };

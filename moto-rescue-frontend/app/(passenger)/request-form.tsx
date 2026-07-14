@@ -1,10 +1,10 @@
 import { useRouter } from "expo-router";
 import * as Location from "expo-location";
-import { addDoc, collection, GeoPoint, serverTimestamp, Timestamp } from "firebase/firestore";
 import { ChevronDown, MapPin, X, Zap } from "lucide-react-native";
 import React, { useState } from "react";
 import { Alert, Platform, Switch, Text, TouchableOpacity, View } from "react-native";
-import { auth, db } from "../../config/firebase";
+import { auth } from "../../config/firebase";
+import { rescueApi } from "../../api/rescues";
 
 export default function RequestFormScreen() {
   const router = useRouter();
@@ -25,17 +25,12 @@ export default function RequestFormScreen() {
       const location = await Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.Balanced,
       });
-      const request = await addDoc(collection(db, "rescueRequests"), {
-        passengerId: user.uid,
-        passengerName: user.displayName || "Passenger",
-        pickup: new GeoPoint(location.coords.latitude, location.coords.longitude),
+      const request = await rescueApi.create({
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude,
         destinationLabel: "Faculté de Droit, Ben Aknoun",
         urgency,
         needsHelmet,
-        status: "searching",
-        bikerId: null,
-        createdAt: serverTimestamp(),
-        expiresAt: Timestamp.fromMillis(Date.now() + 5 * 60 * 1000),
       });
       router.replace({
         pathname: "/(passenger)/searching",

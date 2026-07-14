@@ -343,3 +343,75 @@ Tek repoda frontend ve backend tutulan yapıya genellikle monorepo denir. Monore
 - Kök `.gitignore` dosyasına Node, Expo, Maven, IDE, environment ve özel anahtar kuralları eklendi.
 - Frontend için TypeScript ve ESLint, backend için Maven clean test yeniden çalıştırıldı ve başarılı oldu.
 - Kaynaklarda özel anahtar bulunmadığı tekrar doğrulandı.
+
+## 14 Temmuz 2026 — Kurtarma ve eşleştirme akışının backend'e taşınması
+
+### Sorun neydi?
+
+Yolcu kurtarma isteğini doğrudan Firebase istemci SDK'sı ile Firestore'a yazıyor, biker açık istekleri doğrudan sorguluyor ve kabul işlemini mobil uygulama içinden gerçekleştiriyordu. Spring Boot backend yalnızca Firebase token doğruluyor, uygulamanın ana iş akışına katılmıyordu.
+
+### Neden bu sorun çıktı?
+
+İlk çalışan prototipte Firebase'in gerçek zamanlı istemci SDK'sı en kısa geliştirme yolu olarak seçilmişti. Security Rules temel erişim kontrolü sağlasa da iş kuralları farklı ekranlara ve istemci koduna dağılmıştı.
+
+İstemci güvenilir bir çalışma ortamı değildir. Değiştirilmiş bir uygulama veya doğrudan API isteği, UI kontrollerini tamamen atlayabilir. Eşleştirme gibi kritik bir akışta rol kontrolü, sahiplik, geçerli durum geçişi ve aynı isteğin yalnızca bir biker tarafından kabul edilmesi sunucu tarafında uygulanmalıdır. Bu yaklaşıma server-authoritative state denir.
+
+### Çözüm yöntemi nelerdi?
+
+- Firebase Authentication'ı kullanıcı kimliği sağlayıcısı olarak korumak.
+- Mobil uygulamanın aldığı Firebase ID token'ını backend'e Bearer token olarak göndermek.
+- Kullanıcı kimliğini istek gövdesinden değil yalnızca doğrulanmış token'ın `uid` alanından almak.
+- Firestore işlemlerini Firebase Admin SDK kullanan Spring Boot servisine taşımak.
+- Yolcu ve biker rollerini backend'de `users/{uid}.role` profilinden doğrulamak.
+- Kabul ve iptal işlemlerini Firestore transaction ile atomik gerçekleştirmek.
+- Kurtarma koleksiyonuna doğrudan istemci erişimini Security Rules ile tamamen kapatmak.
+
+### Nasıl çözüldü?
+
+Backend'e aşağıdaki endpoint'ler eklendi:
+
+```text
+POST /api/rescues
+GET  /api/rescues/{requestId}
+GET  /api/rescues/open
+POST /api/rescues/{requestId}/accept
+POST /api/rescues/{requestId}/cancel
+```
+
+- `CreateRescueRequest` ve `RescueResponse` API modelleri oluşturuldu.
+- Koordinat, hedef ve aciliyet alanlarına Jakarta Validation sınırları eklendi.
+- `AuthService.authenticate`, Authorization header içindeki Firebase ID token'ını doğruluyor.
+- `RescueService`, kurtarma isteklerini Firebase Admin Firestore API ile oluşturuyor ve okuyor.
+- Yolcu yalnızca `passenger` rolüyle istek oluşturabiliyor.
+- Biker yalnızca `biker` rolüyle açık istekleri listeleyip kabul edebiliyor.
+- Bir isteği yalnızca isteğin sahibi yolcu iptal edebiliyor.
+- Kabul işlemi, istek hâlâ `searching` durumunda ve süresi dolmamışsa transaction içinde tamamlanıyor. Böylece iki biker aynı isteği eşzamanlı olarak kabul edemiyor.
+- Katılımcı olmayan kullanıcıların istek detayına erişimi backend tarafından reddediliyor.
+- Firebase yapılandırması `FirebaseApp` ve `Firestore` Spring bean'leri sağlayacak şekilde düzenlendi.
+- Merkezi API hata işleyicisi yetkisiz istekleri HTTP 401 olarak döndürüyor.
+
+Frontend'de ortak `api/rescues.ts` istemcisi oluşturuldu:
+
+- Her istekten önce güncel Firebase ID token alınıyor.
+- Token `Authorization: Bearer` header'ıyla backend'e gönderiliyor.
+- Yolcu istek oluşturma ve iptal işlemleri backend API'ye geçirildi.
+- Yolcu arama ekranı istek durumunu backend'den periyodik olarak yeniliyor.
+- Biker dashboard açık istekleri backend'den alıyor.
+- Biker kabul işlemi backend endpoint'ine taşındı.
+- Android emulator için varsayılan `10.0.2.2:8080`, web/iOS simulator için `localhost:8080` adresi tanımlandı.
+- Fiziksel cihaz ve deployment ortamları için `EXPO_PUBLIC_API_URL` yapılandırması eklendi.
+
+Firestore güvenlik kurallarında `rescueRequests` koleksiyonu için bütün istemci okuma ve yazmaları kapatıldı. Firebase Admin SDK bu kuralları yalnızca güvenilir backend ortamında bypass eder.
+
+Backend'in çalışması için Application Default Credentials gerekir. Yerel geliştirmede workspace dışındaki bir credential dosyası `GOOGLE_APPLICATION_CREDENTIALS` ile gösterilmeli; Google Cloud deployment ortamında JSON anahtar yerine runtime service account kullanılmalıdır.
+
+### Test ve doğrulama
+
+```text
+mvnw.cmd clean test             başarılı — 5 test
+npx tsc --noEmit                başarılı
+npm run lint                    başarılı
+npx expo export --platform web  başarılı
+```
+
+Token header reddetme ve rescue controller delegasyonu için yeni backend testleri eklendi. Çalışma ayrı `feat/backend-rescue-workflow` branch'inde yapıldı.
