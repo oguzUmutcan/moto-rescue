@@ -28,9 +28,23 @@ const URGENCY_OPTIONS = [
 ];
 
 type Coordinates = { latitude: number; longitude: number };
-type Suggestion = Coordinates & { label: string; details: string };
+type Suggestion = Coordinates & { label: string; details: string; distanceKm: number | null };
 
-function useAddressSuggestions(query: string, enabled: boolean) {
+function distanceInKm(from: Coordinates, to: Coordinates): number {
+  const radians = (degrees: number) => degrees * Math.PI / 180;
+  const dLat = radians(to.latitude - from.latitude);
+  const dLon = radians(to.longitude - from.longitude);
+  const a = Math.sin(dLat / 2) ** 2 +
+    Math.cos(radians(from.latitude)) * Math.cos(radians(to.latitude)) * Math.sin(dLon / 2) ** 2;
+  return 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function useAddressSuggestions(
+  query: string,
+  enabled: boolean,
+  origin: Coordinates | null,
+  locationContext: string,
+) {
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -43,7 +57,15 @@ function useAddressSuggestions(query: string, enabled: boolean) {
     const timer = setTimeout(async () => {
       setLoading(true);
       try {
-        const matches = (await Location.geocodeAsync(query.trim())).slice(0, 5);
+        const searchText = query.trim();
+        const searches = [...new Set([
+          searchText,
+          locationContext ? `${searchText}, ${locationContext}` : searchText,
+        ])];
+        const batches = await Promise.all(searches.map((value) =>
+          Location.geocodeAsync(value).catch(() => []),
+        ));
+        const matches = batches.flat().slice(0, 12);
         const placeLabel = query.trim();
         const resolved = await Promise.all(matches.map(async (match) => {
           const addresses = await Location.reverseGeocodeAsync(match).catch(() => []);
@@ -54,11 +76,17 @@ function useAddressSuggestions(query: string, enabled: boolean) {
             details: addresses[0]
               ? addressLabel(addresses[0])
               : `${match.latitude.toFixed(5)}, ${match.longitude.toFixed(5)}`,
+            distanceKm: origin ? distanceInKm(origin, match) : null,
           };
         }));
         const unique = resolved.filter((item, index, all) =>
-          all.findIndex((other) => other.details === item.details) === index,
-        );
+          all.findIndex((other) =>
+            Math.abs(other.latitude - item.latitude) < 0.00005 &&
+            Math.abs(other.longitude - item.longitude) < 0.00005,
+          ) === index,
+        ).sort((left, right) =>
+          (left.distanceKm ?? Number.MAX_VALUE) - (right.distanceKm ?? Number.MAX_VALUE),
+        ).slice(0, 8);
         if (active) setSuggestions(unique);
       } catch {
         if (active) setSuggestions([]);
@@ -67,7 +95,7 @@ function useAddressSuggestions(query: string, enabled: boolean) {
       }
     }, 550);
     return () => { active = false; clearTimeout(timer); };
-  }, [enabled, query]);
+  }, [enabled, locationContext, origin, query]);
 
   return { suggestions, loading, clear: () => setSuggestions([]) };
 }
@@ -96,8 +124,9 @@ export default function RequestFormScreen() {
   const [mapSelection, setMapSelection] = useState<Coordinates | null>(null);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const formScrollRef = useRef<ScrollView>(null);
-  const pickupSearch = useAddressSuggestions(manualPickup, manualPickupCoordinates === null);
-  const destinationSearch = useAddressSuggestions(destination, destinationCoordinates === null);
+  const locationContext = pickupLabel.split(",").slice(-2).join(",").trim();
+  const pickupSearch = useAddressSuggestions(manualPickup, manualPickupCoordinates === null, currentPickup, locationContext);
+  const destinationSearch = useAddressSuggestions(destination, destinationCoordinates === null, currentPickup, locationContext);
 
   useEffect(() => {
     if (Platform.OS !== "android") return;
@@ -214,7 +243,11 @@ export default function RequestFormScreen() {
     >
       <View
         className="bg-white rounded-t-[24px] pt-3 px-5 pb-8 shadow-2xl"
-        style={{ maxHeight: keyboardHeight > 0 ? Dimensions.get("window").height - keyboardHeight - 20 : "92%" }}
+        style={{
+          maxHeight: keyboardHeight > 0
+            ? (Dimensions.get("window").height - keyboardHeight) * 0.82
+            : "92%",
+        }}
       >
         <View className="w-9 h-1 rounded-full bg-[#D1D1D6] self-center mb-4" />
         <View className="flex-row items-center justify-between mb-4">
@@ -246,14 +279,14 @@ export default function RequestFormScreen() {
                 <TouchableOpacity onPress={() => openMap("pickup")} className="ml-2 p-2"><Map size={19} color="#007AFF" /></TouchableOpacity>
               </View>
               {pickupSearch.suggestions.length > 0 && (
-                <View className="rounded-xl border border-[#E5E5EA] overflow-hidden mt-1">
+                <ScrollView nestedScrollEnabled keyboardShouldPersistTaps="handled" className="rounded-xl border border-[#E5E5EA] mt-1" style={{ maxHeight: 220 }}>
                   {pickupSearch.suggestions.map((item) => (
                     <TouchableOpacity key={`${item.latitude}-${item.longitude}`} onPress={() => { setManualPickup(item.label); setManualPickupCoordinates(item); pickupSearch.clear(); }} className="bg-white px-3 py-3 border-b border-[#E5E5EA] flex-row">
                       <MapPin size={15} color="#007AFF" />
-                      <View className="ml-2 flex-1"><Text className="font-bold text-[#1C1C1E]">{item.label}</Text><Text className="text-[12px] text-[#8E8E93] mt-0.5">{item.details}</Text></View>
+                      <View className="ml-2 flex-1"><View className="flex-row justify-between"><Text className="font-bold text-[#1C1C1E] flex-1">{item.label}</Text>{item.distanceKm !== null && <Text className="text-[11px] font-bold text-[#007AFF] ml-2">{item.distanceKm < 1 ? `${Math.round(item.distanceKm * 1000)} m` : `${item.distanceKm.toFixed(1)} km`}</Text>}</View><Text className="text-[12px] text-[#8E8E93] mt-0.5">{item.details}</Text></View>
                     </TouchableOpacity>
                   ))}
-                </View>
+                </ScrollView>
               )}
             </View>
           )}
@@ -273,14 +306,14 @@ export default function RequestFormScreen() {
             <TouchableOpacity onPress={() => openMap("destination")} className="ml-1 p-2"><Map size={19} color="#007AFF" /></TouchableOpacity>
           </View>
           {destinationSearch.suggestions.length > 0 && (
-            <View className="rounded-xl border border-[#E5E5EA] overflow-hidden mt-1 mb-3">
+            <ScrollView nestedScrollEnabled keyboardShouldPersistTaps="handled" className="rounded-xl border border-[#E5E5EA] mt-1 mb-3" style={{ maxHeight: 240 }}>
               {destinationSearch.suggestions.map((item) => (
                 <TouchableOpacity key={`${item.latitude}-${item.longitude}`} onPress={() => { setDestination(item.label); setDestinationCoordinates(item); destinationSearch.clear(); }} className="bg-white px-3 py-3 border-b border-[#E5E5EA] flex-row">
                   <MapPin size={15} color="#FF3B30" />
-                  <View className="ml-2 flex-1"><Text className="font-bold text-[#1C1C1E]">{item.label}</Text><Text className="text-[12px] text-[#8E8E93] mt-0.5">{item.details}</Text></View>
+                  <View className="ml-2 flex-1"><View className="flex-row justify-between"><Text className="font-bold text-[#1C1C1E] flex-1">{item.label}</Text>{item.distanceKm !== null && <Text className="text-[11px] font-bold text-[#007AFF] ml-2">{item.distanceKm < 1 ? `${Math.round(item.distanceKm * 1000)} m` : `${item.distanceKm.toFixed(1)} km`}</Text>}</View><Text className="text-[12px] text-[#8E8E93] mt-0.5">{item.details}</Text></View>
                 </TouchableOpacity>
               ))}
-            </View>
+            </ScrollView>
           )}
           {destinationSearch.suggestions.length === 0 && <View className="mb-4" />}
 

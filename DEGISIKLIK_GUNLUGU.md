@@ -494,6 +494,41 @@ Uygulama içindeki MapView yalnızca hedefi görselleştiriyordu; Google Maps na
 - `invalid-credential` artık biker e-posta/şifresini veya password reset seçeneğini kontrol etmeyi söyleyen açık mesaj gösteriyor.
 - Beklenen credential hatası console'a gereksiz stack trace olarak yazılmıyor.
 
+## 15 Temmuz 2026 — Yakın place sonuçları ve dengeli klavye yerleşimi
+
+### Sorun neydi?
+
+Destination aramasında çoğunlukla tek sonuç çıkıyor, sonuç kullanıcıya en yakın şube olacak şekilde sıralanmıyor ve birden fazla sonuç geldiğinde ayrı bir kaydırılabilir liste alanı bulunmuyordu. Android klavyesi açıldığında bottom sheet klavyenin arkasında kalmıyordu ancak bu kez ekranın fazla yukarısına taşınıyordu.
+
+### Neden bu sorun çıktı?
+
+Cihaz geocoder'ı yalnızca ham sorguyla bir kez çağrılıyor ve dönen sıra doğrudan kullanılıyordu. Kullanıcının mevcut bölgesi arama bağlamına eklenmiyor, sonuçlara mesafe hesaplanmıyordu. Klavye düzeltmesinde sheet'in maksimum yüksekliği klavye üstündeki alanın neredeyse tamamını kapladığı için form görsel olarak tepeye yaslanıyordu.
+
+### Çözüm yöntemi neler?
+
+- Ham place sorgusu ile mevcut şehir/bölge bağlamı eklenmiş sorgunun sonuçlarını birleştirmek.
+- Yinelenen koordinatları temizlemek ve Haversine mesafesiyle kullanıcıya yakınlığa göre sıralamak.
+- Sonuçları sabit maksimum yüksekliğe sahip nested ScrollView içinde göstermek.
+- Her sonuçta place adı, açık adres ve metre/kilometre uzaklığını ayrı göstermek.
+- Klavye açıkken sheet yüksekliğini kullanılabilir alanın bir bölümünde sınırlamak.
+
+### Nasıl Çözüldü?
+
+- Arama, kullanıcının reverse-geocode edilmiş yerel bölgesini ikinci bir bağlam sorgusu olarak kullanıyor ve sonuçları tek listede birleştiriyor.
+- Yakınlık mevcut pickup koordinatına göre hesaplanıyor; en yakın sonuç en üstte gösteriliyor.
+- En fazla sekiz benzersiz sonuç 220–240 px yüksekliğinde bağımsız kaydırılabilir listede gösteriliyor.
+- Place adı ana satırda, açık adres alt satırda, mesafe sağ tarafta gösteriliyor.
+- Klavye açık sheet maksimum yüksekliği, klavye üstünde kalan alanın `%82`si yapıldı; böylece alan klavyenin arkasında kalmadan daha dengeli konumlanıyor.
+- Ücretsiz public Nominatim servisi, resmî politikasında client-side autocomplete'i yasakladığı için projeye eklenmedi. Google Places entegrasyonu billing/API anahtarı kararı verilene kadar opsiyonel sonraki adım olarak bırakıldı.
+
+### Test ve doğrulama
+
+```text
+npx tsc --noEmit  başarılı
+npm run lint      başarılı — 0 hata, 0 uyarı
+git diff --check  başarılı
+```
+
 ### Test ve doğrulama
 
 ```text
