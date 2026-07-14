@@ -466,6 +466,33 @@ npm run lint         başarılı — 0 hata, 0 uyarı
 git diff --check     başarılı
 ```
 
+## 15 Temmuz 2026 — Model geçişi için session handoff dokümanı
+
+### Sorun neydi?
+
+Uzun geliştirme oturumunda repo mimarisi, kullanıcı çalışma kuralları, environment ayarları, tamamlanan akışlar ve bilinen sınırlamalar birçok konuşma adımına dağılmıştı. Farklı bir modele geçildiğinde bu bağlamın kaybolma riski vardı.
+
+### Neden bu sorun çıktı?
+
+Commit geçmişi yapılan değişiklikleri gösterse de kararların gerekçesini, yerel çalıştırma koşullarını, test senaryosunu ve sıradaki teknik borçları tek başına açıklamaz. Sohbet bağlamı da yeni model oturumuna eksiksiz aktarılmayabilir.
+
+### Çözüm yöntemi neler?
+
+- Repo kökünde tek bir handoff dokümanı oluşturmak.
+- Git durumu, mimari, endpoint'ler, environment ve test komutlarını belgelemek.
+- Tamamlanan özelliklerle bilinen sınırlamaları ayrı listelemek.
+- Secret veya credential içeriğini dokümana koymamak.
+
+### Nasıl Çözüldü?
+
+- Repo kökünde `session_handoff.md` oluşturuldu.
+- Aktif branch/commit, monorepo yapısı, backend/frontend çalıştırma adımları ve Firebase ADC gereksinimi kaydedildi.
+- Users, rescues, reviews ve badges API sözleşmeleri özetlendi.
+- İki cihazlı passenger/biker test akışı ve tamamlanan frontend davranışları aktarıldı.
+- Place autocomplete, canlı GPS, safety code, storage, pagination ve entegrasyon testi gibi bilinen sınırlamalar kaydedildi.
+- Yeni modelin işe başlama sırası ve kullanıcının her değişikliği günlüğe kaydetme/feature branch'e push etme kuralları açıkça belirtildi.
+- Dokümana hiçbir API key, Firebase credential veya secret eklenmedi.
+
 ## 15 Temmuz 2026 — Backend kontrollü rider badge ve seviye sistemi
 
 ### Sorun neydi?
