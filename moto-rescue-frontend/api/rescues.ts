@@ -6,6 +6,7 @@ export type RescueRequest = {
   passengerName: string;
   latitude: number;
   longitude: number;
+  pickupLabel: string;
   destinationLabel: string;
   destinationLatitude: number;
   destinationLongitude: number;
@@ -24,6 +25,7 @@ export type RescueRequest = {
 type CreateRescueInput = {
   latitude: number;
   longitude: number;
+  pickupLabel: string;
   destinationLabel: string;
   destinationLatitude: number;
   destinationLongitude: number;
@@ -37,6 +39,7 @@ export const rescueApi = {
   get: (id: string) => apiRequest<RescueRequest>(`/api/rescues/${encodeURIComponent(id)}`),
   open: () => apiRequest<RescueRequest[]>("/api/rescues/open"),
   history: () => apiRequest<RescueRequest[]>("/api/rescues/history"),
+  active: () => apiRequest<RescueRequest | null>("/api/rescues/active"),
   accept: (id: string) =>
     apiRequest<RescueRequest>(`/api/rescues/${encodeURIComponent(id)}/accept`, { method: "POST" }),
   cancel: (id: string) =>

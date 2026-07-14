@@ -13,6 +13,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import LocationMap from "../../../components/location-map";
 import type { LocationMapHandle, MapRegion } from "../../../components/location-map.types";
+import { rescueApi } from "../../../api/rescues";
 
 export default function PassengerDashboardScreen() {
   const router = useRouter();
@@ -20,6 +21,16 @@ export default function PassengerDashboardScreen() {
   const mapRef = useRef<LocationMapHandle>(null);
 
   const [initialRegion, setInitialRegion] = useState<MapRegion | null>(null);
+
+  useEffect(() => {
+    rescueApi.active().then((request) => {
+      if (!request) return;
+      router.replace({
+        pathname: request.status === "searching" ? "/(passenger)/searching" : "/(passenger)/ride",
+        params: { requestId: request.id },
+      });
+    }).catch((error) => console.error("Could not restore active rescue", error));
+  }, [router]);
 
   // SOS Button Pulse Animation setup
   const scale1 = useRef(new Animated.Value(1)).current;

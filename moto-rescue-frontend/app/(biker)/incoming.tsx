@@ -336,7 +336,7 @@ export default function IncomingRequestScreen() {
                       color: "#1C1C1E",
                     }}
                   >
-                    {request ? `${request.latitude.toFixed(5)}, ${request.longitude.toFixed(5)}` : "Loading pickup..."}
+                    {request?.pickupLabel ?? "Loading pickup..."}
                   </Text>
                 </View>
                 <Text

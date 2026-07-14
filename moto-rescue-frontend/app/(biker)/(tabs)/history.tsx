@@ -73,13 +73,17 @@ export default function BikerHistoryScreen() {
   const insets = useSafeAreaInsets(); // Hook to get safe area insets for padding
 
   useEffect(() => {
-    rescueApi.history().then((items) => setRides(items.map((item) => ({
+    rescueApi.history().then((items) => setRides(items.filter((item) =>
+      item.status === "completed" || item.status === "cancelled",
+    ).map((item) => ({
       date: new Date(item.createdAt).toLocaleString(),
       passenger: item.passengerName,
       e: "🙋",
-      from: `${item.latitude.toFixed(4)}, ${item.longitude.toFixed(4)}`,
+      from: item.pickupLabel,
       to: item.destinationLabel,
-      dur: null,
+      dur: item.startedAt && item.completedAt
+        ? `${Math.max(1, Math.round((new Date(item.completedAt).getTime() - new Date(item.startedAt).getTime()) / 60000))} min`
+        : null,
       urgency: item.urgency,
       status: item.status === "completed" ? "completed" : "cancelled",
       pts: item.status === "completed" ? 45 : 0,

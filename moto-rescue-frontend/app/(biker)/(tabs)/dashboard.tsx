@@ -29,6 +29,14 @@ export default function BikerDashboardScreen() {
 
   const [initialRegion, setInitialRegion] = useState<MapRegion | null>(null);
 
+  useEffect(() => {
+    rescueApi.active().then((request) => {
+      if (request && (request.status === "accepted" || request.status === "in_progress")) {
+        router.replace({ pathname: "/(biker)/navigation", params: { requestId: request.id } });
+      }
+    }).catch((error) => console.error("Could not restore active rescue", error));
+  }, [router]);
+
   const handleSimulateIncoming = () => {
     if (pendingRequestId) {
       router.push({

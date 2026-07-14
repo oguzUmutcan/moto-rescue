@@ -191,6 +191,7 @@ export default function RequestFormScreen() {
       const resolvedDestination = destinationCoordinates ?? await geocode(destination, "Destination");
       const request = await rescueApi.create({
         ...pickup,
+        pickupLabel: pickupMode === "current" ? pickupLabel : manualPickup.trim(),
         destinationLabel: destination.trim(),
         destinationLatitude: resolvedDestination.latitude,
         destinationLongitude: resolvedDestination.longitude,

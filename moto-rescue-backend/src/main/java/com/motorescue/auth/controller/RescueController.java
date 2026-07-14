@@ -63,6 +63,13 @@ public class RescueController {
         return rescueService.history(authService.authenticate(authorization));
     }
 
+    @GetMapping("/active")
+    public RescueResponse active(
+            @RequestHeader(value = "Authorization", required = false) String authorization
+    ) {
+        return rescueService.active(authService.authenticate(authorization));
+    }
+
     @PostMapping("/{requestId}/accept")
     public RescueResponse accept(
             @RequestHeader(value = "Authorization", required = false) String authorization,

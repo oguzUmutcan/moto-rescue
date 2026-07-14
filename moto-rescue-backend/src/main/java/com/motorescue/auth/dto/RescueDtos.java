@@ -14,6 +14,7 @@ public final class RescueDtos {
     public record CreateRescueRequest(
             @DecimalMin("-90.0") @DecimalMax("90.0") double latitude,
             @DecimalMin("-180.0") @DecimalMax("180.0") double longitude,
+            @NotBlank @Size(max = 200) String pickupLabel,
             @NotBlank @Size(max = 200) String destinationLabel,
             @DecimalMin("-90.0") @DecimalMax("90.0") double destinationLatitude,
             @DecimalMin("-180.0") @DecimalMax("180.0") double destinationLongitude,
@@ -27,6 +28,7 @@ public final class RescueDtos {
             String passengerName,
             double latitude,
             double longitude,
+            String pickupLabel,
             String destinationLabel,
             double destinationLatitude,
             double destinationLongitude,

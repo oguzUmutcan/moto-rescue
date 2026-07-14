@@ -16,7 +16,7 @@ import Animated, {
     withTiming,
 } from "react-native-reanimated";
 import { auth } from "../../config/firebase";
-import { rescueApi } from "../../api/rescues";
+import { rescueApi, RescueRequest } from "../../api/rescues";
 
 // Helper component for the pulsing dots animation
 const AnimatedDot = ({
@@ -58,6 +58,7 @@ export default function PassengerSearchingScreen() {
   const { requestId } = useLocalSearchParams<{ requestId: string }>();
   const [secs, setSecs] = useState(300); // 5 minutes
   const [matched, setMatched] = useState(false);
+  const [request, setRequest] = useState<RescueRequest | null>(null);
 
   // Spinner Animation
   const rotation = useSharedValue(0);
@@ -90,7 +91,12 @@ export default function PassengerSearchingScreen() {
       try {
         const request = await rescueApi.get(requestId);
         if (!active) return;
-        setMatched(["accepted", "arriving", "active"].includes(request.status));
+        setRequest(request);
+        setMatched(request.status === "accepted");
+        setSecs(Math.max(0, Math.ceil((new Date(request.expiresAt).getTime() - Date.now()) / 1000)));
+        if (request.status === "in_progress" || request.status === "completed") {
+          router.replace({ pathname: "/(passenger)/ride", params: { requestId } });
+        }
         if (request.status === "cancelled") {
           router.replace("/(passenger)/(tabs)/dashboard");
         }
@@ -171,7 +177,7 @@ export default function PassengerSearchingScreen() {
               Hero Found!
             </Text>
             <Text className="text-[14px] text-[#8E8E93] mb-5">
-              Khaled M. is on his way
+              {request?.bikerName ?? "Your biker"} is on the way
             </Text>
 
             <TouchableOpacity
@@ -241,15 +247,11 @@ export default function PassengerSearchingScreen() {
         )}
 
         {/* Cancel Request Button */}
-        <TouchableOpacity
-          onPress={handleCancel}
-          activeOpacity={0.7}
-          className="mt-4 bg-white/90 rounded-xl px-6 py-3"
-        >
-          <Text className="text-[14px] font-bold text-[#FF3B30]">
-            Cancel Request
-          </Text>
-        </TouchableOpacity>
+        {request?.status !== "in_progress" && (
+          <TouchableOpacity onPress={handleCancel} activeOpacity={0.7} className="mt-4 bg-white/90 rounded-xl px-6 py-3">
+            <Text className="text-[14px] font-bold text-[#FF3B30]">Cancel Request</Text>
+          </TouchableOpacity>
+        )}
       </View>
     </View>
   );

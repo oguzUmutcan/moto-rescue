@@ -557,6 +557,46 @@ Rescue detay endpoint'i yalnızca `passengerId` veya `bikerId` ile eşleşen kat
 - Katılımcı olmayan kullanıcı ancak profili `biker` rolündeyse, istek hâlâ `searching` durumundaysa ve süresi dolmamışsa detayı görebiliyor.
 - Kabul, başlatma ve tamamlama sahiplik kuralları değiştirilmedi; detay görmek isteği kabul etme yetkisi sağlamıyor.
 
+## 14 Temmuz 2026 — Kabul sonrası rescue akışının iki taraf için tamamlanması
+
+### Sorun neydi?
+
+Backend kabul, başlatma ve tamamlama durumlarını desteklese de passenger ve biker ekranları bu durumları tam yansıtmıyordu. Passenger ekranında sabit biker, rota, süre ve sahte safety code vardı. Biker navigasyonu sabit pickup/destination metinleri gösteriyordu. Uygulama yenilenirse aktif rescue kayboluyor, geçmiş ekranları devam eden istekleri yanlışlıkla iptal edilmiş gibi gösteriyordu.
+
+### Neden bu sorun çıktı?
+
+Backend durum makinesi ile ilk UI prototipinde kullanılan `arriving/active` state adları eşleşmiyordu. Ekranlar API response'unun yalnızca küçük bir bölümünü kullanıyor ve route state'inin uygulama ömrü boyunca korunacağını varsayıyordu. Pickup için okunabilir etiket backend modelinde ayrıca saklanmıyordu.
+
+### Çözüm yöntemi neler?
+
+- Frontend'i backend'in `searching -> accepted -> in_progress -> completed` durum makinesiyle birebir eşlemek.
+- Her iki cihazın rescue detayını düzenli yenileyerek durum değişikliklerini algılamasını sağlamak.
+- Pickup ve destination etiket/koordinatlarını gerçek haritalarda göstermek.
+- Kritik start/complete işlemlerinden önce kullanıcı onayı almak.
+- Uygulama yeniden açıldığında kullanıcıya ait aktif rescue'yu backend'den geri yüklemek.
+- Geçmişte yalnızca terminal durumları göstermek ve süreyi backend timestamp'lerinden hesaplamak.
+
+### Nasıl Çözüldü?
+
+- Rescue modeline `pickupLabel` eklendi; eski kayıtlar koordinat etiketiyle geriye uyumlu okunuyor.
+- Passenger arama ekranı gerçek biker adını gösteriyor ve `in_progress` durumunda ride ekranına geçiyor.
+- Passenger ride ekranı biker'ın geliş/sürüş durumunu, gerçek destination place adını ve harita marker'ını gösteriyor.
+- Biker navigasyonu önce gerçek pickup'a, start işleminden sonra gerçek destination'a geçiyor.
+- Start ve complete düğmelerine yanlış dokunmayı önleyen doğrulama pencereleri eklendi.
+- Passenger iptali biker ekranında algılanıyor; completed durumu iki tarafta da başarı mesajı ve history/dashboard seçeneği gösteriyor.
+- `GET /api/rescues/active` endpoint'i eklendi. Passenger ve biker dashboard uygulama yenilendiğinde devam eden akışı otomatik geri yüklüyor.
+- Devam eden rescue kayıtları geçmişten filtrelendi; tamamlanan sürüş süresi `startedAt` ve `completedAt` farkından hesaplanıyor.
+- API istemcisi boş başarılı response gövdelerini güvenli işliyor.
+
+### Test ve doğrulama
+
+```text
+mvnw.cmd clean test  başarılı — 5 test
+npx tsc --noEmit     başarılı
+npm run lint         başarılı — 0 hata, 0 uyarı
+git diff --check     başarılı
+```
+
 ### Test ve doğrulama
 
 ```text

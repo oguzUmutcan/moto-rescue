@@ -54,14 +54,18 @@ export default function PassengerHistoryScreen() {
   const insets = useSafeAreaInsets();
 
   useEffect(() => {
-    rescueApi.history().then((items) => setRides(items.map((item) => ({
+    rescueApi.history().then((items) => setRides(items.filter((item) =>
+      item.status === "completed" || item.status === "cancelled",
+    ).map((item) => ({
       date: new Date(item.createdAt).toLocaleString(),
-      from: `${item.latitude.toFixed(4)}, ${item.longitude.toFixed(4)}`,
+      from: item.pickupLabel,
       to: item.destinationLabel,
       biker: item.bikerName,
       bikerE: item.bikerId ? "🏍️" : null,
       status: item.status === "completed" ? "completed" : "cancelled",
-      dur: null,
+      dur: item.startedAt && item.completedAt
+        ? `${Math.max(1, Math.round((new Date(item.completedAt).getTime() - new Date(item.startedAt).getTime()) / 60000))} min`
+        : null,
       rating: null,
     })))).catch((error) => console.error("Could not load ride history", error));
   }, []);
