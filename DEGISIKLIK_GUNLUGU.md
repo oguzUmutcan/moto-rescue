@@ -534,6 +534,29 @@ npm run lint      başarılı — 0 hata, 0 uyarı
 git diff --check  başarılı
 ```
 
+## 14 Temmuz 2026 — Aday biker'ın incoming rescue detayına erişimi
+
+### Sorun neydi?
+
+Biker dashboard açık rescue isteğini listeleyebiliyor ve incoming ekranını açabiliyordu ancak ekran `/api/rescues/{requestId}` detayını istediğinde backend HTTP 403 Forbidden dönüyordu.
+
+### Neden bu sorun çıktı?
+
+Rescue detay endpoint'i yalnızca `passengerId` veya `bikerId` ile eşleşen katılımcılara izin veriyordu. İstek henüz `searching` durumundayken hiçbir biker atanmamış olduğu için `bikerId` null'dı. Böylece backend bir taraftan biker'a açık isteği listeliyor, diğer taraftan karar vermesi için gereken detayı yasaklıyordu.
+
+### Çözüm yöntemi neler?
+
+- Incoming ekranına liste response'unu route parametresiyle taşımak.
+- Açık isteğin detayını tüm kimliği doğrulanmış kullanıcılara açmak.
+- Yalnızca biker rolündeki kullanıcıya, yalnızca `searching` ve süresi dolmamış istek için kontrollü detay erişimi vermek.
+
+### Nasıl Çözüldü?
+
+- Detay yetkilendirmesine sınırlı “candidate biker” kuralı eklendi.
+- Passenger ve atanmış biker katılımcı olarak her zamanki erişimini koruyor.
+- Katılımcı olmayan kullanıcı ancak profili `biker` rolündeyse, istek hâlâ `searching` durumundaysa ve süresi dolmamışsa detayı görebiliyor.
+- Kabul, başlatma ve tamamlama sahiplik kuralları değiştirilmedi; detay görmek isteği kabul etme yetkisi sağlamıyor.
+
 ### Test ve doğrulama
 
 ```text

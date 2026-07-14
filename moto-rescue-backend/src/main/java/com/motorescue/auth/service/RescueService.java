@@ -58,7 +58,11 @@ public class RescueService {
         DocumentSnapshot snapshot = getDocument(requestId);
         String passengerId = snapshot.getString("passengerId");
         String bikerId = snapshot.getString("bikerId");
-        if (!token.getUid().equals(passengerId) && !token.getUid().equals(bikerId)) {
+        boolean participant = token.getUid().equals(passengerId) || token.getUid().equals(bikerId);
+        boolean availableToBiker = "searching".equals(snapshot.getString("status"))
+                && !isExpired(snapshot)
+                && hasRole(token.getUid(), "biker");
+        if (!participant && !availableToBiker) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You are not a participant in this rescue");
         }
         return from(snapshot);
@@ -202,10 +206,13 @@ public class RescueService {
     }
 
     private void requireRole(String uid, String expectedRole) {
-        DocumentSnapshot profile = userProfile(uid);
-        if (!expectedRole.equalsIgnoreCase(profile.getString("role"))) {
+        if (!hasRole(uid, expectedRole)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "The " + expectedRole + " role is required");
         }
+    }
+
+    private boolean hasRole(String uid, String expectedRole) {
+        return expectedRole.equalsIgnoreCase(userProfile(uid).getString("role"));
     }
 
     private DocumentSnapshot userProfile(String uid) {
