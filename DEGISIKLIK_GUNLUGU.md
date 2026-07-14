@@ -514,3 +514,40 @@ Application Default Credentials oluşturulduktan sonra backend kimlik bilgisini 
 - Ayar sırasıyla `FIREBASE_PROJECT_ID`, `GOOGLE_CLOUD_PROJECT` veya varsayılan proje ID değerinden okunacak şekilde yapılandırıldı.
 - `FirebaseConfig`, proje ID'sini `FirebaseOptions.setProjectId` ile Admin SDK'ya açıkça iletiyor.
 - README içine `FIREBASE_PROJECT_ID` yapılandırması eklendi.
+
+## 14 Temmuz 2026 — Fiziksel cihazdan backend'e erişim hatasının düzeltilmesi
+
+### Sorun neydi?
+
+Firebase ile giriş tamamlandıktan sonra profil rolünü okumak için yapılan backend isteği `TypeError: Network request failed` hatası veriyordu. Backend `8083` portunda çalışmasına ve bilgisayardan erişilebilmesine rağmen mobil uygulama API'ye ulaşamıyordu.
+
+### Neden bu sorun çıktı?
+
+Frontend Android için varsayılan olarak `10.0.2.2:8083` kullanıyordu. `10.0.2.2`, yalnızca Android emülatörünün ana bilgisayara erişmek için sunduğu özel adrestir. Expo Go ile çalışan fiziksel telefonda bu adres bilgisayarı göstermez. Benzer şekilde telefondaki `localhost` da geliştirme bilgisayarı değil telefonun kendisidir.
+
+### Çözüm yöntemi neler?
+
+- Fiziksel cihazda bilgisayarın LAN IP adresini `EXPO_PUBLIC_API_URL` ile açıkça vermek.
+- Geliştirme ortamında Expo Metro sunucusunun host adresini okuyup backend adresini otomatik üretmek.
+- Web, Android emülatörü ve production ortamı için güvenli fallback adreslerini korumak.
+- Ham `Network request failed` yerine denenen API adresini içeren açıklayıcı hata göstermek.
+
+### Nasıl Çözüldü?
+
+- API adres çözümleyicisi Expo'nun `hostUri` bilgisinden geliştirme bilgisayarının erişilebilir adresini alıp `http://<metro-host>:8083` oluşturacak şekilde güncellendi.
+- `EXPO_PUBLIC_API_URL` tanımlıysa en yüksek öncelikle kullanılmaya devam ediyor.
+- Web için `localhost:8083`, Android emülatörü için `10.0.2.2:8083` fallback'leri korundu.
+- Ağ hataları artık kullanılan backend adresini ve aynı ağ kontrolünü kullanıcıya bildiriyor.
+- Login ekranı backend kaynaklı hata mesajını genel giriş hatasıyla gizlemek yerine gösteriyor.
+- Backend'in hem localhost hem LAN arayüzünden `8083` üzerinde yanıt verdiği doğrulandı.
+- Kullanıcı ve rescue API çağrıları yeniden tarandı; frontend ve backend endpoint sözleşmelerinin eşleştiği doğrulandı.
+
+### Test ve doğrulama
+
+```text
+mvnw.cmd clean test  başarılı — 5 test
+npx tsc --noEmit     başarılı
+npm run lint         başarılı — 0 hata, 0 uyarı
+LAN :8083 erişimi    başarılı
+git diff --check     başarılı
+```

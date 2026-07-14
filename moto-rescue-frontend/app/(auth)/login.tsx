@@ -80,6 +80,8 @@ export default function LoginScreen() {
         friendlyError = "Incorrect email or password.";
       } else if (error.code === "auth/invalid-email") {
         friendlyError = "Please enter a valid email address.";
+      } else if (error instanceof Error) {
+        friendlyError = error.message;
       }
 
       Alert.alert("Login Failed", friendlyError);
