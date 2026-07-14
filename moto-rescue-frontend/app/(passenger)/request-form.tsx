@@ -28,7 +28,7 @@ const URGENCY_OPTIONS = [
 ];
 
 type Coordinates = { latitude: number; longitude: number };
-type Suggestion = Coordinates & { label: string };
+type Suggestion = Coordinates & { label: string; details: string };
 
 function useAddressSuggestions(query: string, enabled: boolean) {
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
@@ -44,12 +44,20 @@ function useAddressSuggestions(query: string, enabled: boolean) {
       setLoading(true);
       try {
         const matches = (await Location.geocodeAsync(query.trim())).slice(0, 5);
+        const placeLabel = query.trim();
         const resolved = await Promise.all(matches.map(async (match) => {
           const addresses = await Location.reverseGeocodeAsync(match).catch(() => []);
-          return { latitude: match.latitude, longitude: match.longitude, label: addressLabel(addresses[0]) };
+          return {
+            latitude: match.latitude,
+            longitude: match.longitude,
+            label: placeLabel,
+            details: addresses[0]
+              ? addressLabel(addresses[0])
+              : `${match.latitude.toFixed(5)}, ${match.longitude.toFixed(5)}`,
+          };
         }));
         const unique = resolved.filter((item, index, all) =>
-          item.label !== "Current GPS location" && all.findIndex((other) => other.label === item.label) === index,
+          all.findIndex((other) => other.details === item.details) === index,
         );
         if (active) setSuggestions(unique);
       } catch {
@@ -240,7 +248,8 @@ export default function RequestFormScreen() {
                 <View className="rounded-xl border border-[#E5E5EA] overflow-hidden mt-1">
                   {pickupSearch.suggestions.map((item) => (
                     <TouchableOpacity key={`${item.latitude}-${item.longitude}`} onPress={() => { setManualPickup(item.label); setManualPickupCoordinates(item); pickupSearch.clear(); }} className="bg-white px-3 py-3 border-b border-[#E5E5EA] flex-row">
-                      <MapPin size={15} color="#007AFF" /><Text className="ml-2 flex-1 text-[#1C1C1E]">{item.label}</Text>
+                      <MapPin size={15} color="#007AFF" />
+                      <View className="ml-2 flex-1"><Text className="font-bold text-[#1C1C1E]">{item.label}</Text><Text className="text-[12px] text-[#8E8E93] mt-0.5">{item.details}</Text></View>
                     </TouchableOpacity>
                   ))}
                 </View>
@@ -266,7 +275,8 @@ export default function RequestFormScreen() {
             <View className="rounded-xl border border-[#E5E5EA] overflow-hidden mt-1 mb-3">
               {destinationSearch.suggestions.map((item) => (
                 <TouchableOpacity key={`${item.latitude}-${item.longitude}`} onPress={() => { setDestination(item.label); setDestinationCoordinates(item); destinationSearch.clear(); }} className="bg-white px-3 py-3 border-b border-[#E5E5EA] flex-row">
-                  <MapPin size={15} color="#FF3B30" /><Text className="ml-2 flex-1 text-[#1C1C1E]">{item.label}</Text>
+                  <MapPin size={15} color="#FF3B30" />
+                  <View className="ml-2 flex-1"><Text className="font-bold text-[#1C1C1E]">{item.label}</Text><Text className="text-[12px] text-[#8E8E93] mt-0.5">{item.details}</Text></View>
                 </TouchableOpacity>
               ))}
             </View>

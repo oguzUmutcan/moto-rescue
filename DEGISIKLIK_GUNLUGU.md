@@ -496,6 +496,10 @@ Formun scroll alanı Android klavyesine göre yeniden boyutlandırılmıyordu. A
 
 İlk keyboard-aware düzen bazı Android cihazlarda transparent modal pencerenin yeniden boyutlandırılmaması nedeniyle yeterli olmadı. Klavyenin gerçek yüksekliği `keyboardDidShow` olayıyla ölçülüp formun alt boşluğuna doğrudan uygulanarak bottom sheet klavyenin üzerine taşındı. Görünür form yüksekliği ekran yüksekliği eksi klavye yüksekliği olarak sınırlandı ve destination odaklandığında ScrollView ilgili alana programatik olarak kaydırılıyor. Standalone Android build'leri için `softwareKeyboardLayoutMode: resize` da etkinleştirildi.
 
+### Ek düzeltme — Place adının korunması
+
+Adres önerisinde reverse-geocode sonucu ana etiket yapıldığı için `Erasta AVM` gibi bir place araması seçildiğinde textbox'a işletme/yer adı yerine uzun açık adres yazılıyordu. Aranan ifade artık place adı olarak korunuyor ve önerinin ana satırında gösteriliyor; açık adres yalnızca aynı isimli sonuçları ayırt etmek için ikinci satırda yardımcı bilgi olarak sunuluyor. Öneri seçildiğinde textbox ve rescue kaydında place adı kalıyor, koordinat ise seçilen sonuca ait oluyor.
+
 ### Test ve doğrulama
 
 ```text
