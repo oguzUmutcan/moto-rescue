@@ -8,6 +8,13 @@ import org.springframework.stereotype.Service;
 @Service
 public class AuthService {
 
+    public FirebaseToken authenticate(String authorization) {
+        if (authorization == null || !authorization.startsWith("Bearer ")) {
+            throw new IllegalArgumentException("Bearer token is required");
+        }
+        return verifyIdToken(authorization.substring("Bearer ".length()).trim());
+    }
+
     public FirebaseToken verifyIdToken(String idToken) {
         if (idToken == null || idToken.isBlank()) {
             throw new IllegalArgumentException("A Firebase ID token is required");

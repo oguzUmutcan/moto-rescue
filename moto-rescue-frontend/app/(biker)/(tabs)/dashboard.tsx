@@ -2,7 +2,7 @@ import * as Location from "expo-location";
 import { useRouter } from "expo-router";
 import * as SecureStore from "expo-secure-store";
 import { onAuthStateChanged } from "firebase/auth";
-import { collection, doc, getDoc, limit, onSnapshot, query, where } from "firebase/firestore";
+import { doc, getDoc } from "firebase/firestore";
 import { Navigation2 } from "lucide-react-native";
 import React, { useEffect, useRef, useState } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
@@ -10,6 +10,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { auth, db } from "../../../config/firebase";
 import LocationMap from "../../../components/location-map";
 import type { LocationMapHandle, MapRegion } from "../../../components/location-map.types";
+import { rescueApi } from "../../../api/rescues";
 
 export default function BikerDashboardScreen() {
   const router = useRouter();
@@ -86,14 +87,21 @@ export default function BikerDashboardScreen() {
       setPendingRequestId(null);
       return;
     }
-    const openRequests = query(
-      collection(db, "rescueRequests"),
-      where("status", "==", "searching"),
-      limit(1),
-    );
-    return onSnapshot(openRequests, (snapshot) => {
-      setPendingRequestId(snapshot.docs[0]?.id ?? null);
-    });
+    let active = true;
+    const refresh = async () => {
+      try {
+        const requests = await rescueApi.open();
+        if (active) setPendingRequestId(requests[0]?.id ?? null);
+      } catch (error) {
+        console.error("Could not load open rescue requests", error);
+      }
+    };
+    void refresh();
+    const timer = setInterval(refresh, 3000);
+    return () => {
+      active = false;
+      clearInterval(timer);
+    };
   }, [online]);
 
   // 2. Fetch User Data

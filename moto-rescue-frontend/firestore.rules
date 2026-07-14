@@ -20,30 +20,9 @@ service cloud.firestore {
     }
 
     match /rescueRequests/{requestId} {
-      allow create: if signedIn()
-        && request.resource.data.passengerId == request.auth.uid
-        && request.resource.data.status == "searching"
-        && request.resource.data.bikerId == null;
-
-      allow read: if signedIn() && (
-        resource.data.passengerId == request.auth.uid
-        || resource.data.bikerId == request.auth.uid
-        || (isBiker() && resource.data.status == "searching")
-      );
-
-      allow update: if signedIn() && (
-        (resource.data.passengerId == request.auth.uid
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["status"])
-          && request.resource.data.status == "cancelled")
-        || (isBiker()
-          && resource.data.status == "searching"
-          && request.resource.data.status == "accepted"
-          && request.resource.data.bikerId == request.auth.uid
-          && request.resource.data.diff(resource.data).affectedKeys()
-            .hasOnly(["status", "bikerId", "bikerName", "acceptedAt"]))
-      );
-
-      allow delete: if false;
+      // Rescue state is server-authoritative. Firebase Admin SDK bypasses
+      // client rules after the backend verifies the user's ID token and role.
+      allow read, create, update, delete: if false;
     }
   }
 }

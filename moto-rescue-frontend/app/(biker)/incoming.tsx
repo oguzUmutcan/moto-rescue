@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
 // Pure React Native implementation
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { doc, runTransaction, serverTimestamp } from "firebase/firestore";
 import { AlertCircle, MapPin, Star } from "lucide-react-native";
 import {
   StyleSheet,
@@ -9,7 +8,8 @@ import {
   TouchableOpacity,
   View
 } from "react-native";
-import { auth, db } from "../../config/firebase";
+import { auth } from "../../config/firebase";
+import { rescueApi } from "../../api/rescues";
 
 // --- Minimal Map Background ---
 function MapBg() {
@@ -104,19 +104,7 @@ export default function IncomingRequestScreen() {
     const biker = auth.currentUser;
     if (!biker || !requestId) return;
     try {
-      await runTransaction(db, async (transaction) => {
-        const requestRef = doc(db, "rescueRequests", requestId);
-        const request = await transaction.get(requestRef);
-        if (!request.exists() || request.data().status !== "searching") {
-          throw new Error("This request is no longer available.");
-        }
-        transaction.update(requestRef, {
-          status: "accepted",
-          bikerId: biker.uid,
-          bikerName: biker.displayName || "Biker",
-          acceptedAt: serverTimestamp(),
-        });
-      });
+      await rescueApi.accept(requestId);
       router.replace({ pathname: "/(biker)/navigation", params: { requestId } });
     } catch (error) {
       console.error("Could not accept request", error);
