@@ -735,6 +735,37 @@ npm run lint         başarılı — 0 hata, 0 uyarı
 git diff --check     başarılı
 ```
 
+## 15 Temmuz 2026 — Google Places yanıt dönüşümü düzeltmesi
+
+### Sorun neydi?
+
+Adres araması Google Places servisleri etkin ve API anahtarı tanımlı olmasına rağmen sonuç göstermiyordu. Backend, autocomplete isteğinde HTTP 500 hatası üretiyordu.
+
+### Neden bu sorun çıktı?
+
+Spring Boot 4, JSON dönüşümü için Jackson 3'ün `tools.jackson` paketini kullanırken Places servisi eski Jackson 2 `com.fasterxml.jackson` paketindeki `JsonNode` sınıfını kullanıyordu. RestClient bu soyut tipi uygun dönüştürücüyle oluşturamıyordu.
+
+### Çözüm yöntemi neler?
+
+- Places yanıt tipini Spring Boot 4 ile gelen Jackson 3 tipiyle uyumlu hâle getirmek.
+- Backend testlerini çalıştırıp güncel servisi yeniden başlatmak.
+- Canlı adres araması sırasında backend logunu doğrulamak.
+
+### Nasıl çözüldü?
+
+- `PlacesService` içindeki `JsonNode` importu `tools.jackson.databind.JsonNode` olarak değiştirildi.
+- Google Cloud tarafında `places.googleapis.com` ve `places-backend.googleapis.com` servislerinin etkin olduğu doğrulandı.
+- `GOOGLE_MAPS_API_KEY` değişkeninin Windows kullanıcı ortamında kayıtlı olduğu, anahtar değeri açığa çıkarılmadan doğrulandı.
+
+### Test ve doğrulama
+
+```text
+mvnw.cmd test       başarılı — 6 test
+Güncel backend      başarılı — 8083 portunda PID 32796
+Places servisleri  etkin — places.googleapis.com ve places-backend.googleapis.com
+API anahtarı        Windows User scope içinde tanımlı
+```
+
 ## 15 Temmuz 2026 — Model geçişi için session handoff dokümanı
 
 ### Sorun neydi?

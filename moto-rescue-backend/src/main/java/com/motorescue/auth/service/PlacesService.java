@@ -1,6 +1,6 @@
 package com.motorescue.auth.service;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import tools.jackson.databind.JsonNode;
 import com.motorescue.auth.dto.PlacesDtos.AutocompleteRequest;
 import com.motorescue.auth.dto.PlacesDtos.AutocompleteResponse;
 import com.motorescue.auth.dto.PlacesDtos.PlaceDetailsResponse;
