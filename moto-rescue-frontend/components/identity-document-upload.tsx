@@ -24,6 +24,26 @@ export default function IdentityDocumentUpload({ initialStatus, onSubmitted }: P
   useEffect(() => setStatus(initialStatus), [initialStatus]);
 
   useEffect(() => {
+    if (status !== "pending") return;
+    let active = true;
+    const refreshStatus = async () => {
+      try {
+        const profile = await userApi.get();
+        if (!active) return;
+        setStatus(profile.identityDocumentStatus);
+        onSubmitted(profile);
+      } catch (error) {
+        console.error("Could not refresh document status", error);
+      }
+    };
+    const timer = setInterval(refreshStatus, 3000);
+    return () => {
+      active = false;
+      clearInterval(timer);
+    };
+  }, [status, onSubmitted]);
+
+  useEffect(() => {
     const uid = auth.currentUser?.uid;
     if (!uid) return;
     let active = true;

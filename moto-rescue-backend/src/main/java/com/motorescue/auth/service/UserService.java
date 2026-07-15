@@ -50,7 +50,17 @@ public class UserService {
     }
 
     public UserProfileResponse get(FirebaseToken token) {
-        return from(profile(token.getUid()), token.getUid());
+        DocumentSnapshot current = profile(token.getUid());
+        Timestamp submittedAt = current.getTimestamp("identityDocumentSubmittedAt");
+        if (isAutoVerificationDue(
+                current.getString("identityDocumentStatus"),
+                submittedAt == null ? null : submittedAt.toDate().toInstant(),
+                Instant.now()
+        )) {
+            await(firestore.collection("users").document(token.getUid()).update("identityDocumentStatus", "verified"));
+            current = profile(token.getUid());
+        }
+        return from(current, token.getUid());
     }
 
     public UserProfileResponse setRole(FirebaseToken token, String role) {
@@ -128,7 +138,8 @@ public class UserService {
                 "identityDocumentFrontPath", frontPath,
                 "identityDocumentBackPath", backPath,
                 "identityDocumentStatus", "pending",
-                "identityDocumentSubmittedAt", Timestamp.now()
+                "identityDocumentSubmittedAt", Timestamp.now(),
+                "online", false
         )));
         return get(token);
     }
@@ -181,9 +192,15 @@ public class UserService {
     }
 
     static boolean hasSubmittedIdentityDocument(String status, String frontPath, String backPath) {
-        return ("pending".equals(status) || "verified".equals(status))
+        return "verified".equals(status)
                 && frontPath != null && !frontPath.isBlank()
                 && backPath != null && !backPath.isBlank();
+    }
+
+    static boolean isAutoVerificationDue(String status, Instant submittedAt, Instant now) {
+        return "pending".equals(status)
+                && submittedAt != null
+                && !submittedAt.plusSeconds(60).isAfter(now);
     }
 
     private void updateAuthDisplayName(String uid, String name) {

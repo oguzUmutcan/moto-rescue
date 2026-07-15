@@ -923,6 +923,40 @@ npm run lint      başarılı — 0 hata, 0 uyarı
 git diff --check  başarılı
 ```
 
+## 15 Temmuz 2026 — Bir dakikalık otomatik ehliyet doğrulaması
+
+### Sorun neydi?
+
+Projede gerçek bir admin paneli bulunmadığı için `pending` ehliyet belgelerini onaylayacak kullanıcı yoktu. Önceki geçici kural `pending` durumundaki biker'ın online olmasına izin veriyor, dolayısıyla onay şartı gerçekte uygulanmıyordu.
+
+### Neden bu sorun çıktı?
+
+Belge yükleme ve özel saklama akışı hazırlanmış ancak admin doğrulama iş akışı prototip kapsamına alınmamıştı. Onay durumunu otomatik ilerletecek bir mekanizma ve frontend durum yenilemesi de yoktu.
+
+### Çözüm yöntemi neler?
+
+- Prototip ortamında belge gönderiminden 60 saniye sonra otomatik doğrulama uygulamak.
+- Frontend ekranlarını kısa aralıklarla yenileyerek durum değişikliğini kullanıcıya yansıtmak.
+- Online olmayı yalnızca `verified` durumuna izin verecek şekilde sıkılaştırmak.
+- Yeniden belge gönderiminde biker'ı güvenli biçimde offline yapmak.
+
+### Nasıl çözüldü?
+
+- Backend profil okunurken `pending` belgenin gönderim zamanı 60 saniyeyi geçtiyse durum atomik güncellemeyle `verified` yapılıyor.
+- Identity upload, biker dashboard ve biker profil ekranları pending durumunda profili üç saniyede bir yeniliyor.
+- Online uygunluğu yalnızca iki belge yolu bulunan `verified` biker'lar için geçerli hâle getirildi.
+- Belge yeniden gönderildiğinde backend `online=false` kaydediyor.
+- 60 saniye sınırı ve online uygunluğu için backend testleri genişletildi.
+
+### Test ve doğrulama
+
+```text
+mvnw.cmd test       başarılı — 8 test
+npx tsc --noEmit    başarılı
+npm run lint        başarılı — 0 hata, 0 uyarı
+git diff --check    başarılı
+```
+
 ## 15 Temmuz 2026 — Model geçişi için session handoff dokümanı
 
 ### Sorun neydi?

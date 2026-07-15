@@ -51,11 +51,13 @@ export default function BikerDashboardScreen() {
 
   const handleToggleOnline = async () => {
     const newStatus = !online;
-    const hasSubmittedLicense = identityDocumentStatus === "pending" || identityDocumentStatus === "verified";
-    if (newStatus && !hasSubmittedLicense) {
+    const hasVerifiedLicense = identityDocumentStatus === "verified";
+    if (newStatus && !hasVerifiedLicense) {
       Alert.alert(
-        "Driver's license required",
-        "Upload both sides of your driver's license before going online.",
+        identityDocumentStatus === "pending" ? "Verification pending" : "Driver's license required",
+        identityDocumentStatus === "pending"
+          ? "Your driver's license will be verified automatically about one minute after upload."
+          : "Upload both sides of your driver's license before going online.",
         [
           { text: "Upload license", onPress: () => router.push("/(auth)/profile-biker") },
           { text: "Cancel", style: "cancel" },
@@ -129,9 +131,9 @@ export default function BikerDashboardScreen() {
           const data = await userApi.get();
           if (data) {
             setName(data.name || user.displayName || "Biker");
-            const hasSubmittedLicense = data.identityDocumentStatus === "pending" || data.identityDocumentStatus === "verified";
+            const hasVerifiedLicense = data.identityDocumentStatus === "verified";
             setIdentityDocumentStatus(data.identityDocumentStatus);
-            if (data.online && !hasSubmittedLicense) {
+            if (data.online && !hasVerifiedLicense) {
               await userApi.update({ online: false });
               setOnline(false);
             } else {
@@ -159,6 +161,24 @@ export default function BikerDashboardScreen() {
 
     return () => unsubscribe();
   }, []);
+
+  useEffect(() => {
+    if (identityDocumentStatus !== "pending") return;
+    let active = true;
+    const refreshVerification = async () => {
+      try {
+        const profile = await userApi.get();
+        if (active) setIdentityDocumentStatus(profile.identityDocumentStatus);
+      } catch (error) {
+        console.error("Could not refresh license verification", error);
+      }
+    };
+    const timer = setInterval(refreshVerification, 3000);
+    return () => {
+      active = false;
+      clearInterval(timer);
+    };
+  }, [identityDocumentStatus]);
 
   // 3. Request Location Permissions & Set Initial Region
   useEffect(() => {

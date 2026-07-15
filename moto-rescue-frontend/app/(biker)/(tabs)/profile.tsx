@@ -76,6 +76,24 @@ export default function BikerProfileScreen() {
     fetchUserData();
   }, []);
 
+  useEffect(() => {
+    if (identityDocumentStatus !== "pending") return;
+    let active = true;
+    const refreshVerification = async () => {
+      try {
+        const profile = await userApi.get();
+        if (active) setIdentityDocumentStatus(profile.identityDocumentStatus);
+      } catch (error) {
+        console.error("Could not refresh license verification", error);
+      }
+    };
+    const timer = setInterval(refreshVerification, 3000);
+    return () => {
+      active = false;
+      clearInterval(timer);
+    };
+  }, [identityDocumentStatus]);
+
   const handleSignOut = async () => {
     try {
       await signOut(auth);
