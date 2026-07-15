@@ -828,6 +828,38 @@ npm run lint      başarılı — 0 hata, 0 uyarı
 git diff --check  başarılı
 ```
 
+## 15 Temmuz 2026 — Profil fotoğrafı kamerası ve kayıt yönlendirmesi
+
+### Sorun neydi?
+
+Passenger ve diğer profil ekranlarında profil fotoğrafına basıldığında yalnızca galeri açılıyordu. Ayrıca kullanıcı `verify-creds` ekranında hesabı başarıyla oluşturduktan sonra rol seçimine ilerlemek yerine yeniden hesap oluşturma ekranına dönüyordu.
+
+### Neden bu sorun çıktı?
+
+Ortak `ProfilePhoto` bileşeni yalnızca medya kütüphanesini başlatıyordu. Kayıt akışında ise başarı sonrasında draft temizlenince `verify-creds` guard effect'i bunu eksik kayıt verisi olarak algılıyor ve `profile-select` yönlendirmesiyle aynı anda `register` yönlendirmesi başlatıyordu.
+
+### Çözüm yöntemi neler?
+
+- Ortak profil fotoğrafı bileşeninde kamera ve galeri kaynaklarını açıkça sunmak.
+- Seçilen kaynağa özgü izni istemek ve mevcut güvenli yükleme kontrollerini korumak.
+- Başarıyla tamamlanan kayıt sırasında eksik-draft guard'ının devreye girmesini engellemek.
+- Draft içindeki parolayı rol seçimine geçerken bellekten temizlemeye devam etmek.
+
+### Nasıl çözüldü?
+
+- `ProfilePhoto` aksiyonlarına `Take photo`, `Choose from gallery`, opsiyonel `Remove photo` ve `Cancel` eklendi.
+- Kamera için `requestCameraPermissionsAsync` ve `launchCameraAsync` kullanıldı.
+- Başarılı kayıt tamamlanırken `isCompletingRegistration` ref'i ayarlanarak draft temizliğinin yanlış geri yönlendirme üretmesi önlendi.
+- Expo kamera izin açıklaması profil ve doğrulama fotoğraflarını kapsayacak şekilde güncellendi.
+
+### Test ve doğrulama
+
+```text
+npx tsc --noEmit  başarılı
+npm run lint      başarılı — 0 hata, 0 uyarı
+git diff --check  başarılı
+```
+
 ## 15 Temmuz 2026 — Model geçişi için session handoff dokümanı
 
 ### Sorun neydi?

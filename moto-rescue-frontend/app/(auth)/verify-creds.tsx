@@ -1,7 +1,7 @@
 // Note: This code is strictly for the Expo React Native environment.
 import { useRouter } from "expo-router";
 import { ArrowLeft, Edit2, Phone, User } from "lucide-react-native";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Alert, StatusBar, Text, TouchableOpacity, View } from "react-native";
 
 // --- CENTRAL FIREBASE IMPORTS ---
@@ -14,11 +14,12 @@ import { useRegistration } from "../../contexts/registration";
 export default function ConfirmPhoneScreen() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
+  const isCompletingRegistration = useRef(false);
   const { draft, clearDraft } = useRegistration();
   const insets = useSafeAreaInsets();
 
   useEffect(() => {
-    if (!draft) {
+    if (!draft && !isCompletingRegistration.current) {
       router.replace("/(auth)/register");
     }
   }, [draft, router]);
@@ -50,6 +51,7 @@ export default function ConfirmPhoneScreen() {
       console.log("✅ User created in Auth & Firestore successfully!");
 
       // 4. Navigate to Role Selection
+      isCompletingRegistration.current = true;
       clearDraft();
       router.replace("/(auth)/profile-select");
     } catch (error: any) {

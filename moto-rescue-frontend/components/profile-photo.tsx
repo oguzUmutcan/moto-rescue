@@ -33,20 +33,28 @@ export default function ProfilePhoto({ fallbackEmoji, storagePath, onStoragePath
     return () => { active = false; };
   }, [storagePath]);
 
-  const choosePhoto = async () => {
+  const choosePhoto = async (source: "camera" | "library") => {
     if (busy || !auth.currentUser) return;
     try {
-      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      const permission = source === "camera"
+        ? await ImagePicker.requestCameraPermissionsAsync()
+        : await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!permission.granted) {
-        Alert.alert("Photo access required", "Allow photo access to choose a profile picture.");
+        Alert.alert(
+          source === "camera" ? "Camera access required" : "Photo access required",
+          `Allow ${source === "camera" ? "camera" : "photo"} access to choose a profile picture.`,
+        );
         return;
       }
-      const result = await ImagePicker.launchImageLibraryAsync({
+      const pickerOptions: ImagePicker.ImagePickerOptions = {
         mediaTypes: ["images"],
         allowsEditing: true,
         aspect: [1, 1],
         quality: 0.8,
-      });
+      };
+      const result = source === "camera"
+        ? await ImagePicker.launchCameraAsync(pickerOptions)
+        : await ImagePicker.launchImageLibraryAsync(pickerOptions);
       if (result.canceled) return;
       const asset = result.assets[0];
       if (asset.fileSize && asset.fileSize > MAX_PROFILE_PHOTO_BYTES) {
@@ -96,7 +104,8 @@ export default function ProfilePhoto({ fallbackEmoji, storagePath, onStoragePath
 
   const showActions = () => {
     Alert.alert("Profile photo", undefined, [
-      { text: photoUrl ? "Change photo" : "Choose photo", onPress: () => void choosePhoto() },
+      { text: "Take photo", onPress: () => void choosePhoto("camera") },
+      { text: "Choose from gallery", onPress: () => void choosePhoto("library") },
       ...(photoUrl ? [{ text: "Remove photo", style: "destructive" as const, onPress: () => void removePhoto() }] : []),
       { text: "Cancel", style: "cancel" },
     ]);
