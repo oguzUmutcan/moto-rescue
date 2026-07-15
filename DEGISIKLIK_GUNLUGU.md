@@ -2,6 +2,55 @@
 
 Bu belge projede yapılan teknik değişiklikleri, değişikliklerin gerekçelerini ve doğrulama sonuçlarını kalıcı olarak kayıt altına alır. Yeni çalışmalar tarih sırasıyla bu dosyaya eklenecektir.
 
+## 15 Temmuz 2026 — Firebase Storage tabanlı profil fotoğrafı sistemi
+
+### Sorun neydi?
+
+Passenger ve biker profilleri yalnızca emoji gösteriyordu. Kullanıcı gerçek bir profil fotoğrafı seçemiyor, yükleyemiyor, değiştiremiyor veya kaldıramıyordu. Backend profil modelinde fotoğraf metadata alanı ve Storage için profil fotoğrafı güvenlik kuralı yoktu.
+
+### Neden bu sorun çıktı?
+
+Firebase Storage billing daha önce etkinleştirilemediği için dosya özellikleri kapalı tutulmuştu. ImagePicker paketi projede bulunsa da Firebase Storage istemcisi başlatılmamış, profil ekranlarına bağlanmamış ve backend arbitrary download URL kabul etmeden güvenli metadata saklayacak şekilde genişletilmemişti.
+
+### Çözüm yöntemi neler?
+
+- Her kullanıcı için sabit `profilePhotos/{uid}/avatar` Storage yolu kullanmak.
+- Yalnızca JPEG, PNG ve WebP görselleri, en fazla 5 MB olacak şekilde kabul etmek.
+- Storage yazma/silme işlemlerini yalnızca dosya sahibine açmak.
+- Backend'e download URL yerine UID ile doğrulanabilen sabit Storage yolunu kaydetmek.
+- Passenger ve biker profilinde ortak seçme, değiştirme ve kaldırma bileşeni kullanmak.
+
+### Nasıl Çözüldü?
+
+- Firebase istemci yapılandırmasına `getStorage` eklendi.
+- Expo ImagePicker config plugin'i yalnızca fotoğraf kitaplığı açıklamasıyla eklendi; gereksiz kamera ve mikrofon izinleri kapatıldı.
+- Ortak `ProfilePhoto` bileşeni fotoğraf seçimi, kare crop, MIME/boyut kontrolü, upload, download URL çözümleme, değiştirme ve silme davranışlarını uyguluyor.
+- Passenger ve biker profil avatarları gerçek fotoğrafı gösterecek şekilde bağlandı; fotoğraf yoksa mevcut emoji fallback'i korunuyor.
+- Backend `profilePhotoPath` alanını profile response'a ekledi.
+- `PATCH /api/users/me/profile-photo` yalnızca token UID'sine ait tam sabit yolu kabul ediyor.
+- `DELETE /api/users/me/profile-photo` profil metadata alanını kaldırıyor.
+- Storage kurallarına authenticated read, owner-only create/update/delete, sabit dosya adı, 5 MB ve izinli görsel MIME kontrolleri eklendi.
+
+### Test ve doğrulama
+
+```text
+mvnw.cmd test      başarılı — 6 test
+npx tsc --noEmit  başarılı
+npm run lint      başarılı — 0 hata, 0 uyarı
+```
+
+Canlı rules deploy denendi ancak Firebase projesinde Storage ürünü henüz ilk kez oluşturulmadığı için CLI işlemi durdu:
+
+```text
+Firebase Storage has not been set up on project 'motorescue-d4abc'.
+```
+
+Firebase Console → Storage → Get Started adımı tamamlandıktan sonra çalıştırılacak komut:
+
+```powershell
+npx firebase-tools deploy --only storage --project motorescue-d4abc
+```
+
 ## 15 Temmuz 2026 — Boarding code TextInput NativeWind çalışma zamanı hatasının düzeltilmesi
 
 ### Sorun neydi?

@@ -3,6 +3,7 @@ package com.motorescue.auth.service;
 import com.google.cloud.Timestamp;
 import com.google.cloud.firestore.DocumentSnapshot;
 import com.google.cloud.firestore.Firestore;
+import com.google.cloud.firestore.FieldValue;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseAuthException;
 import com.google.firebase.auth.FirebaseToken;
@@ -83,6 +84,21 @@ public class UserService {
         return get(token);
     }
 
+    public UserProfileResponse setProfilePhoto(FirebaseToken token, String storagePath) {
+        String expectedPath = "profilePhotos/" + token.getUid() + "/avatar";
+        if (!expectedPath.equals(storagePath)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid profile photo path");
+        }
+        await(firestore.collection("users").document(token.getUid()).update("profilePhotoPath", expectedPath));
+        return get(token);
+    }
+
+    public void clearProfilePhoto(FirebaseToken token) {
+        await(firestore.collection("users").document(token.getUid()).update(
+                "profilePhotoPath", FieldValue.delete()
+        ));
+    }
+
     public void delete(FirebaseToken token) {
         await(firestore.collection("users").document(token.getUid()).delete());
         try {
@@ -114,6 +130,7 @@ public class UserService {
                 uid, value.getString("name"), value.getString("email"), value.getString("phone"),
                 Boolean.TRUE.equals(value.getBoolean("phoneVerified")), value.getString("role"),
                 value.getString("emergencyContact"), value.getString("profileEmoji"), value.getString("bio"),
+                value.getString("profilePhotoPath"),
                 value.getString("plateNumber"), value.getString("motorcycleModel"), value.getString("motorcycleColor"),
                 (List<Boolean>) value.get("availableDays"), Boolean.TRUE.equals(value.getBoolean("online")),
                 !Boolean.FALSE.equals(value.getBoolean("notificationsEnabled")), value.getString("identityDocumentStatus"),

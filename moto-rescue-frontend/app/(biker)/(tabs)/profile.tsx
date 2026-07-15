@@ -16,6 +16,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { signOut } from "firebase/auth";
 import { auth } from "../../../config/firebase";
 import { userApi } from "../../../api/users";
+import ProfilePhoto from "../../../components/profile-photo";
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
@@ -39,6 +40,7 @@ export default function BikerProfileScreen() {
   const [plateNumber, setPlateNumber] = useState("Loading...");
   const [bio, setBio] = useState("Loading...");
   const [profileEmoji, setProfileEmoji] = useState("🦸"); // Default Biker Emoji
+  const [profilePhotoPath, setProfilePhotoPath] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -50,6 +52,7 @@ export default function BikerProfileScreen() {
             setPlateNumber(data.plateNumber || "Not provided");
             setBio(data.bio || "No bio available");
             setProfileEmoji(data.profileEmoji || "⛔");
+            setProfilePhotoPath(data.profilePhotoPath);
             setAvailable(
               data.availableDays || [
                 false,
@@ -135,8 +138,8 @@ export default function BikerProfileScreen() {
             <View className="flex-row items-start justify-between mb-4">
               <View className="flex-row items-center gap-3.5">
                 <View className="relative">
-                  <View className="w-[72px] h-[72px] rounded-full bg-[#0d2318] border-[3px] border-[#34C759] items-center justify-center">
-                    <Text className="text-[32px]">{profileEmoji}</Text>
+                  <View className="rounded-full border-[3px] border-[#34C759]">
+                    <ProfilePhoto fallbackEmoji={profileEmoji} storagePath={profilePhotoPath} onStoragePathChange={setProfilePhotoPath} dark />
                   </View>
                   <View className="absolute bottom-[-2px] right-[-2px] bg-[#34C759] rounded-full px-1.5 py-0.5 border-2 border-[#071510]">
                     <Text className="text-[9px] font-black text-white">

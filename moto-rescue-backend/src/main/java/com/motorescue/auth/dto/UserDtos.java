@@ -17,6 +17,10 @@ public final class UserDtos {
 
     public record RoleRequest(@Pattern(regexp = "passenger|biker") String role) {}
 
+    public record ProfilePhotoRequest(
+            @NotBlank @Size(max = 200) String storagePath
+    ) {}
+
     public record UpdateProfileRequest(
             @Size(max = 100) String name,
             @Size(max = 30) String emergencyContact,
@@ -33,6 +37,7 @@ public final class UserDtos {
     public record UserProfileResponse(
             String uid, String name, String email, String phone, boolean phoneVerified,
             String role, String emergencyContact, String profileEmoji, String bio,
+            String profilePhotoPath,
             String plateNumber, String motorcycleModel, String motorcycleColor,
             List<Boolean> availableDays, boolean online, boolean notificationsEnabled,
             String identityDocumentStatus, double rating, long totalRescues,

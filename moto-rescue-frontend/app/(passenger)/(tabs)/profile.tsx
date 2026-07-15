@@ -18,6 +18,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { signOut } from "firebase/auth";
 import { auth } from "../../../config/firebase";
 import { userApi } from "../../../api/users";
+import ProfilePhoto from "../../../components/profile-photo";
 
 export default function PassengerProfileScreen() {
   const router = useRouter();
@@ -32,6 +33,7 @@ export default function PassengerProfileScreen() {
   const [phone, setPhone] = useState("Loading...");
   const [emergencyContact, setEmergencyContact] = useState("Not set");
   const [profileEmoji, setProfileEmoji] = useState("⛔"); // Default Passenger Emoji
+  const [profilePhotoPath, setProfilePhotoPath] = useState<string | null>(null);
 
   // Fetch User Data from Firestore
   useEffect(() => {
@@ -45,6 +47,7 @@ export default function PassengerProfileScreen() {
             setPhone(data.phone || "");
             setEmergencyContact(data.emergencyContact || "Not set");
             setProfileEmoji(data.profileEmoji || "⛔");
+            setProfilePhotoPath(data.profilePhotoPath);
           }
         } catch (error) {
           console.error("Error fetching profile data:", error);
@@ -118,9 +121,7 @@ export default function PassengerProfileScreen() {
         <View className="bg-white rounded-[20px] p-5 mb-4 shadow-sm">
           <View className="flex-row items-center gap-3.5 mb-4">
             <View className="relative">
-              <View className="w-[72px] h-[72px] rounded-full bg-[#EEF4FF] items-center justify-center">
-                <Text className="text-[32px]">{profileEmoji}</Text>
-              </View>
+              <ProfilePhoto fallbackEmoji={profileEmoji} storagePath={profilePhotoPath} onStoragePathChange={setProfilePhotoPath} />
               <View className="absolute bottom-0 right-0 w-[18px] h-[18px] rounded-full bg-[#34C759] border-[2px] border-white items-center justify-center">
                 <Check size={9} color="white" strokeWidth={3} />
               </View>
