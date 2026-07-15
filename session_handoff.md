@@ -1,6 +1,6 @@
 # MotoRescue Session Handoff
 
-Son güncelleme: 15 Temmuz 2026, PC yeniden başlatılmadan hemen önce  
+Son güncelleme: 15 Temmuz 2026, PC yeniden başlatılmadan hemen önce
 Workspace: `C:\Users\umuto\Desktop\Lecture\zMy Works\Actual Projects\MotoRescue`
 
 ## Kullanıcının çalışma kuralları
