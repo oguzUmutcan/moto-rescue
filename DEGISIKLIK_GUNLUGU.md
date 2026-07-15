@@ -1464,3 +1464,9 @@ npx tsc --noEmit     başarılı
 npm run lint         başarılı — 0 hata, 0 uyarı
 git diff --check     başarılı
 ```
+## 15 Temmuz 2026 — Passenger arama ekranındaki sabit biker sayısının kaldırılması
+
+Passenger rescue oluşturulduktan sonra arama ekranı, backend gerçek bir bildirim alıcısı sayısı döndürmediği hâlde `2 bikers alerted nearby` yazıyordu. Ayrıca ekrandaki zone açıklaması backend'in kullandığı 6 km yerine 3 km gösteriyordu.
+
+- Sabit biker sayısı kaldırılarak `Nearby verified bikers alerted` durum metni kullanıldı.
+- Arama yarıçapı açıklaması backend ile uyumlu olacak şekilde 6 km olarak güncellendi.

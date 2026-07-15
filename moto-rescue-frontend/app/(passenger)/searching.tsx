@@ -204,7 +204,7 @@ export default function PassengerSearchingScreen() {
               Searching for Heroes…
             </Text>
             <Text className="text-[14px] text-[#8E8E93] mb-4 text-center">
-              Alerting verified bikers within 3 km
+              Alerting verified bikers within 6 km
             </Text>
 
             {/* Pulsing Dots */}
@@ -224,7 +224,7 @@ export default function PassengerSearchingScreen() {
 
             {/* Status Checklist */}
             {[
-              { text: "2 bikers alerted nearby", done: true },
+              { text: "Nearby verified bikers alerted", done: true },
               { text: "Checking availability…", done: false },
             ].map((item, i) => (
               <View
