@@ -1,7 +1,7 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { ExternalLink, MapPin } from "lucide-react-native";
 import React, { useEffect, useRef, useState } from "react";
-import { Alert, Linking, Platform, Text, TouchableOpacity, View } from "react-native";
+import { Alert, Linking, Platform, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { rescueApi, RescueRequest } from "../../api/rescues";
 import { badgeApi } from "../../api/badges";
 import LocationMap from "../../components/location-map";
@@ -13,6 +13,7 @@ export default function BikerNavigationScreen() {
   const mapRef = useRef<LocationMapHandle>(null);
   const [request, setRequest] = useState<RescueRequest | null>(null);
   const [busy, setBusy] = useState(false);
+  const [boardingCode, setBoardingCode] = useState("");
 
   useEffect(() => {
     if (!requestId) return;
@@ -54,7 +55,8 @@ export default function BikerNavigationScreen() {
     setBusy(true);
     try {
       if (request.status === "accepted") {
-        setRequest(await rescueApi.start(requestId));
+        setRequest(await rescueApi.start(requestId, boardingCode));
+        setBoardingCode("");
       } else if (request.status === "in_progress") {
         await rescueApi.complete(requestId);
         const badges = await badgeApi.mine().catch(() => null);
@@ -77,6 +79,10 @@ export default function BikerNavigationScreen() {
 
   const confirmAction = () => {
     if (!request) return;
+    if (request.status === "accepted" && !/^\d{6}$/.test(boardingCode)) {
+      Alert.alert("Boarding code required", "Ask the passenger for the 6-digit code shown in their app.");
+      return;
+    }
     Alert.alert(
       request.status === "accepted" ? "Start ride?" : "Complete ride?",
       request.status === "accepted"
@@ -133,6 +139,20 @@ export default function BikerNavigationScreen() {
           <ExternalLink size={18} color="#4285F4" />
           <Text className="text-[#4285F4] text-[16px] font-black ml-2">Open in Google Maps</Text>
         </TouchableOpacity>
+        {!inProgress && (
+          <View className="mb-3">
+            <Text className="text-[11px] text-[#8E8E93] font-black uppercase mb-2">Passenger boarding code</Text>
+            <TextInput
+              value={boardingCode}
+              onChangeText={(value) => setBoardingCode(value.replace(/\D/g, "").slice(0, 6))}
+              keyboardType="number-pad"
+              maxLength={6}
+              placeholder="6-digit code"
+              placeholderTextColor="#AEAEB2"
+              className="h-12 rounded-2xl bg-[#F2F2F7] px-4 text-center text-[22px] font-black tracking-[8px] text-[#1C1C1E]"
+            />
+          </View>
+        )}
         <TouchableOpacity onPress={confirmAction} disabled={busy} className={`h-14 rounded-2xl items-center justify-center ${inProgress ? "bg-[#34C759]" : "bg-[#007AFF]"}`}>
           <Text className="text-white text-[18px] font-black">{busy ? "Updating..." : inProgress ? "✓ Complete Ride" : "🏍️ Start Ride"}</Text>
         </TouchableOpacity>

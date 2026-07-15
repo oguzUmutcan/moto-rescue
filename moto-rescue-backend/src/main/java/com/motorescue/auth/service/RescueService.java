@@ -10,12 +10,14 @@ import com.google.cloud.firestore.QueryDocumentSnapshot;
 import com.google.firebase.auth.FirebaseToken;
 import com.motorescue.auth.dto.RescueDtos.CreateRescueRequest;
 import com.motorescue.auth.dto.RescueDtos.RescueResponse;
+import com.motorescue.auth.dto.RescueDtos.StartRescueRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Instant;
+import java.security.SecureRandom;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -27,6 +29,7 @@ public class RescueService {
 
     private static final String REQUESTS = "rescueRequests";
     private static final String USERS = "users";
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
     private final Firestore firestore;
 
     public RescueService(Firestore firestore) {
@@ -53,7 +56,7 @@ public class RescueService {
         Instant expiresAt = now.plusSeconds(300);
         data.put("expiresAt", Timestamp.ofTimeSecondsAndNanos(expiresAt.getEpochSecond(), expiresAt.getNano()));
         await(reference.create(data));
-        return from(reference.getId(), data);
+        return forUser(token, from(reference.getId(), data));
     }
 
     public RescueResponse get(FirebaseToken token, String requestId) {
@@ -67,7 +70,7 @@ public class RescueService {
         if (!participant && !availableToBiker) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You are not a participant in this rescue");
         }
-        return from(snapshot);
+        return forUser(token, from(snapshot));
     }
 
     public List<RescueResponse> open(FirebaseToken token) {
@@ -79,6 +82,7 @@ public class RescueService {
                     .get().get().getDocuments().stream()
                     .filter(document -> !isExpired(document))
                     .map(this::from)
+                    .map(response -> forUser(token, response))
                     .toList();
         } catch (InterruptedException exception) {
             Thread.currentThread().interrupt();
@@ -98,6 +102,7 @@ public class RescueService {
                     .limit(100)
                     .get().get().getDocuments().stream()
                     .map(this::from)
+                    .map(response -> forUser(token, response))
                     .sorted((left, right) -> right.createdAt().compareTo(left.createdAt()))
                     .toList();
         } catch (InterruptedException exception) {
@@ -123,6 +128,7 @@ public class RescueService {
                     })
                     .filter(document -> !"searching".equals(document.getString("status")) || !isExpired(document))
                     .map(this::from)
+                    .map(response -> forUser(token, response))
                     .max((left, right) -> left.createdAt().compareTo(right.createdAt()))
                     .orElse(null);
         } catch (InterruptedException exception) {
@@ -149,11 +155,12 @@ public class RescueService {
                         "status", "accepted",
                         "bikerId", token.getUid(),
                         "bikerName", displayName(token),
+                        "boardingCode", String.format("%06d", SECURE_RANDOM.nextInt(1_000_000)),
                         "acceptedAt", Timestamp.now()
                 ));
                 return null;
             }).get();
-            return from(getDocument(requestId));
+            return forUser(token, from(getDocument(requestId)));
         } catch (InterruptedException exception) {
             Thread.currentThread().interrupt();
             throw unavailable(exception);
@@ -183,7 +190,7 @@ public class RescueService {
                 transaction.update(reference, "status", "cancelled");
                 return null;
             }).get();
-            return from(getDocument(requestId));
+            return forUser(token, from(getDocument(requestId)));
         } catch (InterruptedException exception) {
             Thread.currentThread().interrupt();
             throw unavailable(exception);
@@ -195,8 +202,40 @@ public class RescueService {
         }
     }
 
-    public RescueResponse start(FirebaseToken token, String requestId) {
-        return transitionByBiker(token, requestId, "accepted", "in_progress", "startedAt");
+    public RescueResponse start(FirebaseToken token, String requestId, StartRescueRequest request) {
+        requireRole(token.getUid(), "biker");
+        DocumentReference reference = firestore.collection(REQUESTS).document(requestId);
+        try {
+            firestore.runTransaction(transaction -> {
+                DocumentSnapshot snapshot = transaction.get(reference).get();
+                if (!snapshot.exists()) {
+                    throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Rescue request not found");
+                }
+                if (!token.getUid().equals(snapshot.getString("bikerId"))) {
+                    throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only the assigned biker can start this rescue");
+                }
+                if (!"accepted".equals(snapshot.getString("status"))) {
+                    throw new ResponseStatusException(HttpStatus.CONFLICT, "Invalid rescue status transition");
+                }
+                if (!request.boardingCode().equals(snapshot.getString("boardingCode"))) {
+                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Boarding code is incorrect");
+                }
+                Timestamp now = Timestamp.now();
+                transaction.update(reference, Map.of(
+                        "status", "in_progress",
+                        "boardingVerifiedAt", now,
+                        "startedAt", now
+                ));
+                return null;
+            }).get();
+            return forUser(token, from(getDocument(requestId)));
+        } catch (InterruptedException exception) {
+            Thread.currentThread().interrupt();
+            throw unavailable(exception);
+        } catch (ExecutionException exception) {
+            if (exception.getCause() instanceof ResponseStatusException statusException) throw statusException;
+            throw unavailable(exception);
+        }
     }
 
     public RescueResponse complete(FirebaseToken token, String requestId) {
@@ -226,7 +265,7 @@ public class RescueService {
                 }
                 return null;
             }).get();
-            return from(getDocument(requestId));
+            return forUser(token, from(getDocument(requestId)));
         } catch (InterruptedException exception) {
             Thread.currentThread().interrupt();
             throw unavailable(exception);
@@ -306,8 +345,23 @@ public class RescueService {
                 instant((Timestamp) data.get("createdAt")),
                 instant((Timestamp) data.get("expiresAt")),
                 instant((Timestamp) data.get("acceptedAt")),
+                (String) data.get("boardingCode"),
+                instant((Timestamp) data.get("boardingVerifiedAt")),
                 instant((Timestamp) data.get("startedAt")),
                 instant((Timestamp) data.get("completedAt"))
+        );
+    }
+
+    private RescueResponse forUser(FirebaseToken token, RescueResponse response) {
+        boolean showBoardingCode = token.getUid().equals(response.passengerId())
+                && "accepted".equals(response.status());
+        if (showBoardingCode || response.boardingCode() == null) return response;
+        return new RescueResponse(
+                response.id(), response.passengerId(), response.passengerName(), response.latitude(), response.longitude(),
+                response.pickupLabel(), response.destinationLabel(), response.destinationLatitude(), response.destinationLongitude(),
+                response.urgency(), response.needsHelmet(), response.status(), response.bikerId(), response.bikerName(),
+                response.createdAt(), response.expiresAt(), response.acceptedAt(), null, response.boardingVerifiedAt(),
+                response.startedAt(), response.completedAt()
         );
     }
 

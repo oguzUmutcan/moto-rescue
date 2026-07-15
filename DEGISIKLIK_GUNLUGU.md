@@ -2,6 +2,42 @@
 
 Bu belge projede yapılan teknik değişiklikleri, değişikliklerin gerekçelerini ve doğrulama sonuçlarını kalıcı olarak kayıt altına alır. Yeni çalışmalar tarih sırasıyla bu dosyaya eklenecektir.
 
+## 15 Temmuz 2026 — Doğrulanmış passenger boarding code sistemi
+
+### Sorun neydi?
+
+Biker, passenger'ın gerçekten doğru araca bindiğini doğrulamadan yalnızca kendi onay penceresine dokunarak rescue kaydını `accepted` durumundan `in_progress` durumuna geçirebiliyordu. Önceki safety code prototipi kaldırılmış fakat yerine backend tarafından doğrulanan bir mekanizma eklenmemişti.
+
+### Neden bu sorun çıktı?
+
+İlk kabul sonrası akış UI durumlarını backend durum makinesiyle eşlemeye odaklanmıştı. Start endpoint'i request body almıyor ve yalnızca atanmış biker kimliği ile mevcut durumu kontrol ediyordu. Bu kontroller doğru biker'ın işlem yaptığını kanıtlasa da doğru passenger'ın araca bindiğini kanıtlamıyordu.
+
+### Çözüm yöntemi neler?
+
+- Biker kabulü sırasında backend'de tahmin edilmesi zor, altı haneli ve rescue'ya özel kod üretmek.
+- Kodu yalnızca ilgili passenger'ın API yanıtında göstermek; biker ve diğer kullanıcılardan gizlemek.
+- Start endpoint'inin altı haneli kod kabul etmesini ve transaction içinde doğrulamasını zorunlu kılmak.
+- Doğru kod doğrulanmadan rescue durumunun ve başlangıç zamanının değiştirilmesini engellemek.
+- Passenger ve biker ekranlarını kod paylaşma/girme akışına bağlamak.
+
+### Nasıl Çözüldü?
+
+- Rescue kabul transaction'ı `SecureRandom` ile altı haneli `boardingCode` üretiyor.
+- API response kişiselleştirmesi kodu yalnızca rescue passenger'ına ve yalnızca `accepted` durumunda döndürüyor.
+- `POST /api/rescues/{requestId}/start` artık `boardingCode` gövdesini zorunlu tutuyor ve biçimi validation ile kontrol ediyor.
+- Start transaction'ı atanmış biker, mevcut durum ve boarding code kontrollerinin tamamı geçmeden `in_progress`, `boardingVerifiedAt` ve `startedAt` alanlarını yazmıyor.
+- Passenger ride ekranı kodu ve güvenli paylaşım uyarısını gösteriyor.
+- Biker navigation ekranına yalnızca altı rakam kabul eden kod alanı eklendi; eksik ve yanlış kodlarda sürüş başlatılmıyor.
+- Controller testi start isteğinin doğrulanmış token ve boarding code ile service katmanına aktarıldığını kapsayacak şekilde genişletildi.
+
+### Test ve doğrulama
+
+```text
+mvnw.cmd test      başarılı — 6 test
+npx tsc --noEmit  başarılı
+npm run lint      başarılı — 0 hata, 0 uyarı
+```
+
 ## 14 Temmuz 2026 — Güvenlik, kimlik doğrulama ve kurtarma akışı düzeltmeleri
 
 ### 1. Firebase servis hesabı anahtarının kaynak kodda bulunması

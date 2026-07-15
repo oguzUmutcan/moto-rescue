@@ -3,6 +3,7 @@ package com.motorescue.auth.controller;
 import com.google.firebase.auth.FirebaseToken;
 import com.motorescue.auth.dto.RescueDtos.CreateRescueRequest;
 import com.motorescue.auth.dto.RescueDtos.RescueResponse;
+import com.motorescue.auth.dto.RescueDtos.StartRescueRequest;
 import com.motorescue.auth.service.AuthService;
 import com.motorescue.auth.service.RescueService;
 import org.junit.jupiter.api.BeforeEach;
@@ -56,11 +57,23 @@ class RescueControllerTests {
         verify(rescueService).accept(token, "request-1");
     }
 
+    @Test
+    void startRequiresBoardingCodeAndDelegatesItToService() {
+        StartRescueRequest request = new StartRescueRequest("123456");
+        RescueResponse response = response("request-1", "in_progress");
+        when(rescueService.start(token, "request-1", request)).thenReturn(response);
+
+        RescueResponse result = controller.start("Bearer token", "request-1", request);
+
+        assertThat(result.status()).isEqualTo("in_progress");
+        verify(rescueService).start(token, "request-1", request);
+    }
+
     private RescueResponse response(String id, String status) {
         Instant now = Instant.now();
         return new RescueResponse(
                 id, "passenger", "Passenger", 36.75, 3.05, "Pickup", "Campus", 36.76, 3.06, "Exam", true,
-                status, null, null, now, now.plusSeconds(300), null, null, null
+                status, null, null, now, now.plusSeconds(300), null, null, null, null, null
         );
     }
 }

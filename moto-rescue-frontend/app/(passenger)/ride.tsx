@@ -79,6 +79,13 @@ export default function PassengerRideScreen() {
         <View className="bg-[#EDFAF3] rounded-2xl p-3 flex-row items-center">
           <ShieldCheck size={18} color="#34C759" /><Text className="ml-2 flex-1 text-[#248A3D] font-bold">{inProgress ? "Ride started. Follow the route progress here." : "Wait at the selected pickup point."}</Text>
         </View>
+        {!inProgress && request.boardingCode && (
+          <View className="mt-3 rounded-2xl bg-[#EEF4FF] p-4 items-center">
+            <Text className="text-[11px] font-black uppercase tracking-widest text-[#007AFF]">Boarding code</Text>
+            <Text className="mt-1 text-[32px] font-black tracking-[10px] text-[#1C1C1E]">{request.boardingCode}</Text>
+            <Text className="mt-1 text-center text-[12px] font-semibold text-[#636366]">Share this code only after the correct biker arrives.</Text>
+          </View>
+        )}
         {!inProgress && (
           <TouchableOpacity onPress={handleCancel} className="mt-4 py-3"><Text className="text-center text-[#FF3B30] font-black">Cancel Request</Text></TouchableOpacity>
         )}
