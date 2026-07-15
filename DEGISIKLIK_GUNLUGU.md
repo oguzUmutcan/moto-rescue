@@ -860,6 +860,40 @@ npm run lint      başarılı — 0 hata, 0 uyarı
 git diff --check  başarılı
 ```
 
+## 15 Temmuz 2026 — Ehliyetsiz biker'ın online olmasının engellenmesi
+
+### Sorun neydi?
+
+Biker, sürücü belgesinin ön ve arka yüzünü yüklemeden dashboard üzerinden kendisini online yapabiliyordu. Online tercihi yalnızca cihazdaki SecureStore'a kaydedildiği için backend bu durumu doğrulamıyordu.
+
+### Neden bu sorun çıktı?
+
+Dashboard online durumunu yerel UI tercihi olarak yönetiyordu. Backend profil güncelleme endpoint'i de `online=true` talebinde rol veya kimlik belgesi durumunu kontrol etmiyordu.
+
+### Çözüm yöntemi neler?
+
+- Online durumunu backend-authoritative hâle getirmek.
+- Hem belge durumu hem ön/arka belge yolları mevcut değilse backend'de online talebini reddetmek.
+- Frontend'de kullanıcıya anlaşılır uyarı ve belge yükleme ekranına geçiş sunmak.
+- Eski yerel online kaydı nedeniyle belgesiz online görünen hesapları dashboard açılışında offline yapmak.
+
+### Nasıl çözüldü?
+
+- Backend `online=true` güncellemesinde biker rolü, `pending`/`verified` belge durumu ve iki belge yolu zorunlu kılındı.
+- Biker dashboard online durumunu SecureStore yerine `/api/users/me` profilinden okumaya ve güncellemeye başladı.
+- Belgesi olmayan kullanıcı online düğmesine bastığında belge yükleme CTA'sı gösteriliyor.
+- Eski veride belgesiz olup `online=true` kalan hesaplar dashboard yüklenirken backend üzerinden offline yapılıyor.
+- Belge uygunluk kombinasyonları için backend birim testi eklendi.
+
+### Test ve doğrulama
+
+```text
+mvnw.cmd test       başarılı — 7 test
+npx tsc --noEmit    başarılı
+npm run lint        başarılı — 0 hata, 0 uyarı
+git diff --check    başarılı
+```
+
 ## 15 Temmuz 2026 — Model geçişi için session handoff dokümanı
 
 ### Sorun neydi?

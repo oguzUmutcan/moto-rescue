@@ -76,6 +76,19 @@ public class UserService {
             }
             updates.put("availableDays", request.availableDays());
         }
+        if (Boolean.TRUE.equals(request.online())) {
+            DocumentSnapshot current = profile(token.getUid());
+            if (!"biker".equals(current.getString("role"))) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "The biker role is required to go online");
+            }
+            if (!hasSubmittedIdentityDocument(
+                    current.getString("identityDocumentStatus"),
+                    current.getString("identityDocumentFrontPath"),
+                    current.getString("identityDocumentBackPath")
+            )) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Submit both sides of your driver's license before going online");
+            }
+        }
         if (request.online() != null) updates.put("online", request.online());
         if (request.notificationsEnabled() != null) updates.put("notificationsEnabled", request.notificationsEnabled());
         if (updates.isEmpty()) return get(token);
@@ -165,6 +178,12 @@ public class UserService {
 
     private void put(Map<String, Object> updates, String field, String value) {
         if (value != null) updates.put(field, value.trim());
+    }
+
+    static boolean hasSubmittedIdentityDocument(String status, String frontPath, String backPath) {
+        return ("pending".equals(status) || "verified".equals(status))
+                && frontPath != null && !frontPath.isBlank()
+                && backPath != null && !backPath.isBlank();
     }
 
     private void updateAuthDisplayName(String uid, String name) {

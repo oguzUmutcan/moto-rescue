@@ -1,11 +1,10 @@
 import * as Location from "expo-location";
 import { useRouter } from "expo-router";
-import * as SecureStore from "expo-secure-store";
 import { getAvailablePosition } from "../../../utils/device-location";
 import { onAuthStateChanged } from "firebase/auth";
 import { Navigation2 } from "lucide-react-native";
 import React, { useEffect, useRef, useState } from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { auth } from "../../../config/firebase";
 import LocationMap from "../../../components/location-map";
@@ -19,7 +18,10 @@ export default function BikerDashboardScreen() {
   const mapRef = useRef<LocationMapHandle>(null);
   const presentedRequestId = useRef<string | null>(null);
 
-  const [online, setOnline] = useState(true);
+  const [online, setOnline] = useState(false);
+  const [onlineBusy, setOnlineBusy] = useState(false);
+  const [profileLoaded, setProfileLoaded] = useState(false);
+  const [identityDocumentStatus, setIdentityDocumentStatus] = useState<"not_submitted" | "pending" | "verified" | "rejected">("not_submitted");
   const [name, setName] = useState("Loading...");
   const [pendingRequestId, setPendingRequestId] = useState<string | null>(null);
 
@@ -49,12 +51,27 @@ export default function BikerDashboardScreen() {
 
   const handleToggleOnline = async () => {
     const newStatus = !online;
-    setOnline(newStatus);
-
+    const hasSubmittedLicense = identityDocumentStatus === "pending" || identityDocumentStatus === "verified";
+    if (newStatus && !hasSubmittedLicense) {
+      Alert.alert(
+        "Driver's license required",
+        "Upload both sides of your driver's license before going online.",
+        [
+          { text: "Upload license", onPress: () => router.push("/(auth)/profile-biker") },
+          { text: "Cancel", style: "cancel" },
+        ],
+      );
+      return;
+    }
+    setOnlineBusy(true);
     try {
-      await SecureStore.setItemAsync("biker_online_status", String(newStatus));
+      const profile = await userApi.update({ online: newStatus });
+      setOnline(profile.online);
     } catch (error) {
       console.error("Error saving online status:", error);
+      Alert.alert("Could not change status", error instanceof Error ? error.message : "Please try again.");
+    } finally {
+      setOnlineBusy(false);
     }
   };
 
@@ -74,23 +91,6 @@ export default function BikerDashboardScreen() {
       console.error("Could not get location", error);
     }
   };
-
-  // 1. Load SecureStore Online Status
-  useEffect(() => {
-    const loadOnlineStatus = async () => {
-      try {
-        const savedStatus = await SecureStore.getItemAsync(
-          "biker_online_status",
-        );
-        if (savedStatus !== null) {
-          setOnline(savedStatus === "true");
-        }
-      } catch (error) {
-        console.error("Error loading online status:", error);
-      }
-    };
-    loadOnlineStatus();
-  }, []);
 
   useEffect(() => {
     if (!online) {
@@ -129,6 +129,14 @@ export default function BikerDashboardScreen() {
           const data = await userApi.get();
           if (data) {
             setName(data.name || user.displayName || "Biker");
+            const hasSubmittedLicense = data.identityDocumentStatus === "pending" || data.identityDocumentStatus === "verified";
+            setIdentityDocumentStatus(data.identityDocumentStatus);
+            if (data.online && !hasSubmittedLicense) {
+              await userApi.update({ online: false });
+              setOnline(false);
+            } else {
+              setOnline(data.online);
+            }
 
             // FETCH STATS FROM FIRESTORE (with safe fallbacks)
             setTodayRescues("0");
@@ -140,9 +148,12 @@ export default function BikerDashboardScreen() {
         } catch (error) {
           console.error("Error fetching profile data:", error);
           setName("Biker");
+        } finally {
+          setProfileLoaded(true);
         }
       } else {
         setName("Biker");
+        setProfileLoaded(true);
       }
     });
 
@@ -230,6 +241,7 @@ export default function BikerDashboardScreen() {
             {/* Online Toggle */}
             <TouchableOpacity
               onPress={handleToggleOnline}
+              disabled={!profileLoaded || onlineBusy}
               activeOpacity={0.8}
               className={`flex-row items-center rounded-full px-4 py-2.5 ${online ? "bg-[#34C759]" : "bg-[#F2F2F7]"}`}
             >
