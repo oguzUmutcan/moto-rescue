@@ -56,7 +56,7 @@ export default function IdentityDocumentUpload({ initialStatus, onSubmitted }: P
       }
       const pickerOptions: ImagePicker.ImagePickerOptions = {
         mediaTypes: ["images"],
-        allowsEditing: true,
+        allowsEditing: source === "library",
         quality: 0.9,
       };
       const result = source === "camera"

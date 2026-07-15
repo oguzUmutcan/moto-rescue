@@ -894,6 +894,35 @@ npm run lint        başarılı — 0 hata, 0 uyarı
 git diff --check    başarılı
 ```
 
+## 15 Temmuz 2026 — Kamera sonrası görünmeyen kaydet düğmesi
+
+### Sorun neydi?
+
+Profil veya ehliyet fotoğrafı kamerayla çekildikten sonra Android edit/kırpma ekranı açılıyor ancak emülatör ekranında kaydet/onay düğmesi görünmüyordu. Kullanıcı çektiği fotoğrafla yükleme akışına devam edemiyordu.
+
+### Neden bu sorun çıktı?
+
+Kamera ve galeri aynı ImagePicker seçeneklerini kullanıyor, her iki kaynakta da `allowsEditing: true` gönderiliyordu. Bu değer Android'in sistem kırpma arayüzünü açıyordu; arayüzün onay kontrolü mevcut emülatör ekranına düzgün yerleşmiyordu.
+
+### Çözüm yöntemi neler?
+
+- Kamera çekiminde sistem edit/kırpma ekranını atlamak.
+- Çekilen fotoğrafı doğrudan mevcut doğrulama ve yükleme akışına vermek.
+- Galeriden seçimde kırpma özelliğini korumak.
+
+### Nasıl çözüldü?
+
+- Profil ve kimlik belgesi ImagePicker seçeneklerinde `allowsEditing`, yalnızca kaynak `library` olduğunda etkin olacak şekilde değiştirildi.
+- Kamera kaynağı artık çekim onayından sonra ekstra edit ekranı açmadan uygulamaya dönüyor.
+
+### Test ve doğrulama
+
+```text
+npx tsc --noEmit  başarılı
+npm run lint      başarılı — 0 hata, 0 uyarı
+git diff --check  başarılı
+```
+
 ## 15 Temmuz 2026 — Model geçişi için session handoff dokümanı
 
 ### Sorun neydi?
