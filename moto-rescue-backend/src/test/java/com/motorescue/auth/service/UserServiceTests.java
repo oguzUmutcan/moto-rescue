@@ -42,4 +42,11 @@ class UserServiceTests {
         assertThat(UserService.hasContactPhone("555 111 22")).isFalse();
         assertThat(UserService.hasContactPhone("123")).isFalse();
     }
+
+    @Test
+    void profilePhoneMustMatchFirebaseVerifiedClaim() {
+        assertThat(UserService.verifiedPhoneMatches("+905551112233", "+905551112233")).isTrue();
+        assertThat(UserService.verifiedPhoneMatches("+905551112233", "+905559999999")).isFalse();
+        assertThat(UserService.verifiedPhoneMatches(null, "+905551112233")).isFalse();
+    }
 }

@@ -1545,3 +1545,25 @@ npx tsc --noEmit    başarılı
 npm run lint        başarılı — 0 hata, 0 uyarı
 git diff --check    başarılı
 ```
+
+## 15 Temmuz 2026 — Firebase SMS ile kayıt telefonu doğrulaması
+
+Kayıt akışı email/password hesabını ve Firestore profilini telefon numarasının kullanıcıya ait olduğunu doğrulamadan oluşturuyordu. Firebase Phone Auth native uygulama doğrulaması gerektirdiği için Expo Go tabanlı çalışma gerçek SMS akışını desteklemiyordu.
+
+- Android Firebase uygulaması `com.oguzumutcan.motorescue` paketiyle yapılandırıldı ve `google-services.json` Expo config'e bağlandı.
+- Expo development client ile `@react-native-firebase/app` ve `@react-native-firebase/auth` eklendi.
+- Verify credentials ekranı SMS gönderme, 6 haneli kod girişi, 60 saniyelik yeniden gönderme sınırı ve hata durumlarını içeren iki aşamalı akışa dönüştürüldü.
+- SMS doğrulaması tamamlanınca email/password credential telefon kullanıcısına bağlanıyor; JS Firebase oturumu aynı UID ile açıldıktan sonra backend profili oluşturuluyor.
+- Backend profil oluştururken istemci telefonuna güvenmiyor; Firebase ID token içindeki doğrulanmış `phone_number` claim'ini zorunlu tutuyor ve istenen numarayla birebir eşleştiriyor.
+- Doğrulanmış telefon profil ekranlarında salt okunur gösteriliyor; numara değişikliği ayrı bir yeniden doğrulama akışı gerektiriyor.
+
+### Doğrulama
+
+```text
+mvnw.cmd test       başarılı — 11 test
+npx tsc --noEmit    başarılı
+npm run lint        başarılı — 0 hata, 0 uyarı
+npx expo-doctor     başarılı — 18/18 kontrol
+Expo config         başarılı
+Yerel Android build engeli — internet kesintisinde Google Maven bağımlılıkları indirilemedi; EAS development build kullanılacak
+```

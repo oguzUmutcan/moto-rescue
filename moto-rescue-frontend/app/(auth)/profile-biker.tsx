@@ -119,7 +119,6 @@ export default function ProfileBikerScreen() {
     try {
       await userApi.update({
         name: name.trim(),
-        phone: phone.trim(),
         plateNumber: plateNumber.trim().toUpperCase(),
         bio: bio.trim(),
         motorcycleModel: motorcycleModel.trim(),
@@ -217,10 +216,9 @@ export default function ProfileBikerScreen() {
               placeholderTextColor="#C7C7CC"
               keyboardType="phone-pad"
               value={phone}
-              onChangeText={(value) => setPhone(value.replace(/[^\d+]/g, "").replace(/(?!^)\+/g, "").slice(0, 16))}
-              editable={!isLoading}
+              editable={false}
             />
-            <Text className="text-[12px] text-[#8E8E93] mt-1.5">Passengers can use this number only after you accept their rescue.</Text>
+            <Text className="text-[12px] text-[#8E8E93] mt-1.5">Verified by SMS. Passengers can use it only after you accept their rescue.</Text>
           </View>
 
           <View className="mb-4">
