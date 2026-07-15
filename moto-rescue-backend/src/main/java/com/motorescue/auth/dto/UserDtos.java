@@ -35,6 +35,7 @@ public final class UserDtos {
 
     public record UpdateProfileRequest(
             @Size(max = 100) String name,
+            @Pattern(regexp = "^\\+?[0-9]{7,15}$", message = "phone must contain 7 to 15 digits") String phone,
             @Size(max = 30) String emergencyContact,
             @Size(max = 10) String profileEmoji,
             @Size(max = 500) String bio,

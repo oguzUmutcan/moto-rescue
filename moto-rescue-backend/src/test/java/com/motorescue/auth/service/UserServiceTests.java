@@ -33,4 +33,13 @@ class UserServiceTests {
         assertThat(RescueService.isFreshLocation(Timestamp.ofTimeSecondsAndNanos(now.minusSeconds(30).getEpochSecond(), 0), now)).isTrue();
         assertThat(RescueService.isFreshLocation(Timestamp.ofTimeSecondsAndNanos(now.minusSeconds(121).getEpochSecond(), 0), now)).isFalse();
     }
+
+    @Test
+    void onlineContactPhoneMustBeUsable() {
+        assertThat(UserService.hasContactPhone("+905551112233")).isTrue();
+        assertThat(UserService.hasContactPhone("05551112233")).isTrue();
+        assertThat(UserService.hasContactPhone(null)).isFalse();
+        assertThat(UserService.hasContactPhone("555 111 22")).isFalse();
+        assertThat(UserService.hasContactPhone("123")).isFalse();
+    }
 }

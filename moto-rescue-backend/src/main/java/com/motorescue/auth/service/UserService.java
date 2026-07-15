@@ -75,6 +75,7 @@ public class UserService {
     public UserProfileResponse update(FirebaseToken token, UpdateProfileRequest request) {
         Map<String, Object> updates = new HashMap<>();
         put(updates, "name", request.name());
+        put(updates, "phone", request.phone());
         put(updates, "emergencyContact", request.emergencyContact());
         put(updates, "profileEmoji", request.profileEmoji());
         put(updates, "bio", request.bio());
@@ -92,6 +93,10 @@ public class UserService {
             if (!"biker".equals(current.getString("role"))) {
                 throw new ResponseStatusException(HttpStatus.FORBIDDEN, "The biker role is required to go online");
             }
+            String contactPhone = request.phone() != null ? request.phone() : current.getString("phone");
+            if (!hasContactPhone(contactPhone)) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Add a valid contact phone number before going online");
+            }
             if (!hasSubmittedIdentityDocument(
                     current.getString("identityDocumentStatus"),
                     current.getString("identityDocumentFrontPath"),
@@ -106,6 +111,10 @@ public class UserService {
         await(firestore.collection("users").document(token.getUid()).update(updates));
         if (request.name() != null && !request.name().isBlank()) updateAuthDisplayName(token.getUid(), request.name().trim());
         return get(token);
+    }
+
+    static boolean hasContactPhone(String phone) {
+        return phone != null && phone.matches("^\\+?[0-9]{7,15}$");
     }
 
     public UserProfileResponse setProfilePhoto(FirebaseToken token, String storagePath) {

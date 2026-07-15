@@ -1507,3 +1507,22 @@ npx tsc --noEmit    başarılı
 npm run lint        başarılı — 0 hata, 0 uyarı
 git diff --check    başarılı
 ```
+
+## 15 Temmuz 2026 — Düzenlenebilir iletişim telefonu ve biker online kontrolü
+
+Kayıt sırasında telefon numarası alınmasına rağmen biker ve passenger profil düzenleme ekranlarında numarayı sonradan ekleme veya değiştirme alanı bulunmuyordu. Eski biker hesapları telefon alanı olmadan online olabildiği için passenger arama düğmesi kullanılamayabiliyordu.
+
+- Backend profil güncelleme sözleşmesine doğrulanan `phone` alanı eklendi; yalnızca isteğe bağlı `+` ve 7–15 rakam kabul ediliyor.
+- Biker ve passenger profil ekranları mevcut numarayı yüklüyor, düzenlemeye ve backend'e kaydetmeye izin veriyor.
+- Geçerli iletişim numarası bulunmayan biker'ın online olma talebi backend tarafından reddediliyor.
+- Profil kaydetme hatalarında backend'in açıklayıcı mesajı kullanıcıya gösteriliyor.
+- Telefon uygunluğu için backend birim testi eklendi.
+
+### Doğrulama
+
+```text
+mvnw.cmd test       başarılı — 10 test
+npx tsc --noEmit    başarılı
+npm run lint        başarılı — 0 hata, 0 uyarı
+git diff --check    başarılı
+```

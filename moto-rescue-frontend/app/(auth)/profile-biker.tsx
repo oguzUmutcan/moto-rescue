@@ -57,6 +57,7 @@ const AVATAR_EMOJIS = [
 
 export default function ProfileBikerScreen() {
   const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
   const [plateNumber, setPlateNumber] = useState("");
   const [bio, setBio] = useState("");
   const [motorcycleModel, setMotorcycleModel] = useState("");
@@ -82,7 +83,7 @@ export default function ProfileBikerScreen() {
   const insets = useSafeAreaInsets();
 
   const isFormValid =
-    name.length > 2 && plateNumber.length > 5 && hasUploadedID;
+    name.length > 2 && phone.replace(/\D/g, "").length >= 7 && plateNumber.length > 5 && hasUploadedID;
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -92,6 +93,7 @@ export default function ProfileBikerScreen() {
         const data = await userApi.get();
         if (data) {
           if (data.name) setName(data.name);
+          if (data.phone) setPhone(data.phone);
           if (data.plateNumber) setPlateNumber(data.plateNumber);
           if (data.bio) setBio(data.bio);
           if (data.motorcycleModel) setMotorcycleModel(data.motorcycleModel);
@@ -117,6 +119,7 @@ export default function ProfileBikerScreen() {
     try {
       await userApi.update({
         name: name.trim(),
+        phone: phone.trim(),
         plateNumber: plateNumber.trim().toUpperCase(),
         bio: bio.trim(),
         motorcycleModel: motorcycleModel.trim(),
@@ -127,9 +130,9 @@ export default function ProfileBikerScreen() {
 
       console.log("✅ Biker Profile saved in Firestore!");
       router.push("/(biker)/(tabs)/dashboard");
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error saving biker profile:", error);
-      Alert.alert("Error", "Failed to save profile. Please try again.");
+      Alert.alert("Error", error instanceof Error ? error.message : "Failed to save profile. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -202,6 +205,22 @@ export default function ProfileBikerScreen() {
             <Text className="text-[14px] text-[#34C759] font-bold">
               Choose Emoji Fallback
             </Text>
+          </View>
+
+          <View className="mb-4">
+            <Text className="text-[12px] font-bold text-[#8E8E93] tracking-wider uppercase mb-2">
+              Contact Phone
+            </Text>
+            <TextInput
+              className="w-full bg-[#F2F2F7] rounded-[14px] px-4 py-4 text-[16px] text-[#1C1C1E] font-medium"
+              placeholder="+90 555 111 2233"
+              placeholderTextColor="#C7C7CC"
+              keyboardType="phone-pad"
+              value={phone}
+              onChangeText={(value) => setPhone(value.replace(/[^\d+]/g, "").replace(/(?!^)\+/g, "").slice(0, 16))}
+              editable={!isLoading}
+            />
+            <Text className="text-[12px] text-[#8E8E93] mt-1.5">Passengers can use this number only after you accept their rescue.</Text>
           </View>
 
           <View className="mb-4">
