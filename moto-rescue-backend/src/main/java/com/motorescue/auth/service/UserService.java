@@ -4,6 +4,7 @@ import com.google.cloud.Timestamp;
 import com.google.cloud.firestore.DocumentSnapshot;
 import com.google.cloud.firestore.Firestore;
 import com.google.cloud.firestore.FieldValue;
+import com.google.cloud.firestore.GeoPoint;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseAuthException;
 import com.google.firebase.auth.FirebaseToken;
@@ -120,6 +121,13 @@ public class UserService {
         await(firestore.collection("users").document(token.getUid()).update(
                 "profilePhotoPath", FieldValue.delete()
         ));
+    }
+
+    public void updateLocation(FirebaseToken token, double latitude, double longitude) {
+        await(firestore.collection("users").document(token.getUid()).update(Map.of(
+                "currentLocation", new GeoPoint(latitude, longitude),
+                "locationUpdatedAt", Timestamp.now()
+        )));
     }
 
     public UserProfileResponse submitIdentityDocument(FirebaseToken token, String frontPath, String backPath) {

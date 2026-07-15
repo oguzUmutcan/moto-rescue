@@ -48,6 +48,9 @@ public final class RescueDtos {
             String boardingCode,
             Instant boardingVerifiedAt,
             Instant startedAt,
-            Instant completedAt
+            Instant completedAt,
+            Double bikerLatitude,
+            Double bikerLongitude,
+            Instant bikerLocationUpdatedAt
     ) {}
 }

@@ -61,6 +61,10 @@ export default function PassengerRideScreen() {
           latitude: request.destinationLatitude || request.latitude,
           longitude: request.destinationLongitude || request.longitude,
         }}
+        bikerCoordinate={request.bikerLatitude !== null && request.bikerLongitude !== null ? {
+          latitude: request.bikerLatitude,
+          longitude: request.bikerLongitude,
+        } : null}
       />
 
       <View className="absolute top-0 left-0 right-0 bg-white rounded-b-3xl shadow-lg pt-14 px-5 pb-5">

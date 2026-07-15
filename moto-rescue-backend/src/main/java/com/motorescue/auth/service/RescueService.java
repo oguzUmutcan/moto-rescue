@@ -30,6 +30,7 @@ public class RescueService {
     private static final String REQUESTS = "rescueRequests";
     private static final String USERS = "users";
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
+    private static final double ZONE_KM = 6.0;
     private final Firestore firestore;
 
     public RescueService(Firestore firestore) {
@@ -75,12 +76,17 @@ public class RescueService {
 
     public List<RescueResponse> open(FirebaseToken token) {
         requireRole(token.getUid(), "biker");
+        DocumentSnapshot biker = userProfile(token.getUid());
+        GeoPoint bikerLocation = (GeoPoint) biker.get("currentLocation");
+        if (!Boolean.TRUE.equals(biker.getBoolean("online")) || bikerLocation == null
+                || !isFreshLocation(biker.getTimestamp("locationUpdatedAt"), Instant.now())) return List.of();
         try {
             return firestore.collection(REQUESTS)
                     .whereEqualTo("status", "searching")
                     .limit(10)
                     .get().get().getDocuments().stream()
                     .filter(document -> !isExpired(document))
+                    .filter(document -> distanceKm(bikerLocation, (GeoPoint) document.get("pickup")) <= ZONE_KM)
                     .map(this::from)
                     .map(response -> forUser(token, response))
                     .toList();
@@ -141,6 +147,10 @@ public class RescueService {
 
     public RescueResponse accept(FirebaseToken token, String requestId) {
         requireRole(token.getUid(), "biker");
+        DocumentSnapshot biker = userProfile(token.getUid());
+        GeoPoint bikerLocation = (GeoPoint) biker.get("currentLocation");
+        if (bikerLocation == null || !isFreshLocation(biker.getTimestamp("locationUpdatedAt"), Instant.now()))
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "A recent biker location is required");
         DocumentReference reference = firestore.collection(REQUESTS).document(requestId);
         try {
             firestore.runTransaction(transaction -> {
@@ -150,6 +160,9 @@ public class RescueService {
                 }
                 if (!"searching".equals(snapshot.getString("status")) || isExpired(snapshot)) {
                     throw new ResponseStatusException(HttpStatus.CONFLICT, "Rescue request is no longer available");
+                }
+                if (distanceKm(bikerLocation, (GeoPoint) snapshot.get("pickup")) > ZONE_KM) {
+                    throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Rescue is outside the 6 km zone");
                 }
                 transaction.update(reference, Map.of(
                         "status", "accepted",
@@ -325,6 +338,7 @@ public class RescueService {
     private RescueResponse from(String id, Map<String, Object> data) {
         GeoPoint pickup = (GeoPoint) data.get("pickup");
         GeoPoint destination = (GeoPoint) data.get("destination");
+        GeoPoint bikerLocation = (GeoPoint) data.get("bikerLocation");
         return new RescueResponse(
                 id,
                 (String) data.get("passengerId"),
@@ -348,7 +362,10 @@ public class RescueService {
                 (String) data.get("boardingCode"),
                 instant((Timestamp) data.get("boardingVerifiedAt")),
                 instant((Timestamp) data.get("startedAt")),
-                instant((Timestamp) data.get("completedAt"))
+                instant((Timestamp) data.get("completedAt")),
+                bikerLocation == null ? null : bikerLocation.getLatitude(),
+                bikerLocation == null ? null : bikerLocation.getLongitude(),
+                instant((Timestamp) data.get("bikerLocationUpdatedAt"))
         );
     }
 
@@ -361,8 +378,32 @@ public class RescueService {
                 response.pickupLabel(), response.destinationLabel(), response.destinationLatitude(), response.destinationLongitude(),
                 response.urgency(), response.needsHelmet(), response.status(), response.bikerId(), response.bikerName(),
                 response.createdAt(), response.expiresAt(), response.acceptedAt(), null, response.boardingVerifiedAt(),
-                response.startedAt(), response.completedAt()
+                response.startedAt(), response.completedAt(), response.bikerLatitude(), response.bikerLongitude(), response.bikerLocationUpdatedAt()
         );
+    }
+
+    public void updateBikerLocation(FirebaseToken token, String requestId, double latitude, double longitude) {
+        DocumentSnapshot rescue = getDocument(requestId);
+        if (!token.getUid().equals(rescue.getString("bikerId"))) throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only the assigned biker can share location");
+        String status = rescue.getString("status");
+        if (!"accepted".equals(status) && !"in_progress".equals(status)) throw new ResponseStatusException(HttpStatus.CONFLICT, "Rescue is not active");
+        await(firestore.collection(REQUESTS).document(requestId).update(Map.of("bikerLocation", new GeoPoint(latitude, longitude), "bikerLocationUpdatedAt", Timestamp.now())));
+        updateUserLocation(token.getUid(), latitude, longitude);
+    }
+
+    private void updateUserLocation(String uid, double latitude, double longitude) {
+        await(firestore.collection(USERS).document(uid).update(Map.of("currentLocation", new GeoPoint(latitude, longitude), "locationUpdatedAt", Timestamp.now())));
+    }
+
+    static double distanceKm(GeoPoint left, GeoPoint right) {
+        double lat = Math.toRadians(right.getLatitude() - left.getLatitude());
+        double lon = Math.toRadians(right.getLongitude() - left.getLongitude());
+        double a = Math.pow(Math.sin(lat / 2), 2) + Math.cos(Math.toRadians(left.getLatitude())) * Math.cos(Math.toRadians(right.getLatitude())) * Math.pow(Math.sin(lon / 2), 2);
+        return 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    }
+
+    static boolean isFreshLocation(Timestamp updatedAt, Instant now) {
+        return updatedAt != null && updatedAt.toDate().toInstant().plusSeconds(120).isAfter(now);
     }
 
     private Instant instant(Timestamp timestamp) {

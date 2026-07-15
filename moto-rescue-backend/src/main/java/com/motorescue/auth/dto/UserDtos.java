@@ -3,6 +3,8 @@ package com.motorescue.auth.dto;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.DecimalMax;
+import jakarta.validation.constraints.DecimalMin;
 
 import java.time.Instant;
 import java.util.List;
@@ -24,6 +26,11 @@ public final class UserDtos {
     public record IdentityDocumentRequest(
             @NotBlank @Size(max = 200) String frontStoragePath,
             @NotBlank @Size(max = 200) String backStoragePath
+    ) {}
+
+    public record LocationRequest(
+            @DecimalMin("-90") @DecimalMax("90") double latitude,
+            @DecimalMin("-180") @DecimalMax("180") double longitude
     ) {}
 
     public record UpdateProfileRequest(

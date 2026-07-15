@@ -991,6 +991,41 @@ npm run lint        başarılı — 0 hata, 0 uyarı
 git diff --check    başarılı
 ```
 
+## 15 Temmuz 2026 — 6 km zone eşleştirmesi ve canlı biker konumu
+
+### Sorun neydi?
+
+Açık rescue istekleri mesafeden bağımsız olarak tüm biker'lara gösteriliyor ve passenger atanmış biker'ın canlı konumunu göremiyordu. Kullanıcıların kendi konum marker'ı dışında güvenli, rescue'a özel bir canlı takip hattı yoktu.
+
+### Neden bu sorun çıktı?
+
+User ve rescue modellerinde güncel biker koordinatı bulunmuyor, `/open` sorgusu yalnızca status alanına göre filtreleniyor ve harita bileşeni yalnızca hedef marker destekliyordu.
+
+### Çözüm yöntemi neler?
+
+- Zone yarıçapını 6 km olarak backend'de sabitlemek.
+- Yalnızca online, doğrulanmış ve son iki dakika içinde konum paylaşmış biker'lara yakındaki istekleri sunmak.
+- Zone kontrolünü kabul işleminde de tekrar ederek istemci tarafından atlanmasını önlemek.
+- Aktif rescue boyunca katılımcıya özel canlı biker konumu yayınlamak.
+
+### Nasıl çözüldü?
+
+- User konumu için doğrulanmış `PATCH /api/users/me/location` endpoint'i eklendi.
+- Aktif rescue için yalnızca atanmış biker'ın kullanabildiği `POST /api/rescues/{id}/biker-location` endpoint'i eklendi.
+- `/api/rescues/open` sonuçları Haversine mesafesiyle pickup'a 6 km içinde filtreleniyor.
+- Zone dışı veya iki dakikadan eski konumla kabul backend tarafından reddediliyor.
+- Online dashboard 5 saniyede/20 metrede, aktif navigation 2.5 saniyede/10 metrede foreground konum yayınlıyor.
+- Passenger ride haritasına atanmış biker için ayrı yeşil canlı marker eklendi; cihazın kendi konumu mevcut mavi sistem marker'ıyla görünmeye devam ediyor.
+- Konum paylaşımı ekran kapanınca veya rescue terminal duruma geçince subscription cleanup ile duruyor.
+
+### Test ve doğrulama
+
+```text
+mvnw.cmd test       başarılı — 9 test
+npx tsc --noEmit    başarılı
+npm run lint        başarılı — 0 hata, 0 uyarı
+```
+
 ## 15 Temmuz 2026 — Model geçişi için session handoff dokümanı
 
 ### Sorun neydi?

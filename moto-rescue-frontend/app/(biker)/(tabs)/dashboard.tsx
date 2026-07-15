@@ -123,6 +123,20 @@ export default function BikerDashboardScreen() {
     };
   }, [online, router]);
 
+  useEffect(() => {
+    if (!online) return;
+    let subscription: Location.LocationSubscription | null = null;
+    let active = true;
+    void Location.watchPositionAsync(
+      { accuracy: Location.Accuracy.High, timeInterval: 5000, distanceInterval: 20 },
+      (position) => {
+        if (active) void userApi.updateLocation(position.coords.latitude, position.coords.longitude)
+          .catch((error) => console.error("Could not publish online location", error));
+      },
+    ).then((value) => { if (active) subscription = value; else value.remove(); });
+    return () => { active = false; subscription?.remove(); };
+  }, [online]);
+
   // 2. Fetch User Data
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {

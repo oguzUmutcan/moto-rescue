@@ -3,6 +3,7 @@ package com.motorescue.auth.service;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
+import com.google.cloud.Timestamp;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -24,5 +25,12 @@ class UserServiceTests {
         assertThat(UserService.isAutoVerificationDue("pending", submittedAt, submittedAt.plusSeconds(59))).isFalse();
         assertThat(UserService.isAutoVerificationDue("pending", submittedAt, submittedAt.plusSeconds(60))).isTrue();
         assertThat(UserService.isAutoVerificationDue("verified", submittedAt, submittedAt.plusSeconds(120))).isFalse();
+    }
+
+    @Test
+    void zoneMatchingRequiresRecentLocation() {
+        Instant now = Instant.parse("2026-07-15T10:00:00Z");
+        assertThat(RescueService.isFreshLocation(Timestamp.ofTimeSecondsAndNanos(now.minusSeconds(30).getEpochSecond(), 0), now)).isTrue();
+        assertThat(RescueService.isFreshLocation(Timestamp.ofTimeSecondsAndNanos(now.minusSeconds(121).getEpochSecond(), 0), now)).isFalse();
     }
 }

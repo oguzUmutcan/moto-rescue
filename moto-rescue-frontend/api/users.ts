@@ -37,4 +37,6 @@ export const userApi = {
       body: JSON.stringify({ frontStoragePath, backStoragePath }),
     }),
   delete: () => apiRequest<void>("/api/users/me", { method: "DELETE" }),
+  updateLocation: (latitude: number, longitude: number) =>
+    apiRequest<void>("/api/users/me/location", { method: "PATCH", body: JSON.stringify({ latitude, longitude }) }),
 };

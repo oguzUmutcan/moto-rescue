@@ -6,6 +6,7 @@ import { rescueApi, RescueRequest } from "../../api/rescues";
 import { badgeApi } from "../../api/badges";
 import LocationMap from "../../components/location-map";
 import type { LocationMapHandle } from "../../components/location-map.types";
+import * as Location from "expo-location";
 
 export default function BikerNavigationScreen() {
   const router = useRouter();
@@ -36,6 +37,20 @@ export default function BikerNavigationScreen() {
     const timer = setInterval(load, 2500);
     return () => { active = false; clearInterval(timer); };
   }, [requestId, router]);
+
+  useEffect(() => {
+    if (!requestId || (request?.status !== "accepted" && request?.status !== "in_progress")) return;
+    let subscription: Location.LocationSubscription | null = null;
+    let active = true;
+    void Location.watchPositionAsync(
+      { accuracy: Location.Accuracy.High, timeInterval: 2500, distanceInterval: 10 },
+      (position) => {
+        if (active) void rescueApi.updateBikerLocation(requestId, position.coords.latitude, position.coords.longitude)
+          .catch((error) => console.error("Could not publish biker location", error));
+      },
+    ).then((value) => { if (active) subscription = value; else value.remove(); });
+    return () => { active = false; subscription?.remove(); };
+  }, [request?.status, requestId]);
 
   const inProgress = request?.status === "in_progress";
   const targetLatitude = request

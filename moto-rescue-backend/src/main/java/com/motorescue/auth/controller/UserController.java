@@ -6,6 +6,7 @@ import com.motorescue.auth.dto.UserDtos.ProfilePhotoRequest;
 import com.motorescue.auth.dto.UserDtos.IdentityDocumentRequest;
 import com.motorescue.auth.dto.UserDtos.UpdateProfileRequest;
 import com.motorescue.auth.dto.UserDtos.UserProfileResponse;
+import com.motorescue.auth.dto.UserDtos.LocationRequest;
 import com.motorescue.auth.service.AuthService;
 import com.motorescue.auth.service.UserService;
 import jakarta.validation.Valid;
@@ -67,6 +68,13 @@ public class UserController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteProfilePhoto(@RequestHeader("Authorization") String authorization) {
         userService.clearProfilePhoto(authService.authenticate(authorization));
+    }
+
+    @PatchMapping("/location")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void location(@RequestHeader("Authorization") String authorization,
+                         @Valid @RequestBody LocationRequest request) {
+        userService.updateLocation(authService.authenticate(authorization), request.latitude(), request.longitude());
     }
 
     @PostMapping("/identity-document")

@@ -22,6 +22,9 @@ export type RescueRequest = {
   boardingVerifiedAt: string | null;
   startedAt: string | null;
   completedAt: string | null;
+  bikerLatitude: number | null;
+  bikerLongitude: number | null;
+  bikerLocationUpdatedAt: string | null;
 };
 
 type CreateRescueInput = {
@@ -53,4 +56,9 @@ export const rescueApi = {
     }),
   complete: (id: string) =>
     apiRequest<RescueRequest>(`/api/rescues/${encodeURIComponent(id)}/complete`, { method: "POST" }),
+  updateBikerLocation: (id: string, latitude: number, longitude: number) =>
+    apiRequest<void>(`/api/rescues/${encodeURIComponent(id)}/biker-location`, {
+      method: "POST",
+      body: JSON.stringify({ latitude, longitude }),
+    }),
 };
