@@ -2,6 +2,36 @@
 
 Bu belge projede yapılan teknik değişiklikleri, değişikliklerin gerekçelerini ve doğrulama sonuçlarını kalıcı olarak kayıt altına alır. Yeni çalışmalar tarih sırasıyla bu dosyaya eklenecektir.
 
+## 15 Temmuz 2026 — Boarding code TextInput NativeWind çalışma zamanı hatasının düzeltilmesi
+
+### Sorun neydi?
+
+Biker'ın aktif kabul edilmiş rescue kaydı bulunduğunda login sonrasında navigation ekranı otomatik açılıyor ve `TypeError: path.split is not a function (it is undefined)` component hatası oluşuyordu. Aynı hata yeni istek kabulünün hemen ardından da görülebiliyordu.
+
+### Neden bu sorun çıktı?
+
+ADB React Native component stack kaydı hatanın router'da değil `BikerNavigationScreen` içindeki boarding code `TextInput` bileşeninde oluştuğunu gösterdi. TextInput'a verilen NativeWind arbitrary `tracking-[8px]` sınıfı Android çalışma zamanında style/path çözümleme hatasına neden oluyordu. Önceki route parametresi sağlamlaştırması gerekli bir koruma olmakla birlikte bu component hatasının doğrudan kaynağı değildi.
+
+### Çözüm yöntemi neler?
+
+- NativeWind arbitrary class kullanımını problemli TextInput'tan kaldırmak.
+- Aynı görsel özellikleri React Native'in tip güvenli doğrudan `style` nesnesiyle vermek.
+- Gerçek component stack'i ADB logcat üzerinden doğrulamak.
+
+### Nasıl Çözüldü?
+
+- Boarding code TextInput yüksekliği, radius, renk, hizalama, font ve letter spacing değerleri doğrudan React Native style nesnesine taşındı.
+- TextInput üzerinde NativeWind class çözümlemesi ortadan kaldırıldı.
+- Biker login sonrası aktif rescue restore akışının neden doğrudan bu ekrana geldiği doğrulandı.
+
+### Test ve doğrulama
+
+```text
+npx tsc --noEmit  başarılı
+npm run lint      başarılı — 0 hata, 0 uyarı
+ADB component stack: hata kaynağı BikerNavigationScreen > TextInput olarak doğrulandı
+```
+
 ## 15 Temmuz 2026 — Biker kabul sonrası Expo Router path hatasının düzeltilmesi
 
 ### Sorun neydi?

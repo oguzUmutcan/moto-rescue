@@ -149,7 +149,17 @@ export default function BikerNavigationScreen() {
               maxLength={6}
               placeholder="6-digit code"
               placeholderTextColor="#AEAEB2"
-              className="h-12 rounded-2xl bg-[#F2F2F7] px-4 text-center text-[22px] font-black tracking-[8px] text-[#1C1C1E]"
+              style={{
+                height: 48,
+                borderRadius: 16,
+                backgroundColor: "#F2F2F7",
+                paddingHorizontal: 16,
+                textAlign: "center",
+                fontSize: 22,
+                fontWeight: "900",
+                letterSpacing: 8,
+                color: "#1C1C1E",
+              }}
             />
           </View>
         )}
