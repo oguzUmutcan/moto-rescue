@@ -62,7 +62,7 @@ function useAddressSuggestions(
   const sessionToken = useRef(createSessionToken());
 
   useEffect(() => {
-    if (!enabled || query.trim().length < 3) {
+    if (!enabled || query.trim().length < 1) {
       setSuggestions([]);
       return;
     }

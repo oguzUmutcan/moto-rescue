@@ -766,6 +766,35 @@ Places servisleri  etkin — places.googleapis.com ve places-backend.googleapis.
 API anahtarı        Windows User scope içinde tanımlı
 ```
 
+## 15 Temmuz 2026 — Adres önerilerinin ilk karakterde başlaması
+
+### Sorun neydi?
+
+Passenger adres alanındaki Google Places önerileri ancak üç karakter yazıldıktan sonra başlıyordu. Kullanıcı önerilerin ilk karakterden itibaren görünmesini istedi.
+
+### Neden bu sorun çıktı?
+
+Adres önerisi hook'unda sorgu uzunluğu için sabit olarak üç karakterlik alt sınır uygulanmıştı.
+
+### Çözüm yöntemi neler?
+
+- Minimum sorgu uzunluğunu bir karaktere düşürmek.
+- Mevcut debounce, oturum tokenı ve fallback geocoder davranışını korumak.
+- TypeScript ve lint kontrolleriyle değişikliği doğrulamak.
+
+### Nasıl çözüldü?
+
+- `useAddressSuggestions` içindeki minimum sorgu uzunluğu kontrolü `3` değerinden `1` değerine indirildi.
+- Boş veya yalnızca boşluk içeren sorgular için öneri üretilmemesi korundu.
+
+### Test ve doğrulama
+
+```text
+npx tsc --noEmit  başarılı
+npm run lint      başarılı — 0 hata, 0 uyarı
+git diff --check  başarılı
+```
+
 ## 15 Temmuz 2026 — Model geçişi için session handoff dokümanı
 
 ### Sorun neydi?
