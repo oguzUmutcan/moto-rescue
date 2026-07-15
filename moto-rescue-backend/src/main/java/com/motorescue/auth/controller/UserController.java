@@ -3,6 +3,7 @@ package com.motorescue.auth.controller;
 import com.motorescue.auth.dto.UserDtos.CreateProfileRequest;
 import com.motorescue.auth.dto.UserDtos.RoleRequest;
 import com.motorescue.auth.dto.UserDtos.ProfilePhotoRequest;
+import com.motorescue.auth.dto.UserDtos.IdentityDocumentRequest;
 import com.motorescue.auth.dto.UserDtos.UpdateProfileRequest;
 import com.motorescue.auth.dto.UserDtos.UserProfileResponse;
 import com.motorescue.auth.service.AuthService;
@@ -66,6 +67,14 @@ public class UserController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteProfilePhoto(@RequestHeader("Authorization") String authorization) {
         userService.clearProfilePhoto(authService.authenticate(authorization));
+    }
+
+    @PostMapping("/identity-document")
+    public UserProfileResponse submitIdentityDocument(@RequestHeader("Authorization") String authorization,
+                                                      @Valid @RequestBody IdentityDocumentRequest request) {
+        return userService.submitIdentityDocument(
+                authService.authenticate(authorization), request.frontStoragePath(), request.backStoragePath()
+        );
     }
 
     @DeleteMapping

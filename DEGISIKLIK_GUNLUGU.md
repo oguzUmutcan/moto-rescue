@@ -2,6 +2,47 @@
 
 Bu belge projede yapılan teknik değişiklikleri, değişikliklerin gerekçelerini ve doğrulama sonuçlarını kalıcı olarak kayıt altına alır. Yeni çalışmalar tarih sırasıyla bu dosyaya eklenecektir.
 
+## 15 Temmuz 2026 — Özel biker ehliyet belgesi yükleme ve inceleme durumu
+
+### Sorun neydi?
+
+Biker profil düzenleme ekranındaki ehliyet yükleme düğmesi yalnızca Storage'ın daha sonra etkinleştirileceğini belirten bir uyarı gösteriyordu. Profil sekmesi ise gerçek belge durumuna bakmadan her biker'ı `Verified` olarak gösteriyordu. Backend'de belge yollarını doğrulayan bir başvuru endpoint'i bulunmuyordu.
+
+### Neden bu sorun çıktı?
+
+Firebase Storage billing ve ürün kurulumu daha önce tamamlanamadığı için belge akışı kapatılmıştı. Eski UI tek bir boolean değerle “yüklenmiş” durumunu temsil ediyor, belgenin iki yüzünü ve `not_submitted / pending / verified / rejected` yaşam döngüsünü güvenilir biçimde ayırmıyordu.
+
+### Çözüm yöntemi neler?
+
+- Ehliyetin ön ve arka yüzünü sabit, kullanıcıya özel Storage yollarında ayrı tutmak.
+- Her iki dosya yüklenmeden backend başvurusu oluşturmamak.
+- Backend'in yolları doğrulanmış token UID'si ve biker rolüyle kontrol etmesini sağlamak.
+- İstemcinin yalnızca `pending` başvurusu oluşturabilmesini, kendisini `verified` yapamamasını sağlamak.
+- Belge dosyalarını diğer uygulama kullanıcılarına kapatmak.
+- Profil ekranında gerçek backend durumunu göstermek.
+
+### Nasıl Çözüldü?
+
+- `identityDocuments/{uid}/front` ve `identityDocuments/{uid}/back` sabit yolları tanımlandı.
+- Ortak belge upload bileşeni ön/arka görsel seçimi, MIME kontrolü, yüz başına 10 MB sınırı, yarım kalan upload'ı metadata ile geri yükleme ve iki yüz tamamlanınca submit davranışını uyguluyor.
+- `POST /api/users/me/identity-document` endpoint'i eklendi.
+- Backend yalnızca biker rolünü, token UID'sine ait tam iki yolu ve mevcut durumun `verified` olmadığını doğruladıktan sonra `pending` durumunu ve submit zamanını yazıyor.
+- User profile response'a iki özel Storage yolu ve `identityDocumentSubmittedAt` eklendi.
+- Biker profil sekmesindeki sabit `Verified` metni kaldırıldı; gerçek `Upload`, `Pending`, `Verified` veya `Rejected` durumu gösteriliyor.
+- Pending ve verified belgelerin istemciden tekrar yüklenmesi kilitlendi; rejected durumda yeniden başvuru yapılabiliyor.
+- Storage rules dosya adını, sahipliği, izinli MIME tiplerini ve boyut sınırını doğrulayacak şekilde sıkılaştırıldı; belge okuması yalnızca sahibine açık tutuldu.
+- Storage kuralları `motorescue-d4abc` projesine başarıyla deploy edildi ve backend yeniden başlatıldı.
+
+### Test ve doğrulama
+
+```text
+mvnw.cmd test      başarılı — 6 test
+npx tsc --noEmit  başarılı
+npm run lint      başarılı — 0 hata, 0 uyarı
+Firebase Storage rules compile/deploy başarılı
+Backend :8083 dinleme kontrolü başarılı
+```
+
 ## 15 Temmuz 2026 — Firebase Storage tabanlı profil fotoğrafı sistemi
 
 ### Sorun neydi?

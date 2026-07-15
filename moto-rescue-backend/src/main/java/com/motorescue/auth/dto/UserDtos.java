@@ -21,6 +21,11 @@ public final class UserDtos {
             @NotBlank @Size(max = 200) String storagePath
     ) {}
 
+    public record IdentityDocumentRequest(
+            @NotBlank @Size(max = 200) String frontStoragePath,
+            @NotBlank @Size(max = 200) String backStoragePath
+    ) {}
+
     public record UpdateProfileRequest(
             @Size(max = 100) String name,
             @Size(max = 30) String emergencyContact,
@@ -40,7 +45,9 @@ public final class UserDtos {
             String profilePhotoPath,
             String plateNumber, String motorcycleModel, String motorcycleColor,
             List<Boolean> availableDays, boolean online, boolean notificationsEnabled,
-            String identityDocumentStatus, double rating, long totalRescues,
+            String identityDocumentStatus, String identityDocumentFrontPath,
+            String identityDocumentBackPath, Instant identityDocumentSubmittedAt,
+            double rating, long totalRescues,
             Instant createdAt
     ) {}
 }

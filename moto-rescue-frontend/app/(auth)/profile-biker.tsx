@@ -3,7 +3,6 @@ import {
   ArrowLeft,
   ShieldCheck,
   Smile,
-  UploadCloud,
   X,
 } from "lucide-react-native";
 import React, { useEffect, useState } from "react";
@@ -24,6 +23,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 // --- FIREBASE IMPORTS ---
 import { auth } from "../../config/firebase";
 import { userApi } from "../../api/users";
+import IdentityDocumentUpload from "../../components/identity-document-upload";
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
@@ -70,6 +70,7 @@ export default function ProfileBikerScreen() {
     false,
   ]);
   const [hasUploadedID, setHasUploadedID] = useState(false);
+  const [identityDocumentStatus, setIdentityDocumentStatus] = useState<"not_submitted" | "pending" | "verified" | "rejected">("not_submitted");
   const [profileEmoji, setProfileEmoji] = useState("🦸"); // Default Biker Emoji
 
   const [isEmojiModalVisible, setIsEmojiModalVisible] = useState(false);
@@ -97,6 +98,7 @@ export default function ProfileBikerScreen() {
           if (data.identityDocumentStatus === "pending" || data.identityDocumentStatus === "verified") {
             setHasUploadedID(true);
           }
+          setIdentityDocumentStatus(data.identityDocumentStatus);
           if (data.profileEmoji) setProfileEmoji(data.profileEmoji);
         }
       }
@@ -128,13 +130,6 @@ export default function ProfileBikerScreen() {
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const handleDocumentUpload = async () => {
-    Alert.alert(
-      "Coming later",
-      "Secure document upload will be enabled after the storage provider is configured.",
-    );
   };
 
   const toggleDay = (index: number) => {
@@ -299,40 +294,15 @@ export default function ProfileBikerScreen() {
           <Text className="text-[12px] font-bold text-[#8E8E93] tracking-wider uppercase mb-2">
             Verification Document
           </Text>
-          <TouchableOpacity
-            onPress={handleDocumentUpload}
-            activeOpacity={0.8}
-            disabled={isLoading}
-            className={`w-full border-2 border-dashed rounded-[14px] p-5 mb-8 flex-row items-center transition-colors ${
-              hasUploadedID
-                ? "border-[#34C759] bg-[#EDFAF3]"
-                : "border-[#C7C7CC] bg-[#FAFAFA]"
-            }`}
-          >
-            <View
-              className={`w-10 h-10 rounded-full items-center justify-center mr-4 ${hasUploadedID ? "bg-[#34C759]" : "bg-[#F2F2F7]"}`}
-            >
-              {hasUploadedID ? (
-                <ShieldCheck size={20} color="white" />
-              ) : (
-                <UploadCloud size={20} color="#8E8E93" />
-              )}
-            </View>
-            <View className="flex-1">
-              <Text
-                className={`text-[15px] font-bold mb-0.5 ${hasUploadedID ? "text-[#34C759]" : "text-[#1C1C1E]"}`}
-              >
-                {hasUploadedID
-                  ? "Driver's License Uploaded"
-                  : "Upload Driver's License"}
-              </Text>
-              <Text className="text-[13px] text-[#8E8E93]">
-                {hasUploadedID
-                  ? "Verification pending approval"
-                  : "Photo of front and back"}
-              </Text>
-            </View>
-          </TouchableOpacity>
+          <View className="mb-8">
+            <IdentityDocumentUpload
+              initialStatus={identityDocumentStatus}
+              onSubmitted={(profile) => {
+                setIdentityDocumentStatus(profile.identityDocumentStatus);
+                setHasUploadedID(profile.identityDocumentStatus === "pending" || profile.identityDocumentStatus === "verified");
+              }}
+            />
+          </View>
 
           <View className="flex-row bg-[#EDFAF3] rounded-2xl p-4 mb-8">
             <ShieldCheck
@@ -341,8 +311,8 @@ export default function ProfileBikerScreen() {
               className="mt-0.5 mr-3 shrink-0"
             />
             <Text className="flex-1 text-[13px] text-[#34C759] leading-snug">
-              We verify all bikers to ensure passenger safety. Your documents
-              are securely encrypted.
+              We review biker documents for passenger safety. Your images stay
+              private and cannot be viewed by other app users.
             </Text>
           </View>
         </ScrollView>

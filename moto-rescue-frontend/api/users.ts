@@ -6,7 +6,9 @@ export type UserProfile = {
   profileEmoji: string | null; bio: string | null; profilePhotoPath: string | null; plateNumber: string | null;
   motorcycleModel: string | null; motorcycleColor: string | null;
   availableDays: boolean[] | null; online: boolean; notificationsEnabled: boolean;
-  identityDocumentStatus: string; rating: number; totalRescues: number; createdAt: string;
+  identityDocumentStatus: "not_submitted" | "pending" | "verified" | "rejected";
+  identityDocumentFrontPath: string | null; identityDocumentBackPath: string | null;
+  identityDocumentSubmittedAt: string | null; rating: number; totalRescues: number; createdAt: string;
 };
 
 export type ProfileUpdate = Partial<Pick<UserProfile,
@@ -29,5 +31,10 @@ export const userApi = {
     }),
   clearProfilePhoto: () =>
     apiRequest<void>("/api/users/me/profile-photo", { method: "DELETE" }),
+  submitIdentityDocument: (frontStoragePath: string, backStoragePath: string) =>
+    apiRequest<UserProfile>("/api/users/me/identity-document", {
+      method: "POST",
+      body: JSON.stringify({ frontStoragePath, backStoragePath }),
+    }),
   delete: () => apiRequest<void>("/api/users/me", { method: "DELETE" }),
 };

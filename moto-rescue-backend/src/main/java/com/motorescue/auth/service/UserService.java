@@ -99,6 +99,27 @@ public class UserService {
         ));
     }
 
+    public UserProfileResponse submitIdentityDocument(FirebaseToken token, String frontPath, String backPath) {
+        DocumentSnapshot current = profile(token.getUid());
+        if (!"biker".equals(current.getString("role"))) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "The biker role is required");
+        }
+        String prefix = "identityDocuments/" + token.getUid() + "/";
+        if (!(prefix + "front").equals(frontPath) || !(prefix + "back").equals(backPath)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid identity document paths");
+        }
+        if ("verified".equals(current.getString("identityDocumentStatus"))) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Verified documents cannot be replaced");
+        }
+        await(firestore.collection("users").document(token.getUid()).update(Map.of(
+                "identityDocumentFrontPath", frontPath,
+                "identityDocumentBackPath", backPath,
+                "identityDocumentStatus", "pending",
+                "identityDocumentSubmittedAt", Timestamp.now()
+        )));
+        return get(token);
+    }
+
     public void delete(FirebaseToken token) {
         await(firestore.collection("users").document(token.getUid()).delete());
         try {
@@ -126,6 +147,7 @@ public class UserService {
         Timestamp createdAt = value.getTimestamp("createdAt");
         Number rating = (Number) value.get("rating");
         Number total = (Number) value.get("totalRescues");
+        Timestamp documentSubmittedAt = value.getTimestamp("identityDocumentSubmittedAt");
         return new UserProfileResponse(
                 uid, value.getString("name"), value.getString("email"), value.getString("phone"),
                 Boolean.TRUE.equals(value.getBoolean("phoneVerified")), value.getString("role"),
@@ -134,6 +156,8 @@ public class UserService {
                 value.getString("plateNumber"), value.getString("motorcycleModel"), value.getString("motorcycleColor"),
                 (List<Boolean>) value.get("availableDays"), Boolean.TRUE.equals(value.getBoolean("online")),
                 !Boolean.FALSE.equals(value.getBoolean("notificationsEnabled")), value.getString("identityDocumentStatus"),
+                value.getString("identityDocumentFrontPath"), value.getString("identityDocumentBackPath"),
+                documentSubmittedAt == null ? null : documentSubmittedAt.toDate().toInstant(),
                 rating == null ? 5.0 : rating.doubleValue(), total == null ? 0 : total.longValue(),
                 createdAt == null ? null : createdAt.toDate().toInstant()
         );

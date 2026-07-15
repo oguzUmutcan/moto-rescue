@@ -41,6 +41,7 @@ export default function BikerProfileScreen() {
   const [bio, setBio] = useState("Loading...");
   const [profileEmoji, setProfileEmoji] = useState("🦸"); // Default Biker Emoji
   const [profilePhotoPath, setProfilePhotoPath] = useState<string | null>(null);
+  const [identityDocumentStatus, setIdentityDocumentStatus] = useState<"not_submitted" | "pending" | "verified" | "rejected">("not_submitted");
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -53,6 +54,7 @@ export default function BikerProfileScreen() {
             setBio(data.bio || "No bio available");
             setProfileEmoji(data.profileEmoji || "⛔");
             setProfilePhotoPath(data.profilePhotoPath);
+            setIdentityDocumentStatus(data.identityDocumentStatus);
             setAvailable(
               data.availableDays || [
                 false,
@@ -282,15 +284,18 @@ export default function BikerProfileScreen() {
               ios_backgroundColor="#D1D1D6"
             />
           </View>
-          <View className="flex-row items-center px-4 py-3 gap-3 border-b border-[#F2F2F7]">
+          <TouchableOpacity onPress={() => router.push("/(auth)/profile-biker")} className="flex-row items-center px-4 py-3 gap-3 border-b border-[#F2F2F7]">
             <Text className="text-[18px]">🆔</Text>
             <Text className="flex-1 text-[15px] text-[#1C1C1E] font-medium">
               Identity Document
             </Text>
-            <Text className="text-[13px] font-bold text-[#34C759]">
-              Verified ✓
+            <Text
+              className="text-[13px] font-bold"
+              style={{ color: identityDocumentStatus === "verified" ? "#34C759" : identityDocumentStatus === "pending" ? "#FF9500" : identityDocumentStatus === "rejected" ? "#FF3B30" : "#8E8E93" }}
+            >
+              {identityDocumentStatus === "verified" ? "Verified ✓" : identityDocumentStatus === "pending" ? "Pending" : identityDocumentStatus === "rejected" ? "Rejected" : "Upload"}
             </Text>
-          </View>
+          </TouchableOpacity>
           <TouchableOpacity className="flex-row items-center px-4 py-3 gap-3">
             <Text className="text-[18px]">❓</Text>
             <Text className="flex-1 text-[15px] text-[#1C1C1E] font-medium">
