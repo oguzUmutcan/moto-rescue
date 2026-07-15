@@ -3,6 +3,7 @@ import { ExternalLink, MapPin } from "lucide-react-native";
 import React, { useEffect, useRef, useState } from "react";
 import { Alert, Linking, Platform, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { rescueApi, RescueRequest } from "../../api/rescues";
+import ProfileAvatar from "../../components/profile-avatar";
 import { badgeApi } from "../../api/badges";
 import LocationMap from "../../components/location-map";
 import type { LocationMapHandle } from "../../components/location-map.types";
@@ -143,7 +144,7 @@ export default function BikerNavigationScreen() {
 
       <View className="absolute bottom-0 left-0 right-0 bg-white rounded-t-[28px] px-5 pt-5 pb-9 shadow-2xl">
         <View className="flex-row items-center mb-4">
-          <View className="w-12 h-12 rounded-full bg-[#EEF4FF] items-center justify-center"><Text className="text-[24px]">🙋</Text></View>
+          <ProfileAvatar storagePath={request.passengerProfilePhotoPath} fallbackEmoji="🙋" />
           <View className="ml-3 flex-1"><Text className="text-[18px] font-black text-[#1C1C1E]">{request.passengerName}</Text><Text className="text-[13px] text-[#8E8E93]">{request.urgency} · {request.needsHelmet ? "Helmet requested" : "No helmet needed"}</Text></View>
         </View>
         <View className="bg-[#F2F2F7] rounded-2xl p-3 flex-row items-center mb-4">

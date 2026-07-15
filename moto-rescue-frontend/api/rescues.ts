@@ -4,6 +4,7 @@ export type RescueRequest = {
   id: string;
   passengerId: string;
   passengerName: string;
+  passengerProfilePhotoPath: string | null;
   latitude: number;
   longitude: number;
   pickupLabel: string;

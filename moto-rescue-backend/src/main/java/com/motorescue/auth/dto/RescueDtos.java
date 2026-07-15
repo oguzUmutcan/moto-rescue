@@ -31,6 +31,7 @@ public final class RescueDtos {
             String id,
             String passengerId,
             String passengerName,
+            String passengerProfilePhotoPath,
             double latitude,
             double longitude,
             String pickupLabel,

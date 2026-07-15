@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import { auth } from "../../config/firebase";
 import { rescueApi, RescueRequest } from "../../api/rescues";
+import ProfileAvatar from "../../components/profile-avatar";
 
 // --- Minimal Map Background ---
 function MapBg() {
@@ -251,18 +252,8 @@ export default function IncomingRequestScreen() {
               }}
             >
               <View style={{ flexDirection: "row", alignItems: "center" }}>
-                <View
-                  style={{
-                    width: 46,
-                    height: 46,
-                    borderRadius: 23,
-                    backgroundColor: "#007AFF",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    marginRight: 12,
-                  }}
-                >
-                  <Text style={{ fontSize: 20 }}>🙋</Text>
+                <View style={{ marginRight: 12 }}>
+                  <ProfileAvatar storagePath={request?.passengerProfilePhotoPath ?? null} size={46} fallbackEmoji="🙋" />
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text

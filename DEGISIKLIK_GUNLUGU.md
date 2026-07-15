@@ -1526,3 +1526,22 @@ npx tsc --noEmit    başarılı
 npm run lint        başarılı — 0 hata, 0 uyarı
 git diff --check    başarılı
 ```
+
+## 15 Temmuz 2026 — Rescue akışında iki yönlü profil fotoğrafı
+
+Rescue modelinde yalnızca biker profil fotoğrafı yolu bulunuyor ve bu alan kabul sırasında kaydediliyordu. Passenger profil fotoğrafı rescue oluşturulurken taşınmadığı için biker incoming request, navigation ve history ekranları gerçek fotoğraf yerine sabit emoji gösteriyordu.
+
+- Passenger rescue oluşturduğunda güncel `profilePhotoPath` rescue belgesine kaydediliyor.
+- `RescueResponse` ve frontend `RescueRequest` sözleşmelerine `passengerProfilePhotoPath` eklendi.
+- Biker incoming request, navigation ve history ekranları ortak `ProfileAvatar` bileşeniyle passenger'ın gerçek fotoğrafını gösteriyor.
+- Passenger tarafındaki biker fotoğraf akışı korunarak iki yönlü görüntüleme tamamlandı.
+- Fotoğrafı olmayan hesaplarda rol bazlı emoji fallback'i kullanılmaya devam ediyor.
+
+### Doğrulama
+
+```text
+mvnw.cmd test       başarılı — 10 test
+npx tsc --noEmit    başarılı
+npm run lint        başarılı — 0 hata, 0 uyarı
+git diff --check    başarılı
+```

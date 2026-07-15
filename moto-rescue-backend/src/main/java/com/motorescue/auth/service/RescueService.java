@@ -38,12 +38,16 @@ public class RescueService {
     }
 
     public RescueResponse create(FirebaseToken token, CreateRescueRequest request) {
-        requireRole(token.getUid(), "passenger");
+        DocumentSnapshot passenger = userProfile(token.getUid());
+        if (!"passenger".equalsIgnoreCase(passenger.getString("role"))) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "The passenger role is required");
+        }
         Instant now = Instant.now();
         DocumentReference reference = firestore.collection(REQUESTS).document();
         Map<String, Object> data = new HashMap<>();
         data.put("passengerId", token.getUid());
         data.put("passengerName", displayName(token));
+        data.put("passengerProfilePhotoPath", passenger.getString("profilePhotoPath"));
         data.put("pickup", new GeoPoint(request.latitude(), request.longitude()));
         data.put("pickupLabel", request.pickupLabel().trim());
         data.put("destinationLabel", request.destinationLabel().trim());
@@ -347,6 +351,7 @@ public class RescueService {
                 id,
                 (String) data.get("passengerId"),
                 (String) data.get("passengerName"),
+                (String) data.get("passengerProfilePhotoPath"),
                 pickup.getLatitude(),
                 pickup.getLongitude(),
                 data.get("pickupLabel") == null
@@ -380,7 +385,7 @@ public class RescueService {
                 && "accepted".equals(response.status());
         if (showBoardingCode || response.boardingCode() == null) return response;
         return new RescueResponse(
-                response.id(), response.passengerId(), response.passengerName(), response.latitude(), response.longitude(),
+                response.id(), response.passengerId(), response.passengerName(), response.passengerProfilePhotoPath(), response.latitude(), response.longitude(),
                 response.pickupLabel(), response.destinationLabel(), response.destinationLatitude(), response.destinationLongitude(),
                 response.urgency(), response.needsHelmet(), response.status(), response.bikerId(), response.bikerName(), response.bikerProfilePhotoPath(), response.bikerPhoneNumber(),
                 response.createdAt(), response.expiresAt(), response.acceptedAt(), null, response.boardingVerifiedAt(),
