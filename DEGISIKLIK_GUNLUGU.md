@@ -2,6 +2,51 @@
 
 Bu belge projede yapılan teknik değişiklikleri, değişikliklerin gerekçelerini ve doğrulama sonuçlarını kalıcı olarak kayıt altına alır. Yeni çalışmalar tarih sırasıyla bu dosyaya eklenecektir.
 
+## 15 Temmuz 2026 — Backend proxy üzerinden Google Places Autocomplete
+
+### Sorun neydi?
+
+Pickup ve destination araması yalnızca cihazın yerel geocoder'ını kullanıyordu. Okul, AVM ve işletme gibi POI adları eksik yazıldığında sonuç bulunamıyor veya aynı yer için zayıf/tekrarlı adres sonuçları çıkabiliyordu. Google Places billing daha önce etkin olmadığı için gerçek autocomplete eklenmemişti.
+
+### Neden bu sorun çıktı?
+
+Yerel geocoder tam metin adres çözümleme için uygundur ancak yazarken POI tahmini sunan bir autocomplete servisi değildir. Google Places anahtarını doğrudan Expo public environment'ına koymak anahtarı mobil bundle içinde açığa çıkaracağı için güvenli bir backend katmanı da gerekiyordu.
+
+### Çözüm yöntemi neler?
+
+- Places API (New) anahtarını yalnızca backend environment'ında tutmak.
+- Firebase Bearer token gerektiren autocomplete ve details proxy endpoint'leri oluşturmak.
+- Aramaları kullanıcının pickup konumuna 50 km location bias ile yakınlaştırmak.
+- Aynı yazma/seçme akışında session token kullanmak.
+- Autocomplete tahmini seçildiğinde Place Details ile kesin koordinatı almak.
+- Google kullanılamadığında mevcut cihaz geocoder ve harita seçimini fallback olarak korumak.
+- Google tahminleri gösterildiğinde gerekli attribution metnini göstermek.
+
+### Nasıl Çözüldü?
+
+- `POST /api/places/autocomplete` ve `GET /api/places/{placeId}` endpoint'leri eklendi.
+- Backend Google'a yalnızca gerekli field mask'lerle çağrı yapıyor; API key response veya mobil bundle içine girmiyor.
+- Input uzunluğu, koordinatlar, session token ve place ID alanları validation ile sınırlandı.
+- Frontend debounce akışı önce Google Places sonuçlarını kullanıyor; servis yapılandırılmamış veya geçici olarak erişilemezse cihaz geocoder'ına düşüyor.
+- Places tahminleri gerçek place adı, ikincil adres ve Google'ın origin mesafesiyle gösteriliyor.
+- Tahmin seçimi Details endpoint'inden gelen kesin koordinatı pickup/destination state'ine yazıyor.
+- `Powered by Google` attribution yalnızca Google kaynaklı sonuç bulunduğunda gösteriliyor.
+- Places API (New) `motorescue-d4abc` projesinde etkinleştirildi.
+- Yalnızca Places servis hedeflerine izinli ayrı `MotoRescue Places Backend` anahtarı oluşturuldu ve repo dışında Windows kullanıcı environment'ına `GOOGLE_MAPS_API_KEY` olarak kaydedildi.
+- İlk oluşturma aracının progress çıktısında görünen geçici key derhal iptal edildi; uygulama yalnızca sessiz oluşturulan replacement key'i kullanıyor.
+- Backend README ve application properties environment yapılandırmasıyla güncellendi.
+
+### Test ve doğrulama
+
+```text
+mvnw.cmd test                  başarılı — 6 test
+npx tsc --noEmit              başarılı
+npm run lint                  başarılı — 0 hata, 0 uyarı
+Places Autocomplete canlı test  HTTP 200 — 5 prediction
+Place Details canlı test        HTTP 200 — location mevcut
+Backend :8083                   dinliyor
+```
+
 ## 15 Temmuz 2026 — Özel biker ehliyet belgesi yükleme ve inceleme durumu
 
 ### Sorun neydi?
