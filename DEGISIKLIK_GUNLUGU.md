@@ -1567,3 +1567,9 @@ npx expo-doctor     başarılı — 18/18 kontrol
 Expo config         başarılı
 Yerel Android build engeli — internet kesintisinde Google Maven bağımlılıkları indirilemedi; EAS development build kullanılacak
 ```
+
+## 15 Temmuz 2026 — PC yeniden başlatma öncesi session handoff
+
+- `session_handoff.md` güncel branch/commit, SMS mimarisi, EAS build kimliği, yapılmayan manuel testler ve yeniden başlatma sonrası devam adımlarıyla baştan güncellendi.
+- Gerçek SMS testi ve development APK kurulumu tamamlanmış gibi işaretlenmedi.
+- Untracked backend loglarının commit edilmemesi gerektiği kaydedildi.
