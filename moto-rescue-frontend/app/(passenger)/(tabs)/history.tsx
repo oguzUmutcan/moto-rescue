@@ -3,49 +3,18 @@ import React, { useEffect, useState } from "react";
 import { ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { rescueApi } from "../../../api/rescues";
+import { reviewApi } from "../../../api/reviews";
+import ProfileAvatar from "../../../components/profile-avatar";
 
 type PassengerRide = {
+  id: string;
   date: string; from: string; to: string; biker: string | null;
-  bikerE: string | null; status: "completed" | "cancelled";
+  bikerProfilePhotoPath: string | null; status: "completed" | "cancelled";
   dur: string | null; rating: number | null;
 };
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const RIDE_SHAPE: PassengerRide[] = [
-  {
-    date: "Thu Jun 12 · 8:14 AM",
-    from: "Rue Didouche Mourad",
-    to: "Faculté de Droit, Ben Aknoun",
-    biker: "Khaled M.",
-    bikerE: "🧑",
-    status: "completed",
-    dur: "18 min",
-    rating: 5,
-  },
-  {
-    date: "Mon Jun 9 · 2:31 PM",
-    from: "Place du 1er Mai",
-    to: "American Visa Centre, Hydra",
-    biker: "Amine R.",
-    bikerE: "👨",
-    status: "completed",
-    dur: "22 min",
-    rating: 4,
-  },
-  {
-    date: "Tue Jun 3 · 11:48 AM",
-    from: "Grande Poste",
-    to: "Campus Ibn Khaldoun, Usthb",
-    biker: null,
-    bikerE: null,
-    status: "cancelled",
-    dur: null,
-    rating: null,
-  },
-];
-
 export default function PassengerHistoryScreen() {
-  const [rides, setRides] = useState<typeof RIDE_SHAPE>([]);
+  const [rides, setRides] = useState<PassengerRide[]>([]);
   const [filter, setFilter] = useState<"all" | "completed" | "cancelled">(
     "all",
   );
@@ -54,20 +23,22 @@ export default function PassengerHistoryScreen() {
   const insets = useSafeAreaInsets();
 
   useEffect(() => {
-    rescueApi.history().then((items) => setRides(items.filter((item) =>
-      item.status === "completed" || item.status === "cancelled",
-    ).map((item) => ({
-      date: new Date(item.createdAt).toLocaleString(),
-      from: item.pickupLabel,
-      to: item.destinationLabel,
-      biker: item.bikerName,
-      bikerE: item.bikerId ? "🏍️" : null,
-      status: item.status === "completed" ? "completed" : "cancelled",
-      dur: item.startedAt && item.completedAt
-        ? `${Math.max(1, Math.round((new Date(item.completedAt).getTime() - new Date(item.startedAt).getTime()) / 60000))} min`
-        : null,
-      rating: null,
-    })))).catch((error) => console.error("Could not load ride history", error));
+    Promise.all([rescueApi.history(), reviewApi.mine()]).then(([items, reviews]) => {
+      const ratings = new Map(reviews.map((review) => [review.rescueId, review.rating]));
+      setRides(items.filter((item) => item.status === "completed" || item.status === "cancelled").map((item) => ({
+        id: item.id,
+        date: new Date(item.createdAt).toLocaleString(),
+        from: item.pickupLabel,
+        to: item.destinationLabel,
+        biker: item.bikerName,
+        bikerProfilePhotoPath: item.bikerProfilePhotoPath,
+        status: item.status === "completed" ? "completed" : "cancelled",
+        dur: item.startedAt && item.completedAt
+          ? `${Math.max(1, Math.round((new Date(item.completedAt).getTime() - new Date(item.startedAt).getTime()) / 60000))} min`
+          : null,
+        rating: ratings.get(item.id) ?? null,
+      })));
+    }).catch((error) => console.error("Could not load ride history", error));
   }, []);
 
   return (
@@ -109,8 +80,8 @@ export default function PassengerHistoryScreen() {
         className="flex-1 px-4 pt-4"
         contentContainerStyle={{ paddingBottom: 24 }}
       >
-        {visibleRides.map((r, i) => (
-          <View key={i} className="bg-white rounded-2xl p-4 mb-3 shadow-sm">
+        {visibleRides.map((r) => (
+          <View key={r.id} className="bg-white rounded-2xl p-4 mb-3 shadow-sm">
             {/* Date & Status */}
             <View className="flex-row items-center justify-between mb-3">
               <Text className="text-[12px] text-[#8E8E93] font-semibold">
@@ -148,9 +119,7 @@ export default function PassengerHistoryScreen() {
             {r.status === "completed" && r.biker && (
               <View className="flex-row items-center justify-between border-t border-[#F2F2F7] pt-3">
                 <View className="flex-row items-center gap-2">
-                  <View className="w-8 h-8 rounded-full bg-[#EEF4FF] items-center justify-center">
-                    <Text className="text-[16px]">{r.bikerE}</Text>
-                  </View>
+                    <ProfileAvatar storagePath={r.bikerProfilePhotoPath} size={32} />
                   <View>
                     <Text className="text-[12px] text-[#8E8E93]">
                       Rescued by

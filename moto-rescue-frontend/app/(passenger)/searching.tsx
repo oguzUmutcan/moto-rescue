@@ -2,7 +2,6 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { CheckCircle, Clock } from "lucide-react-native";
 import React, { useEffect, useState } from "react";
 import {
-    StyleSheet,
     Text,
     TouchableOpacity,
     View
@@ -17,6 +16,8 @@ import Animated, {
 } from "react-native-reanimated";
 import { auth } from "../../config/firebase";
 import { rescueApi, RescueRequest } from "../../api/rescues";
+import LocationMap from "../../components/location-map";
+import ProfileAvatar from "../../components/profile-avatar";
 
 // Helper component for the pulsing dots animation
 const AnimatedDot = ({
@@ -133,28 +134,12 @@ export default function PassengerSearchingScreen() {
 
   return (
     <View className="flex-1 bg-[#E5EBF0] relative">
-      {/* BACKGROUND MAP MOCK */}
-      <View
-        style={StyleSheet.absoluteFillObject}
-        className="items-center justify-center"
-      >
-        <View className="absolute w-full h-full opacity-10">
-          {Array.from({ length: 20 }).map((_, i) => (
-            <View
-              key={`h-${i}`}
-              className="absolute w-full h-[1px] bg-black"
-              style={{ top: i * 50 }}
-            />
-          ))}
-          {Array.from({ length: 10 }).map((_, i) => (
-            <View
-              key={`v-${i}`}
-              className="absolute h-full w-[1px] bg-black"
-              style={{ left: i * 50 }}
-            />
-          ))}
-        </View>
-      </View>
+      {request && (
+        <LocationMap
+          initialRegion={{ latitude: request.latitude, longitude: request.longitude, latitudeDelta: 0.04, longitudeDelta: 0.04 }}
+          selectedCoordinate={{ latitude: request.latitude, longitude: request.longitude }}
+        />
+      )}
 
       {/* OVERLAY CONTENT */}
       <View className="absolute inset-0 items-center justify-center px-6">
@@ -172,7 +157,7 @@ export default function PassengerSearchingScreen() {
         {matched ? (
           // --- MATCHED STATE ---
           <View className="bg-white rounded-[22px] p-6 shadow-2xl w-full items-center">
-            <Text className="text-[40px] mb-2.5">🎉</Text>
+            <ProfileAvatar storagePath={request?.bikerProfilePhotoPath ?? null} size={72} />
             <Text className="text-[22px] font-black text-[#1C1C1E] mb-1.5">
               Hero Found!
             </Text>

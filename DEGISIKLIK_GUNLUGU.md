@@ -1470,3 +1470,23 @@ Passenger rescue oluşturulduktan sonra arama ekranı, backend gerçek bir bildi
 
 - Sabit biker sayısı kaldırılarak `Nearby verified bikers alerted` durum metni kullanıldı.
 - Arama yarıçapı açıklaması backend ile uyumlu olacak şekilde 6 km olarak güncellendi.
+
+## 15 Temmuz 2026 — Passenger rescue akışındaki dinamik biker verileri ve gerçek harita
+
+Passenger rescue oluşturulduktan sonraki searching, active ride ve review ekranları biker'ın profil fotoğrafı yerine sabit motosiklet emojisi gösteriyordu. Searching ekranının arka planı gerçek harita yerine çizgilerden oluşan bir mock'tu. Passenger history içinde kullanılmayan örnek sürüşler bulunuyor ve gerçek review puanları her kayıt için `null` atanıyordu.
+
+- Biker rescue isteğini kabul ederken güncel `profilePhotoPath` rescue kaydına ekleniyor ve `RescueResponse` üzerinden passenger'a dönüyor.
+- Ortak, salt okunur `ProfileAvatar` bileşeni Firebase Storage yolunu gerçek fotoğrafa çeviriyor; fotoğraf yoksa motosiklet simgesine geri düşüyor.
+- Searching, ride, review ve passenger history ekranları biker'ın gerçek profil fotoğrafını gösteriyor.
+- Searching ekranındaki mock çizgiler kaldırıldı; gerçek pickup koordinatını gösteren `LocationMap` eklendi.
+- Passenger history, rescue history ile kullanıcının review listesini `rescueId` üzerinden eşleştirerek gerçek puanı gösteriyor.
+- Kullanılmayan örnek passenger sürüş kayıtları tamamen kaldırıldı.
+
+### Doğrulama
+
+```text
+mvnw.cmd test       başarılı — 9 test
+npx tsc --noEmit    başarılı
+npm run lint        başarılı — 0 hata, 0 uyarı
+git diff --check    başarılı
+```

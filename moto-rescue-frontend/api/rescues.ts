@@ -15,6 +15,7 @@ export type RescueRequest = {
   status: "searching" | "accepted" | "in_progress" | "cancelled" | "completed";
   bikerId: string | null;
   bikerName: string | null;
+  bikerProfilePhotoPath: string | null;
   createdAt: string;
   expiresAt: string;
   acceptedAt: string | null;

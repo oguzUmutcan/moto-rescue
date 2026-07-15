@@ -53,6 +53,7 @@ public class RescueService {
         data.put("status", "searching");
         data.put("bikerId", null);
         data.put("bikerName", null);
+        data.put("bikerProfilePhotoPath", null);
         data.put("createdAt", Timestamp.ofTimeSecondsAndNanos(now.getEpochSecond(), now.getNano()));
         Instant expiresAt = now.plusSeconds(300);
         data.put("expiresAt", Timestamp.ofTimeSecondsAndNanos(expiresAt.getEpochSecond(), expiresAt.getNano()));
@@ -164,13 +165,14 @@ public class RescueService {
                 if (distanceKm(bikerLocation, (GeoPoint) snapshot.get("pickup")) > ZONE_KM) {
                     throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Rescue is outside the 6 km zone");
                 }
-                transaction.update(reference, Map.of(
-                        "status", "accepted",
-                        "bikerId", token.getUid(),
-                        "bikerName", displayName(token),
-                        "boardingCode", String.format("%06d", SECURE_RANDOM.nextInt(1_000_000)),
-                        "acceptedAt", Timestamp.now()
-                ));
+                Map<String, Object> acceptance = new HashMap<>();
+                acceptance.put("status", "accepted");
+                acceptance.put("bikerId", token.getUid());
+                acceptance.put("bikerName", displayName(token));
+                acceptance.put("bikerProfilePhotoPath", biker.getString("profilePhotoPath"));
+                acceptance.put("boardingCode", String.format("%06d", SECURE_RANDOM.nextInt(1_000_000)));
+                acceptance.put("acceptedAt", Timestamp.now());
+                transaction.update(reference, acceptance);
                 return null;
             }).get();
             return forUser(token, from(getDocument(requestId)));
@@ -356,6 +358,7 @@ public class RescueService {
                 (String) data.get("status"),
                 (String) data.get("bikerId"),
                 (String) data.get("bikerName"),
+                (String) data.get("bikerProfilePhotoPath"),
                 instant((Timestamp) data.get("createdAt")),
                 instant((Timestamp) data.get("expiresAt")),
                 instant((Timestamp) data.get("acceptedAt")),
@@ -376,7 +379,7 @@ public class RescueService {
         return new RescueResponse(
                 response.id(), response.passengerId(), response.passengerName(), response.latitude(), response.longitude(),
                 response.pickupLabel(), response.destinationLabel(), response.destinationLatitude(), response.destinationLongitude(),
-                response.urgency(), response.needsHelmet(), response.status(), response.bikerId(), response.bikerName(),
+                response.urgency(), response.needsHelmet(), response.status(), response.bikerId(), response.bikerName(), response.bikerProfilePhotoPath(),
                 response.createdAt(), response.expiresAt(), response.acceptedAt(), null, response.boardingVerifiedAt(),
                 response.startedAt(), response.completedAt(), response.bikerLatitude(), response.bikerLongitude(), response.bikerLocationUpdatedAt()
         );

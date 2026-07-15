@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { Alert, Text, TouchableOpacity, View } from "react-native";
 import { rescueApi, RescueRequest } from "../../api/rescues";
 import LocationMap from "../../components/location-map";
+import ProfileAvatar from "../../components/profile-avatar";
 
 export default function PassengerRideScreen() {
   const router = useRouter();
@@ -70,7 +71,7 @@ export default function PassengerRideScreen() {
       <View className="absolute top-0 left-0 right-0 bg-white rounded-b-3xl shadow-lg pt-14 px-5 pb-5">
         <Text className="text-[12px] text-[#8E8E93] font-black tracking-widest uppercase">{inProgress ? "Ride in progress" : "Biker on the way"}</Text>
         <View className="flex-row items-center mt-2">
-          <View className="w-12 h-12 rounded-full bg-[#EEF4FF] items-center justify-center"><Text className="text-[24px]">🏍️</Text></View>
+          <ProfileAvatar storagePath={request.bikerProfilePhotoPath} />
           <View className="ml-3 flex-1"><Text className="text-[18px] font-black text-[#1C1C1E]">{request.bikerName ?? "Assigned biker"}</Text><Text className="text-[13px] text-[#34C759] font-bold">{inProgress ? "Taking you to destination" : "Heading to your pickup"}</Text></View>
         </View>
       </View>

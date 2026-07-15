@@ -42,6 +42,7 @@ public final class RescueDtos {
             String status,
             String bikerId,
             String bikerName,
+            String bikerProfilePhotoPath,
             Instant createdAt,
             Instant expiresAt,
             Instant acceptedAt,
