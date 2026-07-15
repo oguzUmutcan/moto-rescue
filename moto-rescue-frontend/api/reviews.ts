@@ -12,4 +12,5 @@ export const reviewApi = {
       body: JSON.stringify({ rating, comment }),
     }),
   mine: () => apiRequest<Review[]>("/api/reviews/mine"),
+  latest: () => apiRequest<Review[]>("/api/reviews"),
 };

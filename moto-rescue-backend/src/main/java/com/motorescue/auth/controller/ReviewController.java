@@ -35,4 +35,10 @@ public class ReviewController {
     public List<ReviewResponse> mine(@RequestHeader("Authorization") String authorization) {
         return reviewService.mine(authService.authenticate(authorization));
     }
+
+    @GetMapping
+    public List<ReviewResponse> latest(@RequestHeader("Authorization") String authorization) {
+        authService.authenticate(authorization);
+        return reviewService.latest();
+    }
 }

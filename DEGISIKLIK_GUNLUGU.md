@@ -957,6 +957,40 @@ npm run lint        başarılı — 0 hata, 0 uyarı
 git diff --check    başarılı
 ```
 
+## 15 Temmuz 2026 — Kalıcı badge doğrulaması, gerçek biker istatistikleri ve community reviews
+
+### Sorun neydi?
+
+Badge'lerin reinstall sonrasında sıfırlanabileceği düşünülüyordu. Biker history özetlerinde toplam, kilometre, ortalama süre ve XP; biker profilinde ise rating, seviye, rescue sayısı, kilometre, üyelik tarihi ve motosiklet bilgileri sabit örnek değerlerdi. Review'ları da yalnızca passenger kendi gönderdiği liste üzerinden görebiliyordu.
+
+### Neden bu sorun çıktı?
+
+Badge ekranı backend'e bağlı olmasına rağmen kalıcılık modeli UI'da açık değildi. History ve profil tasarımları prototip verileriyle bırakılmıştı. Review backend'i yalnızca `mine` sorgusu sunduğu için iki rolün ortak yorum akışına erişimi yoktu.
+
+### Çözüm yöntemi neler?
+
+- Badge sisteminin Firestore rescue ve rating verisinden hesaplanmaya devam ettiğini doğrulamak.
+- History ve profil özetlerini gerçek rescue koordinatları, timestamp'leri, user profili ve badge özetiyle üretmek.
+- Giriş yapmış passenger ve biker'lara son community review'larını sunan ortak endpoint ve ekran oluşturmak.
+
+### Nasıl çözüldü?
+
+- Badge'lerin cihaz depolamasında tutulmadığı; `/api/badges/me` üzerinden Firestore verisinden hesaplandığı doğrulandı.
+- Biker history sahte kayıt şablonundan ayrıldı; toplam rescue, Haversine mesafesi, ortalama süre ve rescue başına 50 XP gerçek veriden hesaplanıyor.
+- Biker profili gerçek rating, level, rescue sayısı, kilometre, üyelik tarihi, motosiklet modeli/rengi ve belge doğrulama durumuna bağlandı.
+- Kimliği doğrulanmamış biker'da sabit `VERIFIED` etiketi kaldırıldı.
+- `GET /api/reviews` ile son 100 community review giriş yapmış kullanıcılara açıldı.
+- Passenger Reviews sekmesi community akışına çevrildi ve biker tab barına aynı Reviews ekranı eklendi.
+
+### Test ve doğrulama
+
+```text
+mvnw.cmd test       başarılı — 8 test
+npx tsc --noEmit    başarılı
+npm run lint        başarılı — 0 hata, 0 uyarı
+git diff --check    başarılı
+```
+
 ## 15 Temmuz 2026 — Model geçişi için session handoff dokümanı
 
 ### Sorun neydi?
