@@ -894,6 +894,23 @@ npm run lint        başarılı — 0 hata, 0 uyarı
 git diff --check    başarılı
 ```
 
+## 15 Temmuz 2026 — Passenger'ın atanan biker'ı arayabilmesi
+
+Passenger'ın `Biker on the way` ekranında atanan biker ile telefon üzerinden iletişim kurabileceği bir işlem bulunmuyordu.
+
+- Biker rescue isteğini kabul ettiğinde profilindeki telefon numarası rescue kaydına ekleniyor ve `RescueResponse` içinde yalnızca rescue katılımcılarına ulaşıyor.
+- Accepted durumundaki passenger ride ekranına telefon ikonlu arama butonu eklendi.
+- Numara cihazın telefon uygulamasına `tel:` bağlantısıyla aktarılıyor; numara yoksa veya telefon uygulaması açılamazsa kullanıcıya açıklayıcı uyarı gösteriliyor.
+- Yolculuk başladıktan sonra arama butonu gizleniyor.
+
+### Doğrulama
+
+```text
+mvnw.cmd test       başarılı — 9 test
+npx tsc --noEmit    başarılı
+npm run lint        başarılı — 0 hata, 0 uyarı
+```
+
 ## 15 Temmuz 2026 — Kamera sonrası görünmeyen kaydet düğmesi
 
 ### Sorun neydi?

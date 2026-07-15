@@ -16,6 +16,7 @@ export type RescueRequest = {
   bikerId: string | null;
   bikerName: string | null;
   bikerProfilePhotoPath: string | null;
+  bikerPhoneNumber: string | null;
   createdAt: string;
   expiresAt: string;
   acceptedAt: string | null;

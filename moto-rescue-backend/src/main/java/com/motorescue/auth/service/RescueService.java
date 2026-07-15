@@ -54,6 +54,7 @@ public class RescueService {
         data.put("bikerId", null);
         data.put("bikerName", null);
         data.put("bikerProfilePhotoPath", null);
+        data.put("bikerPhoneNumber", null);
         data.put("createdAt", Timestamp.ofTimeSecondsAndNanos(now.getEpochSecond(), now.getNano()));
         Instant expiresAt = now.plusSeconds(300);
         data.put("expiresAt", Timestamp.ofTimeSecondsAndNanos(expiresAt.getEpochSecond(), expiresAt.getNano()));
@@ -170,6 +171,7 @@ public class RescueService {
                 acceptance.put("bikerId", token.getUid());
                 acceptance.put("bikerName", displayName(token));
                 acceptance.put("bikerProfilePhotoPath", biker.getString("profilePhotoPath"));
+                acceptance.put("bikerPhoneNumber", biker.getString("phone"));
                 acceptance.put("boardingCode", String.format("%06d", SECURE_RANDOM.nextInt(1_000_000)));
                 acceptance.put("acceptedAt", Timestamp.now());
                 transaction.update(reference, acceptance);
@@ -359,6 +361,7 @@ public class RescueService {
                 (String) data.get("bikerId"),
                 (String) data.get("bikerName"),
                 (String) data.get("bikerProfilePhotoPath"),
+                (String) data.get("bikerPhoneNumber"),
                 instant((Timestamp) data.get("createdAt")),
                 instant((Timestamp) data.get("expiresAt")),
                 instant((Timestamp) data.get("acceptedAt")),
@@ -379,7 +382,7 @@ public class RescueService {
         return new RescueResponse(
                 response.id(), response.passengerId(), response.passengerName(), response.latitude(), response.longitude(),
                 response.pickupLabel(), response.destinationLabel(), response.destinationLatitude(), response.destinationLongitude(),
-                response.urgency(), response.needsHelmet(), response.status(), response.bikerId(), response.bikerName(), response.bikerProfilePhotoPath(),
+                response.urgency(), response.needsHelmet(), response.status(), response.bikerId(), response.bikerName(), response.bikerProfilePhotoPath(), response.bikerPhoneNumber(),
                 response.createdAt(), response.expiresAt(), response.acceptedAt(), null, response.boardingVerifiedAt(),
                 response.startedAt(), response.completedAt(), response.bikerLatitude(), response.bikerLongitude(), response.bikerLocationUpdatedAt()
         );

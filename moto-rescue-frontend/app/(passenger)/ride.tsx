@@ -1,7 +1,7 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { MapPin, ShieldCheck } from "lucide-react-native";
+import { MapPin, Phone, ShieldCheck } from "lucide-react-native";
 import React, { useEffect, useRef, useState } from "react";
-import { Alert, Text, TouchableOpacity, View } from "react-native";
+import { Alert, Linking, Text, TouchableOpacity, View } from "react-native";
 import { rescueApi, RescueRequest } from "../../api/rescues";
 import LocationMap from "../../components/location-map";
 import ProfileAvatar from "../../components/profile-avatar";
@@ -44,6 +44,19 @@ export default function PassengerRideScreen() {
     }
   };
 
+  const callBiker = async () => {
+    const phoneNumber = request?.bikerPhoneNumber?.replace(/[^\d+]/g, "");
+    if (!phoneNumber) {
+      Alert.alert("Phone unavailable", "This biker has no phone number on their profile.");
+      return;
+    }
+    try {
+      await Linking.openURL(`tel:${phoneNumber}`);
+    } catch {
+      Alert.alert("Could not start call", "Your device could not open the phone app.");
+    }
+  };
+
   if (!request) {
     return <View className="flex-1 items-center justify-center bg-[#E5EBF0]"><Text className="font-bold text-[#8E8E93]">Loading ride...</Text></View>;
   }
@@ -73,6 +86,11 @@ export default function PassengerRideScreen() {
         <View className="flex-row items-center mt-2">
           <ProfileAvatar storagePath={request.bikerProfilePhotoPath} />
           <View className="ml-3 flex-1"><Text className="text-[18px] font-black text-[#1C1C1E]">{request.bikerName ?? "Assigned biker"}</Text><Text className="text-[13px] text-[#34C759] font-bold">{inProgress ? "Taking you to destination" : "Heading to your pickup"}</Text></View>
+          {!inProgress && (
+            <TouchableOpacity onPress={() => void callBiker()} accessibilityRole="button" accessibilityLabel="Call biker" className="w-12 h-12 rounded-full bg-[#EDFAF3] items-center justify-center">
+              <Phone size={22} color="#248A3D" />
+            </TouchableOpacity>
+          )}
         </View>
       </View>
 

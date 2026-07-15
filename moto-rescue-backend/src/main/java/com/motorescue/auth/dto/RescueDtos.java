@@ -43,6 +43,7 @@ public final class RescueDtos {
             String bikerId,
             String bikerName,
             String bikerProfilePhotoPath,
+            String bikerPhoneNumber,
             Instant createdAt,
             Instant expiresAt,
             Instant acceptedAt,
