@@ -1,4 +1,5 @@
 import * as Location from "expo-location";
+import { getAvailablePosition } from "../../utils/device-location";
 import { useRouter } from "expo-router";
 import { ChevronDown, LocateFixed, Map, MapPin, X, Zap } from "lucide-react-native";
 import React, { useEffect, useRef, useState } from "react";
@@ -146,9 +147,7 @@ export default function RequestFormScreen() {
           if (active) setPickupMode("manual");
           return;
         }
-        const location = await Location.getCurrentPositionAsync({
-          accuracy: Location.Accuracy.Balanced,
-        });
+        const location = await getAvailablePosition();
         const coordinates = {
           latitude: location.coords.latitude,
           longitude: location.coords.longitude,

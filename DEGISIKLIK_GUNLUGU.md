@@ -2,6 +2,41 @@
 
 Bu belge projede yapılan teknik değişiklikleri, değişikliklerin gerekçelerini ve doğrulama sonuçlarını kalıcı olarak kayıt altına alır. Yeni çalışmalar tarih sırasıyla bu dosyaya eklenecektir.
 
+## 15 Temmuz 2026 — Emülatörde geçici GPS erişilemezlik hatasının giderilmesi
+
+### Sorun neydi?
+
+Android Emulator'da location servisi açık, Expo Go precise location iznine sahip ve GPS koordinatı provider'a ulaşmış olmasına rağmen dashboard açılışında `Current location is unavailable` hatası yakalanmamış Promise hatası olarak uygulamayı kesiyordu.
+
+### Neden bu sorun çıktı?
+
+Passenger ve biker dashboard'ları `Location.getCurrentPositionAsync` çağrısını hata yakalama olmadan çalıştırıyordu. Emülatör wipe/boot sonrasında fused location provider ilk ölçümü kısa süre içinde sunamazsa çağrı reddediliyor ve kullanılabilir son GPS ölçümü kontrol edilmiyordu.
+
+### Çözüm yöntemi neler?
+
+- Location servisinin açık olduğunu ölçümden önce kontrol etmek.
+- Önce dengeli doğrulukta güncel ölçüm istemek.
+- Güncel ölçüm geçici olarak alınamazsa yalnızca iki dakikadan yeni ve kabul edilebilir doğruluktaki son bilinen ölçümü kullanmak.
+- Dashboard başlangıcındaki hatayı yakalayıp haritayı güvenli bir başlangıç bölgesiyle açmak.
+- Rescue formunda da aynı ortak konum çözümleyicisini kullanmak.
+
+### Nasıl Çözüldü?
+
+- `utils/device-location.ts` ortak konum yardımcısı eklendi.
+- Passenger dashboard, biker dashboard ve rescue formundaki konum çağrıları bu yardımcıya taşındı.
+- Dashboard başlangıç çağrıları `try/catch` içine alındı; GPS provider geç hazırlandığında artık yakalanmamış Promise hatası oluşmuyor.
+- Emülatörün location mode, provider, Expo Go permission ve son GPS ölçümü ADB üzerinden doğrulandı.
+- Test emülatörüne İstanbul koordinatı gönderildi.
+
+### Test ve doğrulama
+
+```text
+npx tsc --noEmit  başarılı
+npm run lint      başarılı — 0 hata, 0 uyarı
+ADB location mode açık, Expo Go fine/coarse permission granted
+GPS/fused last location 41.0082, 28.9784
+```
+
 ## 15 Temmuz 2026 — Doğrulanmış passenger boarding code sistemi
 
 ### Sorun neydi?

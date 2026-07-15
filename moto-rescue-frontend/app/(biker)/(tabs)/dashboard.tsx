@@ -1,6 +1,7 @@
 import * as Location from "expo-location";
 import { useRouter } from "expo-router";
 import * as SecureStore from "expo-secure-store";
+import { getAvailablePosition } from "../../../utils/device-location";
 import { onAuthStateChanged } from "firebase/auth";
 import { Navigation2 } from "lucide-react-native";
 import React, { useEffect, useRef, useState } from "react";
@@ -59,7 +60,7 @@ export default function BikerDashboardScreen() {
 
   const handleLocateMe = async () => {
     try {
-      let currentLoc = await Location.getCurrentPositionAsync({});
+      const currentLoc = await getAvailablePosition();
       mapRef.current?.animateToRegion(
         {
           latitude: currentLoc.coords.latitude,
@@ -164,14 +165,18 @@ export default function BikerDashboardScreen() {
         return;
       }
 
-      let currentLoc = await Location.getCurrentPositionAsync({});
-      // Calculate and set the initial region based on real GPS
-      setInitialRegion({
-        latitude: currentLoc.coords.latitude,
-        longitude: currentLoc.coords.longitude,
-        latitudeDelta: 0.01,
-        longitudeDelta: 0.01,
-      });
+      try {
+        const currentLoc = await getAvailablePosition();
+        setInitialRegion({
+          latitude: currentLoc.coords.latitude,
+          longitude: currentLoc.coords.longitude,
+          latitudeDelta: 0.01,
+          longitudeDelta: 0.01,
+        });
+      } catch (error) {
+        console.warn("Current location is unavailable", error);
+        setInitialRegion({ latitude: 41.0082, longitude: 28.9784, latitudeDelta: 0.0922, longitudeDelta: 0.0421 });
+      }
     })();
   }, []);
 
