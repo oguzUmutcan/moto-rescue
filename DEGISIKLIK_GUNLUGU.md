@@ -2,6 +2,37 @@
 
 Bu belge projede yapılan teknik değişiklikleri, değişikliklerin gerekçelerini ve doğrulama sonuçlarını kalıcı olarak kayıt altına alır. Yeni çalışmalar tarih sırasıyla bu dosyaya eklenecektir.
 
+## 15 Temmuz 2026 — Biker kabul sonrası Expo Router path hatasının düzeltilmesi
+
+### Sorun neydi?
+
+Biker incoming rescue ekranında isteği kabul ettiğinde işlem sonrasında `TypeError: path.split is not a function (it is undefined)` hatası oluşabiliyordu ve navigation ekranına güvenilir şekilde geçilemiyordu.
+
+### Neden bu sorun çıktı?
+
+Expo Router local search parametresi çalışma zamanında `string`, `string[]` veya `undefined` olabilmesine rağmen yalnızca string kabul edilmiş ve doğrudan object tabanlı router params değerine aktarılmıştı. Geçersiz parametre şekli router'ın path çözümleme katmanına ulaşabiliyordu. Kabul düğmesi ayrıca istek yüklenmeden veya işlem sürerken tekrar çalıştırılabiliyordu.
+
+### Çözüm yöntemi neler?
+
+- Route parametresini kullanmadan önce tek bir string değere normalize etmek.
+- Kabul sonrası hedefi object params yerine encode edilmiş tam string URL olarak vermek.
+- Rescue detayı yüklenene kadar kabul düğmesini kapatmak.
+- Kabul isteği sürerken ikinci dokunmayı engellemek.
+
+### Nasıl Çözüldü?
+
+- `requestId` için `string | string[] | undefined` çalışma zamanı şekilleri açıkça ele alındı.
+- Kabul sonrası route `/(biker)/navigation?requestId=<encoded-id>` biçiminde oluşturuldu.
+- `accepting` state'i eklenerek düğme işlem sırasında kilitlendi ve kullanıcıya `Accepting...` durumu gösterildi.
+- API hatasında kilit kaldırılıyor ve mevcut açıklayıcı hata bildirimi korunuyor.
+
+### Test ve doğrulama
+
+```text
+npx tsc --noEmit  başarılı
+npm run lint      başarılı — 0 hata, 0 uyarı
+```
+
 ## 15 Temmuz 2026 — Emülatörde geçici GPS erişilemezlik hatasının giderilmesi
 
 ### Sorun neydi?
