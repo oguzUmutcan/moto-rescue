@@ -46,7 +46,7 @@
         "expo-image-picker",
         {
           "photosPermission": "MotoRescue uses your selected photo as your profile picture.",
-          "cameraPermission": false,
+          "cameraPermission": "MotoRescue uses your camera to photograph verification documents.",
           "microphonePermission": false
         }
       ]

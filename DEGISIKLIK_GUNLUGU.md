@@ -795,6 +795,39 @@ npm run lint      başarılı — 0 hata, 0 uyarı
 git diff --check  başarılı
 ```
 
+## 15 Temmuz 2026 — Biker profil fotoğrafı ve belge kamera seçeneği
+
+### Sorun neydi?
+
+Biker profil oluşturma ekranında yalnızca emoji avatar seçilebiliyor, güvenli profil fotoğrafı yükleme alanı görünmüyordu. Ehliyet ön/arka yükleme alanına basıldığında ise kullanıcıya kaynak seçimi sunulmadan doğrudan galeri açılıyordu.
+
+### Neden bu sorun çıktı?
+
+Ortak `ProfilePhoto` bileşeni biker'ın sekmeli profil ekranında kullanılmış ancak onboarding ekranına bağlanmamıştı. Belge yükleme bileşeni yalnızca `launchImageLibraryAsync` kullanıyordu ve Expo ImagePicker yapılandırmasında kamera izni kapalıydı.
+
+### Çözüm yöntemi neler?
+
+- Biker onboarding profilini mevcut güvenli profil fotoğrafı akışına bağlamak.
+- Ehliyetin her iki yüzü için kamera veya galeri seçimi sunmak.
+- Kamera ve medya izinlerini yalnızca kullanıcı ilgili kaynağı seçtiğinde istemek.
+- Mevcut dosya türü, boyut ve Firebase Storage güvenlik kontrollerini korumak.
+
+### Nasıl çözüldü?
+
+- Biker profil oluşturma ekranına `ProfilePhoto` eklendi ve backend profilindeki `profilePhotoPath` ile bağlandı.
+- Emoji seçimi, fotoğraf bulunmadığında kullanılacak fallback olarak korundu.
+- Ehliyet alanına `Take photo`, `Choose from gallery` ve `Cancel` seçenekleri eklendi.
+- Kamera seçiminde `requestCameraPermissionsAsync` ve `launchCameraAsync` kullanıldı.
+- Expo ImagePicker kamera izin açıklaması uygulama yapılandırmasına eklendi.
+
+### Test ve doğrulama
+
+```text
+npx tsc --noEmit  başarılı
+npm run lint      başarılı — 0 hata, 0 uyarı
+git diff --check  başarılı
+```
+
 ## 15 Temmuz 2026 — Model geçişi için session handoff dokümanı
 
 ### Sorun neydi?

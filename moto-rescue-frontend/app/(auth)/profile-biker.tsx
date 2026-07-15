@@ -24,6 +24,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { auth } from "../../config/firebase";
 import { userApi } from "../../api/users";
 import IdentityDocumentUpload from "../../components/identity-document-upload";
+import ProfilePhoto from "../../components/profile-photo";
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
@@ -72,6 +73,7 @@ export default function ProfileBikerScreen() {
   const [hasUploadedID, setHasUploadedID] = useState(false);
   const [identityDocumentStatus, setIdentityDocumentStatus] = useState<"not_submitted" | "pending" | "verified" | "rejected">("not_submitted");
   const [profileEmoji, setProfileEmoji] = useState("🦸"); // Default Biker Emoji
+  const [profilePhotoPath, setProfilePhotoPath] = useState<string | null>(null);
 
   const [isEmojiModalVisible, setIsEmojiModalVisible] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -100,6 +102,7 @@ export default function ProfileBikerScreen() {
           }
           setIdentityDocumentStatus(data.identityDocumentStatus);
           if (data.profileEmoji) setProfileEmoji(data.profileEmoji);
+          setProfilePhotoPath(data.profilePhotoPath);
         }
       }
     };
@@ -170,8 +173,18 @@ export default function ProfileBikerScreen() {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          {/* Emoji Avatar Selector */}
+          {/* Profile photo and emoji fallback */}
           <View className="items-center mb-8">
+            <View className="mb-3">
+              <ProfilePhoto
+                fallbackEmoji={profileEmoji}
+                storagePath={profilePhotoPath}
+                onStoragePathChange={setProfilePhotoPath}
+              />
+            </View>
+            <Text className="text-[14px] text-[#34C759] font-bold mb-3">
+              Tap photo to add or change
+            </Text>
             <TouchableOpacity
               onPress={() => !isLoading && setIsEmojiModalVisible(true)}
               activeOpacity={0.8}
@@ -187,7 +200,7 @@ export default function ProfileBikerScreen() {
               </View>
             </TouchableOpacity>
             <Text className="text-[14px] text-[#34C759] font-bold">
-              Choose Avatar
+              Choose Emoji Fallback
             </Text>
           </View>
 

@@ -40,20 +40,28 @@ export default function IdentityDocumentUpload({ initialStatus, onSubmitted }: P
     return () => { active = false; };
   }, [initialStatus]);
 
-  const uploadSide = async (side: Side) => {
+  const uploadSide = async (side: Side, source: "camera" | "library") => {
     const uid = auth.currentUser?.uid;
     if (!uid || busySide || status === "verified" || status === "pending") return;
     try {
-      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      const permission = source === "camera"
+        ? await ImagePicker.requestCameraPermissionsAsync()
+        : await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!permission.granted) {
-        Alert.alert("Photo access required", "Allow photo access to upload your driver's license.");
+        Alert.alert(
+          source === "camera" ? "Camera access required" : "Photo access required",
+          `Allow ${source === "camera" ? "camera" : "photo"} access to upload your driver's license.`,
+        );
         return;
       }
-      const result = await ImagePicker.launchImageLibraryAsync({
+      const pickerOptions: ImagePicker.ImagePickerOptions = {
         mediaTypes: ["images"],
         allowsEditing: true,
         quality: 0.9,
-      });
+      };
+      const result = source === "camera"
+        ? await ImagePicker.launchCameraAsync(pickerOptions)
+        : await ImagePicker.launchImageLibraryAsync(pickerOptions);
       if (result.canceled) return;
       const asset = result.assets[0];
       const contentType = asset.mimeType ?? "image/jpeg";
@@ -91,6 +99,15 @@ export default function IdentityDocumentUpload({ initialStatus, onSubmitted }: P
     }
   };
 
+  const chooseSource = (side: Side) => {
+    if (locked || busySide !== null) return;
+    Alert.alert("Add license photo", side === "front" ? "Select the front side source." : "Select the back side source.", [
+      { text: "Take photo", onPress: () => void uploadSide(side, "camera") },
+      { text: "Choose from gallery", onPress: () => void uploadSide(side, "library") },
+      { text: "Cancel", style: "cancel" },
+    ]);
+  };
+
   const locked = status === "pending" || status === "verified";
   const statusLabel = status === "verified" ? "Verified" : status === "pending" ? "Pending review" : status === "rejected" ? "Rejected — upload again" : "Not submitted";
   const statusColor = status === "verified" ? "#34C759" : status === "pending" ? "#FF9500" : status === "rejected" ? "#FF3B30" : "#8E8E93";
@@ -101,14 +118,14 @@ export default function IdentityDocumentUpload({ initialStatus, onSubmitted }: P
       {(["front", "back"] as const).map((side) => (
         <TouchableOpacity
           key={side}
-          onPress={() => void uploadSide(side)}
+          onPress={() => chooseSource(side)}
           disabled={locked || busySide !== null}
           style={{ minHeight: 58, borderWidth: 2, borderStyle: "dashed", borderColor: uploaded[side] ? "#34C759" : "#C7C7CC", borderRadius: 14, paddingHorizontal: 16, marginBottom: 10, flexDirection: "row", alignItems: "center", backgroundColor: uploaded[side] ? "#EDFAF3" : "#FAFAFA" }}
         >
           {busySide === side ? <ActivityIndicator color="#34C759" /> : uploaded[side] ? <CheckCircle size={21} color="#34C759" /> : <UploadCloud size={21} color="#8E8E93" />}
           <View style={{ marginLeft: 12, flex: 1 }}>
             <Text style={{ fontSize: 15, fontWeight: "800", color: uploaded[side] ? "#248A3D" : "#1C1C1E" }}>{side === "front" ? "License front" : "License back"}</Text>
-            <Text style={{ fontSize: 12, color: "#8E8E93", marginTop: 2 }}>{uploaded[side] ? "Uploaded securely" : "Tap to choose an image"}</Text>
+            <Text style={{ fontSize: 12, color: "#8E8E93", marginTop: 2 }}>{uploaded[side] ? "Uploaded securely" : "Use camera or choose from gallery"}</Text>
           </View>
         </TouchableOpacity>
       ))}
