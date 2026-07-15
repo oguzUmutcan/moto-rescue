@@ -39,17 +39,19 @@ npx tsc --noEmit  başarılı
 npm run lint      başarılı — 0 hata, 0 uyarı
 ```
 
-Canlı rules deploy denendi ancak Firebase projesinde Storage ürünü henüz ilk kez oluşturulmadığı için CLI işlemi durdu:
+İlk canlı rules deploy denemesi Firebase projesinde Storage ürünü henüz oluşturulmadığı için durmuştu:
 
 ```text
 Firebase Storage has not been set up on project 'motorescue-d4abc'.
 ```
 
-Firebase Console → Storage → Get Started adımı tamamlandıktan sonra çalıştırılacak komut:
+Firebase Console → Storage → Get Started adımı tamamlandıktan sonra aşağıdaki komut yeniden çalıştırıldı:
 
 ```powershell
 npx firebase-tools deploy --only storage --project motorescue-d4abc
 ```
+
+Storage kuralları başarıyla derlendi ve `motorescue-d4abc` projesine yayınlandı. Backend yeni profil fotoğrafı endpoint'leriyle yeniden başlatıldı; `8083` portu ve kimliksiz isteğe beklenen `401` yanıtı doğrulandı.
 
 ## 15 Temmuz 2026 — Boarding code TextInput NativeWind çalışma zamanı hatasının düzeltilmesi
 
