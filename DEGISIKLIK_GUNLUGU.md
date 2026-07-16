@@ -1573,3 +1573,158 @@ Yerel Android build engeli — internet kesintisinde Google Maven bağımlılık
 - `session_handoff.md` güncel branch/commit, SMS mimarisi, EAS build kimliği, yapılmayan manuel testler ve yeniden başlatma sonrası devam adımlarıyla baştan güncellendi.
 - Gerçek SMS testi ve development APK kurulumu tamamlanmış gibi işaretlenmedi.
 - Untracked backend loglarının commit edilmemesi gerektiği kaydedildi.
+
+## 15 Temmuz 2026 — Varsayılan Expo başlangıcının yerel Expo Go akışına döndürülmesi
+
+- `npm start`, `expo-dev-client` kurulu olduğunda development build modunu otomatik seçmek yerine açıkça `expo start --go --lan` çalıştıracak şekilde değiştirildi.
+- Native Firebase Phone Auth gerektiren SMS akışı için ayrı `npm run start:dev-client` komutu eklendi.
+- Expo CLI'daki `/_expo/loading` adresinin build adresi değil QR/uygulama seçici ara sayfası olduğu; gerçek yerel Metro adresinin terminalde ayrıca gösterilen IP ve `8081` portu olduğu doğrulandı.
+- Kullanıcının isteği doğrultusunda test, build, Metro veya uygulama başlatma komutu çalıştırılmadı.
+
+## 15 Temmuz 2026 — Native Firebase nedeniyle tek development-client akışına geçilmesi
+
+- Expo Go'da `RNFBAppModule not found` hatası alınması üzerine SMS entegrasyonunun native modül zorunluluğu doğrulandı.
+- Karışıklığı önlemek için Expo Go ve development-client başlangıç komutları ayrımı kaldırıldı.
+- `npm start` doğrudan `expo start --dev-client --lan` çalıştıracak şekilde ayarlandı; SMS entegrasyonu bulunan proje için tek yerel çalışma yolu development client oldu.
+- Kullanıcının isteği doğrultusunda test, build, Metro veya uygulama başlatma komutu çalıştırılmadı.
+
+## 15 Temmuz 2026 — İlk SMS gönderimindeki boş native oturum hatasının düzeltilmesi
+
+- Kayıt doğrulama ekranı SMS göndermeden önce koşulsuz native Firebase `signOut()` çağırdığı için, ilk kayıtta oturum bulunmadığında `no user currently signed in` hatası oluşuyordu.
+- Native çıkış işlemi yalnızca `currentUser` mevcutsa çalışacak şekilde korumalı hâle getirildi; ilk SMS gönderimi artık doğrudan telefon doğrulama çağrısına ilerliyor.
+- Kullanıcının isteği doğrultusunda test, build, Metro veya uygulama başlatma komutu çalıştırılmadı.
+
+## 15 Temmuz 2026 — SMS ekranının modular RNFirebase API'ye geçirilmesi
+
+- SMS ekranındaki deprecated namespaced React Native Firebase çağrıları `getApp`, `getAuth`, `signInWithPhoneNumber`, `signOut`, `linkWithCredential` ve `deleteUser` modular fonksiyonlarına geçirildi.
+- SMS gönderildikten sonra açılan kod alanındaki `tracking-[10px]` arbitrary CSS sınıfının `react-native-css` içinde `path.split` hatasına yol açması önlendi; harf aralığı native `style.letterSpacing` ile verildi.
+- Hatanın devam ettiği cihaz çıktısı incelendiğinde asıl tetikleyicinin `TextInput` üzerindeki `text-center` sınıfı olduğu belirlendi: kurulu `react-native-css` sürümünün `textAlign` native mapping değeri boolean olduğu için çalışma zamanında `path.split` çağrısı çöküyordu. OTP alanındaki `className` tamamen kaldırılarak tüm görünüm saf React Native `style` nesnesine taşındı.
+- Kullanıcının isteği doğrultusunda test, build, Metro veya uygulama başlatma komutu çalıştırılmadı.
+
+## 15 Temmuz 2026 — Bekleme öncesi session handoff güncellemesi
+
+- Devam eden yeni EAS development build'in kullandığı remote credential, Firebase/SMS doğrulama durumu, bu turdaki uncommitted düzeltmeler ve build sonrasındaki kesin kontrol sırası `session_handoff.md` dosyasına ayrıntılı olarak işlendi.
+- Yeni build başlatılmadı ve devam eden kullanıcı build'ine müdahale edilmedi.
+
+## 15 Temmuz 2026 — Development SMS doğrulamasında reCAPTCHA fallback
+
+- EAS development APK'sının paket adı, Firebase App ID'si, API key'i ve gerçek imza SHA-1/SHA-256 değerleri APK içinden doğrulandı.
+- Bootloader kilidi açık fiziksel cihaz Play Integrity `basic integrity` kontrolünü geçemediği için SMS isteği Firebase tarafından reddediliyordu.
+- Android development modunda Phone Auth uygulama doğrulaması `forceRecaptchaFlowForTesting` ile reCAPTCHA akışına zorlandı; production build'lerde Play Integrity davranışı korunuyor.
+- Kullanıcıyla yapılan test sırasında otomatik test, build veya Metro komutu çalıştırılmadı.
+- reCAPTCHA fallback sonrasında Firebase'in geçici `[auth/too-many-requests]` cihaz engeline ulaşıldığı ve sonraki güvenli deneme sırası `session_handoff.md` dosyasına kaydedildi.
+
+## 16 Temmuz 2026 — Zorunlu Firebase SMS kaydının kaldırılması
+
+- Bootloader açık/rootlu cihazların Play Integrity nedeniyle kayıt olamaması kabul edilmediği için kayıt akışı email/password Firebase hesabı ve backend profil oluşturma modeline döndürüldü.
+- Telefon numarası iletişim verisi olarak korunuyor; yeni profiller `phoneVerified: false` ile oluşturuluyor ve backend artık `phone_number` token claim'ini zorunlu tutmuyor.
+- Hesap oluşturulduktan sonra backend profil isteği başarısız olursa yarım Firebase hesabı bırakmamak için yeni email/password kullanıcısı temizleniyor.
+- Passenger ve biker profil ekranlarında telefon düzenleme yeniden etkinleştirildi; telefon formatı frontend ve backend sözleşmelerinde korunuyor.
+- Kullanılmayan `@react-native-firebase/app`, `@react-native-firebase/auth`, `expo-dev-client`, Expo RNFirebase pluginleri ve `google-services.json` kaldırıldı.
+- `npm start` yeniden Expo Go LAN akışını başlatıyor; Expo `~54.0.36` uyumlu patch sürümüne yükseltildi.
+- Google Cloud API key'in reCAPTCHA teşhisi sırasında geçici olarak gevşetilen application restriction ayarının manuel olarak yeniden değerlendirilmesi handoff'a not edildi.
+
+### Doğrulama
+
+```text
+mvnw.cmd test       başarılı — 10 test, 0 failure/error
+npx tsc --noEmit    başarılı
+npm run lint        başarılı — 0 hata, 0 uyarı
+npx expo-doctor     başarılı — 18/18 kontrol
+Expo public config  başarılı — native Firebase yapılandırması yok
+git diff --check    başarılı
+```
+
+- `npm install` 17 moderate dependency vulnerability bildirdi; kapsam dışı otomatik `npm audit fix` uygulanmadı.
+- Backend/Metro başlatılmadı ve email/password kayıt akışı henüz cihazda manuel test edilmedi.
+
+## 16 Temmuz 2026 - Session handoff arindirma
+
+- `session_handoff.md` eski Firebase SMS, EAS development build ve Expo dev-client talimatlarindan arindirildi.
+- Handoff yalnizca guncel email/password Firebase JS SDK + backend profil olusturma akisini anlatacak sekilde sadeleştirildi.
+- Acik isler `/api/auth/phone-session` kalintisi, `phoneVerified` semantigi, Google Cloud API key restriction, manuel Expo Go kayit testi ve dependency vulnerability degerlendirmesi olarak yeniden listelendi.
+- Onceki native SMS APK'sinin ve backend log dosyalarinin commit edilmemesi gerektigi korundu.
+
+## 16 Temmuz 2026 - Backend SMS kalintilarinin kaldirilmasi
+
+- Kullanilmayan `/api/auth/phone-session` endpoint'i kaldirildi.
+- `AuthService.verifyPhoneIdentity` silindi; backend artik Firebase token'inda `phone_number` claim'i arayan bir dogrulama yolu sunmuyor.
+- `/api/auth/session` yanitindan token claim'ine dayali `phoneVerified` alani kaldirildi. Telefon dogrulama durumu yalnizca profil belgesindeki `phoneVerified` alaniyla temsil ediliyor.
+- `session_handoff.md` acik isleri bu temizlikten sonra guncellendi.
+
+### Dogrulama
+
+```text
+mvnw.cmd test  basarili - 10 test, 0 failure/error
+```
+
+## 16 Temmuz 2026 - Google Cloud API key kisitlarinin sikilastirilmasi
+
+- Resmi Firebase API key dokumantasyonu kontrol edildi: Firebase client key'leri public olabilir, ancak Firebase disi API'ler ayni key'e eklenmemeli ve API restrictions allowlist korunmalidir.
+- Frontend `.env` icindeki Firebase API key'in `Browser key (auto created by Firebase)` ile eslestigi dogrulandi; key degeri kayda yazilmadi.
+- Browser key API allowlist'i Firebase Management, Cloud Logging, Identity Toolkit, Token Service, Firebase Rules ve Cloud Storage for Firebase API'leriyle sinirlandi.
+- Expo Go / React Native JS SDK akisi sabit browser referrer veya Android package/SHA application header'i saglamadigi icin Browser key'e application restriction eklenmedi.
+- Artik runtime'da kullanilmayan Android key, `com.oguzumutcan.motorescue` paketi ve Firebase'deki mevcut SHA-1 fingerprint ile application-restricted hale getirildi.
+- `MotoRescue Places Backend` key'inin ayri oldugu ve yalnizca Places API hedeflerine kisitli kaldigi dogrulandi.
+- `session_handoff.md` acik isler listesinden Google Cloud API key maddesi kaldirildi ve guncel Cloud key durumu eklendi.
+
+### Dogrulama
+
+```text
+gcloud services api-keys list  basarili - key degerleri yazdirilmadan restriction ozeti dogrulandi
+```
+
+## 16 Temmuz 2026 - Toplu otomatik dogrulama
+
+- Backend testleri, frontend TypeScript kontrolu, Expo lint ve Expo Doctor yeniden calistirildi.
+- Backend testlerinde 10 testin tamami basarili oldu.
+- TypeScript kontrolu hata vermedi.
+- Expo lint hata vermeden tamamlandi.
+- Expo Doctor 18/18 kontrolu basarili tamamlandi.
+- Bu turda backend veya Metro uzun sureli servis olarak baslatilmadi; email/password kayit akisi cihazda manuel test edilmedi.
+
+### Dogrulama
+
+```text
+mvnw.cmd test       basarili - 10 test, 0 failure/error
+npx tsc --noEmit    basarili
+npm run lint        basarili
+npx expo-doctor     basarili - 18/18
+```
+
+## 16 Temmuz 2026 - Review ekranlarinin role gore ayrilmasi
+
+- Reviews sekmesi artik global uygulama yorumlarini gostermiyor.
+- Passenger Reviews sekmesi yalnizca yolcunun verdigi yorumlari `/api/reviews/mine` uzerinden gosteriyor ve passenger icin ortalama rating hesaplamiyor.
+- Biker Reviews sekmesi yalnizca biker'a gelen yorumlari yeni `/api/reviews/received` endpoint'i uzerinden gosteriyor ve ortalamayi sadece bu yorumlardan hesapliyor.
+- Review response sozlesmesine passenger ve biker profil fotografi snapshot alanlari eklendi.
+- Yeni review olusturulurken rescue belgesindeki `passengerProfilePhotoPath` ve `bikerProfilePhotoPath` review belgesine yaziliyor.
+- Eski review belgelerinde fotograf snapshot'i yoksa backend response donusunde ilgili kullanici profilinden `profilePhotoPath` fallback olarak okunuyor.
+- Review kartlari sabit emoji yerine ilgili passenger veya biker profil fotografini `ProfileAvatar` ile gosteriyor.
+- Passenger profil ekranindaki sabit `Avg Rating` kaldirildi; passenger puanlanmadigi icin kartlar tamamlanan request, toplam request ve uyelik tarihi olarak degistirildi.
+
+### Dogrulama
+
+```text
+mvnw.cmd test       basarili - 10 test, 0 failure/error
+npx tsc --noEmit    basarili
+npm run lint        basarili
+```
+
+## 16 Temmuz 2026 - Dependency vulnerability degerlendirmesi
+
+- `npm audit --json` ve `npm audit fix --dry-run --json` calistirildi.
+- Ilk audit sonucu 17 moderate vulnerability bildirdi.
+- Uygulanabilir dar fix olarak yalnizca `@istanbuljs/load-nyc-config` altindaki `js-yaml` icin `3.15.0` override'i eklendi.
+- `npm install --package-lock-only` ile lockfile guncellendi; audit sayisi 17 moderate'dan 16 moderate'a dustu.
+- Kalan 16 uyarinin fix onerileri Expo SDK 57 major upgrade veya NativeWind/react-native-css major/downgrade gerektiriyor. Bu degisiklikler Expo SDK 54 uyumlulugunu ve mevcut NativeWind v5 preview akisini etkileyebilecegi icin otomatik uygulanmadi.
+- `npm audit fix --force` bu turda calistirilmadi.
+
+### Dogrulama
+
+```text
+npx tsc --noEmit    basarili
+npm run lint        basarili
+npx expo-doctor     basarili - 18/18
+npm audit           16 moderate vulnerability kaldi; breaking fix gerektiriyor
+```

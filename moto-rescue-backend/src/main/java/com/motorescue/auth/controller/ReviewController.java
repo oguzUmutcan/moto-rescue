@@ -36,6 +36,11 @@ public class ReviewController {
         return reviewService.mine(authService.authenticate(authorization));
     }
 
+    @GetMapping("/received")
+    public List<ReviewResponse> received(@RequestHeader("Authorization") String authorization) {
+        return reviewService.received(authService.authenticate(authorization));
+    }
+
     @GetMapping
     public List<ReviewResponse> latest(@RequestHeader("Authorization") String authorization) {
         authService.authenticate(authorization);

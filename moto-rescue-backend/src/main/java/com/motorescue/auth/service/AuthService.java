@@ -26,17 +26,4 @@ public class AuthService {
             throw new IllegalArgumentException("Invalid or revoked Firebase ID token", exception);
         }
     }
-
-    public FirebaseToken verifyPhoneIdentity(String idToken) {
-        FirebaseToken token = verifyIdToken(idToken);
-        String phoneNumber = token.getClaims().get("phone_number") instanceof String value
-                ? value
-                : null;
-
-        if (phoneNumber == null || phoneNumber.isBlank()) {
-            throw new IllegalArgumentException("The authenticated Firebase user has no verified phone number");
-        }
-
-        return token;
-    }
 }

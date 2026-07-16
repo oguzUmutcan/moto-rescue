@@ -12,7 +12,7 @@ export type UserProfile = {
 };
 
 export type ProfileUpdate = Partial<Pick<UserProfile,
-  "name" | "emergencyContact" | "profileEmoji" | "bio" | "plateNumber" |
+  "name" | "phone" | "emergencyContact" | "profileEmoji" | "bio" | "plateNumber" |
   "motorcycleModel" | "motorcycleColor" | "availableDays" | "online" | "notificationsEnabled"
 >>;
 

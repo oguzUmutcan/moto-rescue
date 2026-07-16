@@ -30,17 +30,8 @@ public class AuthController {
         FirebaseToken token = authService.verifyIdToken(extractBearerToken(authorization));
         return Map.of(
                 "uid", token.getUid(),
-                "emailVerified", token.isEmailVerified(),
-                "phoneVerified", token.getClaims().containsKey("phone_number")
+                "emailVerified", token.isEmailVerified()
         );
-    }
-
-    @GetMapping("/phone-session")
-    public Map<String, Object> phoneSession(
-            @RequestHeader(value = "Authorization", required = false) String authorization
-    ) {
-        FirebaseToken token = authService.verifyPhoneIdentity(extractBearerToken(authorization));
-        return Map.of("uid", token.getUid(), "phoneVerified", true);
     }
 
     private String extractBearerToken(String authorization) {

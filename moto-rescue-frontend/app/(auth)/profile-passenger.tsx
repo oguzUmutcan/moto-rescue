@@ -107,6 +107,7 @@ export default function ProfilePassengerScreen() {
 
       await userApi.update({
         name: name.trim(),
+        phone: phone.trim(),
         emergencyContact: fullEmergencyContact,
         profileEmoji: profileEmoji, // Save the emoji string directly!
       });
@@ -199,7 +200,8 @@ export default function ProfilePassengerScreen() {
               placeholderTextColor="#C7C7CC"
               keyboardType="phone-pad"
               value={phone}
-              editable={false}
+              onChangeText={(value) => setPhone(value.replace(/[^\d+]/g, "").replace(/(?!^)\+/g, "").slice(0, 16))}
+              editable={!isLoading}
             />
           </View>
 

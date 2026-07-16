@@ -19,6 +19,7 @@ import { signOut } from "firebase/auth";
 import { auth } from "../../../config/firebase";
 import { userApi } from "../../../api/users";
 import ProfilePhoto from "../../../components/profile-photo";
+import { rescueApi } from "../../../api/rescues";
 
 export default function PassengerProfileScreen() {
   const router = useRouter();
@@ -34,6 +35,9 @@ export default function PassengerProfileScreen() {
   const [emergencyContact, setEmergencyContact] = useState("Not set");
   const [profileEmoji, setProfileEmoji] = useState("⛔"); // Default Passenger Emoji
   const [profilePhotoPath, setProfilePhotoPath] = useState<string | null>(null);
+  const [totalRequests, setTotalRequests] = useState(0);
+  const [completedRescues, setCompletedRescues] = useState(0);
+  const [memberSince, setMemberSince] = useState("Unknown");
 
   // Fetch User Data from Firestore
   useEffect(() => {
@@ -48,7 +52,11 @@ export default function PassengerProfileScreen() {
             setEmergencyContact(data.emergencyContact || "Not set");
             setProfileEmoji(data.profileEmoji || "⛔");
             setProfilePhotoPath(data.profilePhotoPath);
+            setMemberSince(data.createdAt ? new Date(data.createdAt).toLocaleDateString(undefined, { month: "short", year: "numeric" }) : "Unknown");
           }
+          const history = await rescueApi.history();
+          setTotalRequests(history.length);
+          setCompletedRescues(history.filter((ride) => ride.status === "completed").length);
         } catch (error) {
           console.error("Error fetching profile data:", error);
         }
@@ -140,9 +148,9 @@ export default function PassengerProfileScreen() {
           {/* Stats */}
           <View className="flex-row border-t border-[#F2F2F7] pt-3.5">
             {[
-              { v: "6", l: "Rescues", c: "text-[#007AFF]" },
-              { v: "4.8", l: "Avg Rating", c: "text-[#FF9500]" },
-              { v: "2h", l: "Time Saved", c: "text-[#34C759]" },
+              { v: String(completedRescues), l: "Completed", c: "text-[#007AFF]" },
+              { v: String(totalRequests), l: "Requests", c: "text-[#34C759]" },
+              { v: memberSince, l: "Member Since", c: "text-[#8E8E93]" },
             ].map(({ v, l, c }, i, arr) => (
               <View
                 key={l}
