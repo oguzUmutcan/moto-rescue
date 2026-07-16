@@ -1,234 +1,179 @@
 # MotoRescue Session Handoff
 
-Son güncelleme: 15 Temmuz 2026  
-Workspace: `C:\Users\umuto\desktop\lecture\zmy works\actual projects\motorescue`
+Son güncelleme: 15 Temmuz 2026, PC yeniden başlatılmadan hemen önce
+Workspace: `C:\Users\umuto\Desktop\Lecture\zMy Works\Actual Projects\MotoRescue`
 
-## Kullanıcı çalışma kuralları
+## Kullanıcının çalışma kuralları
 
-- Her değişiklik kökteki `DEGISIKLIK_GUNLUGU.md` dosyasına şu formatta kaydedilmeli:
-  - Sorun neydi?
-  - Neden bu sorun çıktı?
-  - Çözüm yöntemi neler?
-  - Nasıl Çözüldü?
-- Push işlemleri `master` yerine ayrı bir feature branch üzerinde yapılmalı.
-- Secret, Firebase service-account JSON veya API key repoya eklenmemeli.
-- Kullanıcı fiziksel telefonu passenger, Android emülatörünü rider/biker olarak uçtan uca test ediyor.
+- Her değişiklik kökteki `DEGISIKLIK_GUNLUGU.md` dosyasına kaydedilmeli.
+- Değişiklikler feature branch üzerinde commit edilip pushlanmalı; doğrudan `master` kullanılmamalı.
+- Firebase service-account JSON ve gerçek secret değerleri repoya eklenmemeli. `google-services.json` Android istemci yapılandırmasıdır ve bu çalışmada repoya eklendi.
+- Kullanıcı genellikle fiziksel telefonu passenger, Android emülatörünü biker olarak test ediyor.
+- Kullanıcı bu session sonunda PC'yi yeniden başlatacak; SMS akışı için hiçbir manuel test yapılmadı.
 
 ## Git durumu
 
-- Monorepo remote: `https://github.com/oguzUmutcan/moto-rescue.git`
+- Remote: `https://github.com/oguzUmutcan/moto-rescue.git`
 - Aktif branch: `feat/backend-api-consolidation`
-- Son push edilmiş commit: `32d7b59 feat: add backend-driven rider badge system`
-- Bu dosya oluşturulmadan hemen önce çalışma ağacı temizdi.
+- Son push edilen commit: `cffd367 feat: verify registrations with Firebase SMS`
 - Son önemli commitler:
-  - `32d7b59` backend kontrollü badge sistemi
-  - `a2ec84c` post-ride rider review/rating
-  - `e5985c1` yakın place sonuçları ve klavye yerleşimi
-  - `147c6af` Google Maps turn-by-turn deep link
-  - `56cd326` kabul sonrası iki taraflı rescue akışı
-  - `0dba07b` aday biker'ın açık rescue detay yetkisi
-  - `cd5b460` incoming rescue ekranının otomatik açılması
+  - `cffd367` Firebase SMS ile kayıt telefonu doğrulaması
+  - `4a5cd6c` rescue akışında iki yönlü profil fotoğrafları
+  - `17bb10a` profil iletişim telefonu ve online kontrolü
+  - `c583ca1` passenger'ın atanmış biker'ı araması
+  - `cb3dc30` passenger rescue detayları, gerçek harita/review/fotoğraf
+  - `4672a8f` sabit biker alert sayısının kaldırılması
+  - `fb54948` 6 km zone ve canlı biker konumu
+- Çalışma ağacında yalnızca backend restart sırasında üretilen şu untracked loglar olabilir; commit edilmemeli:
+  - `moto-rescue-backend/backend.stdout.log`
+  - `moto-rescue-backend/backend.stderr.log`
 
-## Repo yapısı
+## Güncel mimari
 
-```text
-motorescue/
-├── moto-rescue-frontend/   Expo 54 / React Native / Expo Router / Firebase Auth
-├── moto-rescue-backend/    Java 21+ / Spring Boot 4.1 / Firebase Admin / Firestore
-├── DEGISIKLIK_GUNLUGU.md   Ayrıntılı kronolojik değişiklik kaydı
-└── session_handoff.md      Bu dosya
-```
+- Frontend: Expo SDK 54, React Native, Expo Router.
+- Backend: Spring Boot 4.1, Java 21+, Firebase Admin ve Firestore; varsayılan port `8083`.
+- Firebase JS SDK mevcut email/password oturumu, Firebase Storage ve API tokenları için kullanılmaya devam ediyor.
+- Firebase Phone Auth için native `@react-native-firebase/app` ve `@react-native-firebase/auth` eklendi.
+- Native modüller nedeniyle uygulama artık SMS testi için Expo Go ile çalışmaz; Expo development build gerekir.
+- Profil, rol, rescue, review, badge ve online uygunluğu backend-authoritative.
+- Rescue zone yarıçapı 6 km; biker konum freshness sınırı 2 dakika.
+- Rescue state: `searching -> accepted -> in_progress -> completed`; passenger sürüş başlamadan önce iptal edebilir.
 
-## Çalıştırma
+## SMS kayıt akışı — kod tamamlandı, cihaz testi yapılmadı
 
-### Backend
+`moto-rescue-frontend/app/(auth)/verify-creds.tsx` iki aşamalı hâle getirildi:
 
-Backend varsayılan portu `8083`:
+1. Firebase Phone Auth ile SMS kodu gönderilir.
+2. Kullanıcı 6 haneli kodu girer; yeniden gönderme için 60 saniye bekleme vardır.
+3. Kod doğrulanınca native telefon kullanıcısı oluşur.
+4. Email/password credential aynı Firebase kullanıcısına `linkWithCredential` ile bağlanır.
+5. Native oturum kapatılır; Firebase JS SDK aynı email/password ile aynı UID'ye giriş yapar.
+6. ID token yenilenir ve backend profili oluşturulur.
+7. Backend `UserService.create` Firebase ID token içindeki doğrulanmış `phone_number` claim'ini zorunlu tutar ve request numarasıyla birebir eşleştirir.
+
+Doğrulanmış telefon profil ekranlarında salt okunur. Numara değiştirmek için ileride ayrı bir yeniden SMS doğrulama akışı gerekir.
+
+### Firebase/Expo yapılandırması
+
+- Android package: `com.oguzumutcan.motorescue`
+- `moto-rescue-frontend/google-services.json` mevcut ve commit edildi.
+- `app.json` içinde `android.googleServicesFile` tanımlı.
+- Expo pluginleri:
+  - `@react-native-firebase/app`
+  - `@react-native-firebase/auth`
+- Development client: `expo-dev-client`
+- EAS project ID: `c9089634-a2e3-4fdd-980f-cf5d278e8087`
+
+Firebase Console'da kullanıcı tarafından ayrıca doğrulanması gerekenler:
+
+- Authentication > Sign-in method > Phone etkin olmalı.
+- Authentication > Settings > SMS region policy içinde test ülkesi açık olmalı.
+- Android SHA-1/SHA-256 fingerprint'leri development build imzasından alınıp Firebase Android app'e eklenmeli. Bu henüz yapılmadı.
+
+## EAS development build durumu
+
+- Build ID: `2cf0915d-6907-42d1-9e9e-144f8b572537`
+- Son kontrol edilen durum: `IN_QUEUE`
+- Commit: `cffd367c9044e987164d6941d6bc393679250617`
+- Build sayfası: `https://expo.dev/accounts/oguzumutcan/projects/moto-rescue/builds/2cf0915d-6907-42d1-9e9e-144f8b572537`
+
+PC açıldıktan sonra durum kontrolü:
 
 ```powershell
-cd moto-rescue-backend
-gcloud auth application-default login
-gcloud auth application-default set-quota-project motorescue-d4abc
+cd "C:\Users\umuto\Desktop\Lecture\zMy Works\Actual Projects\MotoRescue\moto-rescue-frontend"
+npx eas-cli build:view 2cf0915d-6907-42d1-9e9e-144f8b572537
+```
+
+Build tamamlanırsa APK'yı indirip emülatöre kur. Ardından development server:
+
+```powershell
+npx expo start --dev-client --clear --lan
+```
+
+Yerel `npx expo run:android` denendi ancak önce Java 25 uyumsuzluğu, sonra eksik Android SDK path ve son olarak internet kesintisi/Google Maven indirme hatası yaşandı. Android Studio JBR Java 21 uyumlu:
+
+```powershell
+$env:JAVA_HOME='C:\Program Files\Android\Android Studio\jbr'
+$env:Path="$env:JAVA_HOME\bin;$env:Path"
+```
+
+Generated `android/` klasörü `.gitignore` kapsamındadır. Yerel SDK yolu `android/local.properties` içine yazılmıştı ancak PC/re-prebuild sonrasında gerekirse tekrar oluşturulabilir:
+
+```text
+sdk.dir=C:\\Users\\umuto\\AppData\\Local\\Android\\Sdk
+```
+
+## PC yeniden başladıktan sonra çalışma sırası
+
+1. `session_handoff.md` ve `DEGISIKLIK_GUNLUGU.md` son bölümlerini oku.
+2. `git status`, branch ve `cffd367` commit'ini doğrula.
+3. EAS build durumunu yukarıdaki komutla kontrol et.
+4. Firebase Console'da Phone provider ve SMS region policy ayarlarını kullanıcıyla doğrula.
+5. Build bittiyse development APK'yı emülatöre kur.
+6. Build imzasının SHA-1/SHA-256 fingerprint'lerini Firebase Android app'e ekle.
+7. Backend'i güncel environment değişkenleriyle `8083` portunda başlat.
+8. Metro'yu `npx expo start --dev-client --clear --lan` ile başlat.
+9. Önce Firebase test phone number/code ile, sonra gerçek numarayla kayıt testini yap.
+10. Şu durumları doğrula: SMS gönderme, yanlış kod, doğru kod, resend cooldown, email çakışması, aynı telefon çakışması, backend profile create, role selection ve tekrar login.
+11. Test sonuçlarını `DEGISIKLIK_GUNLUGU.md` ve bu handoff dosyasına kaydet; gerekiyorsa düzeltme commit/push yap.
+
+## Çalıştırma komutları
+
+Backend (PC restart sonrası environment değerleri yeni terminale aktarılmalı):
+
+```powershell
+cd "C:\Users\umuto\Desktop\Lecture\zMy Works\Actual Projects\MotoRescue\moto-rescue-backend"
 .\mvnw.cmd spring-boot:run
 ```
 
-Firebase proje ID varsayılan olarak `motorescue-d4abc`. Yapılandırılabilir environment değişkenleri:
+Gerekli backend environment değişkenleri kullanıcı environment'ında kayıtlı olmalı:
 
-```text
-SERVER_PORT=8083
-FIREBASE_ENABLED=true
-FIREBASE_PROJECT_ID=motorescue-d4abc
-GOOGLE_CLOUD_PROJECT=motorescue-d4abc
-CORS_ALLOWED_ORIGINS=http://localhost:8081,http://localhost:19006
-```
+- `GOOGLE_APPLICATION_CREDENTIALS`
+- `GOOGLE_CLOUD_PROJECT` veya `FIREBASE_PROJECT_ID`
+- `GOOGLE_MAPS_API_KEY`
+- Backend varsayılan portu: `8083`
 
-Backend Application Default Credentials kullanıyor. Service-account dosyası kullanılacaksa workspace dışında saklanmalı ve yalnızca `GOOGLE_APPLICATION_CREDENTIALS` ile gösterilmeli.
-
-### Frontend
+Kontroller:
 
 ```powershell
-cd moto-rescue-frontend
-npx expo start --clear --lan
-```
-
-- Web/iOS simulator fallback: `http://localhost:8083`
-- Android emulator fallback: `http://10.0.2.2:8083`
-- Expo Go fiziksel cihaz: Metro `hostUri` üzerinden bilgisayarın LAN adresi otomatik türetiliyor.
-- Override: `EXPO_PUBLIC_API_URL`
-- Fiziksel telefon ve bilgisayar aynı Wi-Fi ağında olmalı.
-- Windows Firewall Java için özel ağ erişimine izin vermeli.
-
-Firebase frontend değerleri `moto-rescue-frontend/.env` içinde bulunmalı; `.env.example` yalnızca anahtar adlarını içerir.
-
-## Mimari kararlar
-
-- Firebase Authentication istemcide oturum açmak için kullanılıyor.
-- Profil, rol, rescue, review ve badge iş kuralları Spring Boot backend'de.
-- Frontend her API isteğinde güncel Firebase ID token'ını `Authorization: Bearer` olarak gönderiyor.
-- Kullanıcı kimliği request body'den değil doğrulanmış token UID'sinden alınıyor.
-- Frontend doğrudan Firestore veya Firebase Storage kullanmıyor.
-- Firebase Storage ücret/billing nedeniyle kullanılmıyor; identity document upload şimdilik kapalı.
-- Rescue state server-authoritative:
-
-```text
-searching -> accepted -> in_progress -> completed
-     |           |
-     +-----------+-> cancelled (passenger, sürüş başlamadan önce)
-```
-
-- Kritik accept/cancel/start/complete ve review/rating işlemleri Firestore transaction kullanıyor.
-
-## Backend API özeti
-
-Bütün endpoint'ler Firebase Bearer token ister.
-
-### Auth
-
-```text
-GET /api/auth/session
-GET /api/auth/phone-session
-```
-
-### Users
-
-```text
-POST   /api/users/me
-GET    /api/users/me
-PATCH  /api/users/me
-PATCH  /api/users/me/role
-DELETE /api/users/me
-```
-
-### Rescues
-
-```text
-POST /api/rescues
-GET  /api/rescues/{requestId}
-GET  /api/rescues/open
-GET  /api/rescues/history
-GET  /api/rescues/active
-POST /api/rescues/{requestId}/accept
-POST /api/rescues/{requestId}/cancel
-POST /api/rescues/{requestId}/start
-POST /api/rescues/{requestId}/complete
-```
-
-Rescue belgeleri pickup/destination label ve koordinatlarını, urgency, helmet ihtiyacı, katılımcıları ve lifecycle timestamp'lerini içeriyor.
-
-### Reviews
-
-```text
-POST /api/reviews/rescue/{rescueId}
-GET  /api/reviews/mine
-```
-
-- Yalnızca tamamlanmış rescue'nun passenger'ı atanmış rider'ı değerlendirebilir.
-- Rating 1–5, yorum opsiyonel ve en fazla 500 karakter.
-- Rescue başına tek review; review document ID = rescue ID.
-- Rider `ratingTotal`, `ratingCount`, `rating` transaction içinde güncellenir.
-
-### Badges
-
-```text
-GET /api/badges/me
-```
-
-Backend'de gerçek veriden hesaplanan badge'ler:
-
-- First Rescue: 1 rescue
-- Rising Rescuer: 5 rescue
-- City Hero: 25 rescue
-- Rescue Legend: 100 rescue
-- Exam Hero: 5 exam rescue
-- Helmet Hero: helmet gereken 10 rescue
-- Night Rescuer: 20:00–06:00 arası 10 rescue (`Europe/Istanbul`)
-- Top Rated Rider: en az 5 review ve 4.8+ rating
-
-Her tamamlanmış rescue 50 XP. Level eşikleri: Bronze 0, Silver 500, Gold 1500, Platinum 3000.
-
-## Tamamlanan frontend akışları
-
-- Register/login, profil oluşturma, passenger/biker rol seçimi backend profiline bağlı.
-- Passenger pickup için mevcut konum veya manuel adres seçebilir.
-- Pickup/destination haritadan marker ile seçilebilir.
-- Destination önerileri yerel geocoder sonuçlarını birleştirir, mevcut pickup'a Haversine mesafesiyle sıralar ve kaydırılabilir listede gösterir.
-- Urgency gerçek açılır seçim listesi.
-- Passenger rescue oluşturur ve backend status polling yapar.
-- Biker açık isteği otomatik görür; incoming ekranı gerçek rescue verisini gösterir.
-- Biker kabul eder, pickup'a gider, sürüşü başlatır, destination'a gider ve tamamlar.
-- `Open in Google Maps` aktif aşamaya göre pickup veya destination için turn-by-turn navigasyon açar.
-- Passenger kabul/start/complete durumlarını polling ile görür.
-- Uygulama yeniden açılırsa `/api/rescues/active` doğru ekrana devam ettirir.
-- Completion sonrası passenger rider'a yıldız ve yorum verebilir.
-- Biker completion sonrası yeni badge kazanmışsa unlock bildirimi görür.
-- History ekranları terminal rescue kayıtlarını ve gerçek süreyi gösterir.
-
-## Bilinen sınırlamalar / sonraki işler
-
-- Yer araması gerçek Places Autocomplete değil. Cihaz geocoder'ı bazı POI'leri (`İlhami Ertem Lisesi` gibi) tam isim yazılmadan bulamayabilir.
-- Google Places denendi ancak billing kurulumu yapılmadı ve entegrasyon koda eklenmedi. Public Nominatim autocomplete kullanım politikası nedeniyle kullanılmamalı.
-- Haritadan seçim bu POI arama sınırlamasının mevcut ücretsiz alternatifi.
-- Canlı biker GPS konumu passenger'a yayınlanmıyor; haritalar hedef marker ve cihazın kendi konumunu gösteriyor.
-- Uygulama içi gerçek rota çizgisi yok; turn-by-turn Google Maps deep link ile açılıyor.
-- Telefon arama düğmeleri henüz gerçek telefon numarasına bağlı değil.
-- Safety code prototipi kaldırıldı; doğrulanmış boarding code sistemi henüz uygulanmadı.
-- Identity document upload için ücretsiz/güvenli object storage sağlayıcısı seçilmedi.
-- Review ekranındaki `Not now` review'u atlar; history üzerinden daha sonra değerlendirme CTA'sı henüz yok.
-- Badge hesabı son 500 biker rescue belgesini tarıyor; yüksek hacimde aggregate counter/event tabanlı yapıya geçirilmeli.
-- Firestore sorguları büyüdükçe composite index ve pagination gerekecek.
-- Mevcut backend testleri temel context/auth/controller testleri; ReviewService, BadgeService ve RescueService transaction kuralları için emulator tabanlı entegrasyon testleri eklenmeli.
-- Push edilen feature branch henüz PR/master merge yapılmadı.
-
-## Test komutları
-
-```powershell
-# Backend
 cd moto-rescue-backend
-.\mvnw.cmd clean test
+.\mvnw.cmd test
 
-# Frontend
 cd ..\moto-rescue-frontend
 npx tsc --noEmit
 npm run lint
-
-# Repo kökü
-cd ..
-git diff --check
-git status --short
+npx expo-doctor
 ```
 
-Son doğrulanan durum:
+Son doğrulanan otomatik sonuçlar:
 
-- Backend: 5 test, 0 failure/error
-- TypeScript: başarılı
-- ESLint: 0 hata, 0 uyarı
-- Branch remote'a push edilmiş durumda
+- Backend: 11 test, 0 failure/error.
+- TypeScript: başarılı.
+- ESLint: 0 hata, 0 uyarı.
+- Expo Doctor: 18/18 başarılı.
+- Expo config: başarılı.
+- Gerçek SMS/device testi: **yapılmadı**.
+- Development APK: **henüz doğrulanmadı; EAS build sırada**.
 
-## Yeni model için önerilen başlangıç sırası
+## Son dönemde tamamlanan diğer özellikler
 
-1. Bu dosyayı ve `DEGISIKLIK_GUNLUGU.md` son bölümlerini oku.
-2. `git status`, aktif branch ve son commit'i doğrula.
-3. Backend ve frontend testlerini çalıştır.
-4. Kullanıcının fiziksel passenger + emülatör biker senaryosundaki en son hatayı yeniden üret.
-5. Değişiklik yaparken server-authoritative state ve mevcut API client yapısını koru.
-6. Her değişikliği günlüğe ekle, aynı feature branch'te commit/push yap.
+- 6 km içindeki online/fresh biker'lar rescue görebilir ve kabul edebilir.
+- Biker foreground konumu backend'e yayınlanır; passenger canlı biker marker'ını görür.
+- Ehliyet iki yüzü yüklenmeden ve otomatik 1 dakikalık doğrulama tamamlanmadan biker online olamaz.
+- Biker için geçerli iletişim telefonu yoksa online olamaz.
+- Passenger accepted aşamasında biker'ı telefon uygulamasıyla arayabilir.
+- Passenger ve biker profil fotoğrafları rescue oluşturma/kabul sırasında rescue belgesine snapshot olarak kaydedilir ve karşı tarafa gösterilir.
+- Passenger searching ekranı gerçek pickup haritası gösterir; sabit 2 biker/3 km metinleri kaldırıldı.
+- Passenger history gerçek review puanını, süreyi ve biker fotoğrafını gösterir; örnek veriler kaldırıldı.
+- Boarding code backend tarafından üretilir ve biker start sırasında doğrulanır.
+- Badge, profile stats, rescue history ve community reviews backend verisine bağlıdır.
+
+## Bilinen önemli sınırlamalar
+
+- Push notification henüz yok; rescue keşfi polling ile çalışıyor.
+- Foreground dışı canlı location tracking yok.
+- Uygulama içi rota/polyline ve gerçek ETA yok; Google Maps deep link kullanılıyor.
+- Incoming ekranında bazı prototip sabitleri hâlâ olabilir (ör. rating/ETA/distance); ayrıca taranmalı.
+- SMS özelliği Expo Go'da çalışmaz.
+- Eski Firebase kullanıcılarının token'ında `phone_number` claim'i yoktur; yeni zorunlu kayıt akışını test etmek için yeni hesap kullanılmalı veya ayrı migration/reverification uygulanmalı.
+- EAS build tamamlanmadan ve SHA fingerprint Firebase'e eklenmeden gerçek SMS başarısı varsayılmamalı.

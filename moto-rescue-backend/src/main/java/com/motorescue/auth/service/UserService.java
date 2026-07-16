@@ -3,6 +3,8 @@ package com.motorescue.auth.service;
 import com.google.cloud.Timestamp;
 import com.google.cloud.firestore.DocumentSnapshot;
 import com.google.cloud.firestore.Firestore;
+import com.google.cloud.firestore.FieldValue;
+import com.google.cloud.firestore.GeoPoint;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseAuthException;
 import com.google.firebase.auth.FirebaseToken;
@@ -31,11 +33,15 @@ public class UserService {
     }
 
     public UserProfileResponse create(FirebaseToken token, CreateProfileRequest request) {
+        String verifiedPhone = token.getClaims().get("phone_number") instanceof String value ? value : null;
+        if (!verifiedPhoneMatches(verifiedPhone, request.phone())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Verify this phone number with Firebase before creating a profile");
+        }
         Map<String, Object> data = new HashMap<>();
         data.put("name", request.name().trim());
         data.put("email", token.getEmail());
-        data.put("phone", request.phone().trim());
-        data.put("phoneVerified", token.getClaims().containsKey("phone_number"));
+        data.put("phone", verifiedPhone);
+        data.put("phoneVerified", true);
         data.put("role", null);
         data.put("online", false);
         data.put("notificationsEnabled", true);
@@ -49,7 +55,17 @@ public class UserService {
     }
 
     public UserProfileResponse get(FirebaseToken token) {
-        return from(profile(token.getUid()), token.getUid());
+        DocumentSnapshot current = profile(token.getUid());
+        Timestamp submittedAt = current.getTimestamp("identityDocumentSubmittedAt");
+        if (isAutoVerificationDue(
+                current.getString("identityDocumentStatus"),
+                submittedAt == null ? null : submittedAt.toDate().toInstant(),
+                Instant.now()
+        )) {
+            await(firestore.collection("users").document(token.getUid()).update("identityDocumentStatus", "verified"));
+            current = profile(token.getUid());
+        }
+        return from(current, token.getUid());
     }
 
     public UserProfileResponse setRole(FirebaseToken token, String role) {
@@ -75,11 +91,80 @@ public class UserService {
             }
             updates.put("availableDays", request.availableDays());
         }
+        if (Boolean.TRUE.equals(request.online())) {
+            DocumentSnapshot current = profile(token.getUid());
+            if (!"biker".equals(current.getString("role"))) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "The biker role is required to go online");
+            }
+            String contactPhone = current.getString("phone");
+            if (!hasContactPhone(contactPhone)) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Add a valid contact phone number before going online");
+            }
+            if (!hasSubmittedIdentityDocument(
+                    current.getString("identityDocumentStatus"),
+                    current.getString("identityDocumentFrontPath"),
+                    current.getString("identityDocumentBackPath")
+            )) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Submit both sides of your driver's license before going online");
+            }
+        }
         if (request.online() != null) updates.put("online", request.online());
         if (request.notificationsEnabled() != null) updates.put("notificationsEnabled", request.notificationsEnabled());
         if (updates.isEmpty()) return get(token);
         await(firestore.collection("users").document(token.getUid()).update(updates));
         if (request.name() != null && !request.name().isBlank()) updateAuthDisplayName(token.getUid(), request.name().trim());
+        return get(token);
+    }
+
+    static boolean hasContactPhone(String phone) {
+        return phone != null && phone.matches("^\\+?[0-9]{7,15}$");
+    }
+
+    static boolean verifiedPhoneMatches(String verifiedPhone, String requestedPhone) {
+        return hasContactPhone(verifiedPhone) && requestedPhone != null && verifiedPhone.equals(requestedPhone.trim());
+    }
+
+    public UserProfileResponse setProfilePhoto(FirebaseToken token, String storagePath) {
+        String expectedPath = "profilePhotos/" + token.getUid() + "/avatar";
+        if (!expectedPath.equals(storagePath)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid profile photo path");
+        }
+        await(firestore.collection("users").document(token.getUid()).update("profilePhotoPath", expectedPath));
+        return get(token);
+    }
+
+    public void clearProfilePhoto(FirebaseToken token) {
+        await(firestore.collection("users").document(token.getUid()).update(
+                "profilePhotoPath", FieldValue.delete()
+        ));
+    }
+
+    public void updateLocation(FirebaseToken token, double latitude, double longitude) {
+        await(firestore.collection("users").document(token.getUid()).update(Map.of(
+                "currentLocation", new GeoPoint(latitude, longitude),
+                "locationUpdatedAt", Timestamp.now()
+        )));
+    }
+
+    public UserProfileResponse submitIdentityDocument(FirebaseToken token, String frontPath, String backPath) {
+        DocumentSnapshot current = profile(token.getUid());
+        if (!"biker".equals(current.getString("role"))) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "The biker role is required");
+        }
+        String prefix = "identityDocuments/" + token.getUid() + "/";
+        if (!(prefix + "front").equals(frontPath) || !(prefix + "back").equals(backPath)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid identity document paths");
+        }
+        if ("verified".equals(current.getString("identityDocumentStatus"))) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Verified documents cannot be replaced");
+        }
+        await(firestore.collection("users").document(token.getUid()).update(Map.of(
+                "identityDocumentFrontPath", frontPath,
+                "identityDocumentBackPath", backPath,
+                "identityDocumentStatus", "pending",
+                "identityDocumentSubmittedAt", Timestamp.now(),
+                "online", false
+        )));
         return get(token);
     }
 
@@ -110,13 +195,17 @@ public class UserService {
         Timestamp createdAt = value.getTimestamp("createdAt");
         Number rating = (Number) value.get("rating");
         Number total = (Number) value.get("totalRescues");
+        Timestamp documentSubmittedAt = value.getTimestamp("identityDocumentSubmittedAt");
         return new UserProfileResponse(
                 uid, value.getString("name"), value.getString("email"), value.getString("phone"),
                 Boolean.TRUE.equals(value.getBoolean("phoneVerified")), value.getString("role"),
                 value.getString("emergencyContact"), value.getString("profileEmoji"), value.getString("bio"),
+                value.getString("profilePhotoPath"),
                 value.getString("plateNumber"), value.getString("motorcycleModel"), value.getString("motorcycleColor"),
                 (List<Boolean>) value.get("availableDays"), Boolean.TRUE.equals(value.getBoolean("online")),
                 !Boolean.FALSE.equals(value.getBoolean("notificationsEnabled")), value.getString("identityDocumentStatus"),
+                value.getString("identityDocumentFrontPath"), value.getString("identityDocumentBackPath"),
+                documentSubmittedAt == null ? null : documentSubmittedAt.toDate().toInstant(),
                 rating == null ? 5.0 : rating.doubleValue(), total == null ? 0 : total.longValue(),
                 createdAt == null ? null : createdAt.toDate().toInstant()
         );
@@ -124,6 +213,18 @@ public class UserService {
 
     private void put(Map<String, Object> updates, String field, String value) {
         if (value != null) updates.put(field, value.trim());
+    }
+
+    static boolean hasSubmittedIdentityDocument(String status, String frontPath, String backPath) {
+        return "verified".equals(status)
+                && frontPath != null && !frontPath.isBlank()
+                && backPath != null && !backPath.isBlank();
+    }
+
+    static boolean isAutoVerificationDue(String status, Instant submittedAt, Instant now) {
+        return "pending".equals(status)
+                && submittedAt != null
+                && !submittedAt.plusSeconds(60).isAfter(now);
     }
 
     private void updateAuthDisplayName(String uid, String name) {

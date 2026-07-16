@@ -3,6 +3,8 @@ package com.motorescue.auth.controller;
 import com.google.firebase.auth.FirebaseToken;
 import com.motorescue.auth.dto.RescueDtos.CreateRescueRequest;
 import com.motorescue.auth.dto.RescueDtos.RescueResponse;
+import com.motorescue.auth.dto.RescueDtos.StartRescueRequest;
+import com.motorescue.auth.dto.UserDtos.LocationRequest;
 import com.motorescue.auth.service.AuthService;
 import com.motorescue.auth.service.RescueService;
 import jakarta.validation.Valid;
@@ -90,9 +92,10 @@ public class RescueController {
     @PostMapping("/{requestId}/start")
     public RescueResponse start(
             @RequestHeader(value = "Authorization", required = false) String authorization,
-            @PathVariable String requestId
+            @PathVariable String requestId,
+            @Valid @RequestBody StartRescueRequest request
     ) {
-        return rescueService.start(authService.authenticate(authorization), requestId);
+        return rescueService.start(authService.authenticate(authorization), requestId, request);
     }
 
     @PostMapping("/{requestId}/complete")
@@ -101,5 +104,12 @@ public class RescueController {
             @PathVariable String requestId
     ) {
         return rescueService.complete(authService.authenticate(authorization), requestId);
+    }
+
+    @PostMapping("/{requestId}/biker-location")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void bikerLocation(@RequestHeader("Authorization") String authorization, @PathVariable String requestId,
+                              @Valid @RequestBody LocationRequest request) {
+        rescueService.updateBikerLocation(authService.authenticate(authorization), requestId, request.latitude(), request.longitude());
     }
 }

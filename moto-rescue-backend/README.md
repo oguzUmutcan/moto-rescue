@@ -42,6 +42,17 @@ POST /api/rescues/{requestId}/cancel
 
 Passenger and biker roles are loaded from `users/{uid}.role` in Firestore. The backend derives the user identity from the verified token; client-provided user IDs are not accepted.
 
+## Google Places
+
+Place autocomplete and detail lookups are proxied by the backend so the Google Maps Platform key is never bundled into the mobile application. Enable Places API (New) for the project and provide a server-restricted key:
+
+```powershell
+$env:GOOGLE_MAPS_API_KEY="your-restricted-server-key"
+.\mvnw.cmd spring-boot:run
+```
+
+If `GOOGLE_MAPS_API_KEY` is absent or Google is temporarily unavailable, the frontend keeps the device geocoder and map selection as fallbacks.
+
 ## Test
 
 ```powershell

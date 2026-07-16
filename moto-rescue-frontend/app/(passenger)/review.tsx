@@ -4,19 +4,22 @@ import React, { useEffect, useState } from "react";
 import { Alert, KeyboardAvoidingView, Platform, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { reviewApi } from "../../api/reviews";
 import { rescueApi } from "../../api/rescues";
+import ProfileAvatar from "../../components/profile-avatar";
 
 export default function ReviewRideScreen() {
   const router = useRouter();
   const { requestId } = useLocalSearchParams<{ requestId: string }>();
   const [bikerName, setBikerName] = useState("your rider");
+  const [bikerProfilePhotoPath, setBikerProfilePhotoPath] = useState<string | null>(null);
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    if (requestId) rescueApi.get(requestId).then((request) =>
-      setBikerName(request.bikerName ?? "your rider"),
-    ).catch(() => undefined);
+    if (requestId) rescueApi.get(requestId).then((request) => {
+      setBikerName(request.bikerName ?? "your rider");
+      setBikerProfilePhotoPath(request.bikerProfilePhotoPath);
+    }).catch(() => undefined);
   }, [requestId]);
 
   const finish = () => router.replace("/(passenger)/(tabs)/history");
@@ -40,7 +43,7 @@ export default function ReviewRideScreen() {
   return (
     <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} className="flex-1 bg-[#F2F2F7] justify-center px-5">
       <View className="bg-white rounded-[28px] p-6 shadow-lg">
-        <View className="w-20 h-20 rounded-full bg-[#EEF4FF] items-center justify-center self-center"><Text className="text-[38px]">🏍️</Text></View>
+        <View className="self-center"><ProfileAvatar storagePath={bikerProfilePhotoPath} size={80} /></View>
         <Text className="text-[25px] font-black text-[#1C1C1E] text-center mt-4">How was your ride?</Text>
         <Text className="text-[15px] text-[#8E8E93] text-center mt-1">Rate {bikerName}</Text>
         <View className="flex-row justify-center gap-3 my-6">

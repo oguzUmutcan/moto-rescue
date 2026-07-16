@@ -16,8 +16,19 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { signOut } from "firebase/auth";
 import { auth } from "../../../config/firebase";
 import { userApi } from "../../../api/users";
+import ProfilePhoto from "../../../components/profile-photo";
+import { badgeApi } from "../../../api/badges";
+import { RescueRequest, rescueApi } from "../../../api/rescues";
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+function rescueDistanceKm(ride: RescueRequest) {
+  const radians = (degrees: number) => degrees * Math.PI / 180;
+  const dLat = radians(ride.destinationLatitude - ride.latitude);
+  const dLon = radians(ride.destinationLongitude - ride.longitude);
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(radians(ride.latitude)) * Math.cos(radians(ride.destinationLatitude)) * Math.sin(dLon / 2) ** 2;
+  return 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
 
 export default function BikerProfileScreen() {
   const router = useRouter();
@@ -38,18 +49,42 @@ export default function BikerProfileScreen() {
   const [name, setName] = useState("Loading...");
   const [plateNumber, setPlateNumber] = useState("Loading...");
   const [bio, setBio] = useState("Loading...");
+  const [motorcycleModel, setMotorcycleModel] = useState("Not provided");
+  const [motorcycleColor, setMotorcycleColor] = useState("Not provided");
+  const [rating, setRating] = useState(5);
+  const [totalRescues, setTotalRescues] = useState(0);
+  const [level, setLevel] = useState("Bronze");
+  const [levelEmoji, setLevelEmoji] = useState("🥉");
+  const [coveredKm, setCoveredKm] = useState(0);
+  const [memberSince, setMemberSince] = useState("Unknown");
   const [profileEmoji, setProfileEmoji] = useState("🦸"); // Default Biker Emoji
+  const [profilePhotoPath, setProfilePhotoPath] = useState<string | null>(null);
+  const [identityDocumentStatus, setIdentityDocumentStatus] = useState<"not_submitted" | "pending" | "verified" | "rejected">("not_submitted");
 
   useEffect(() => {
     const fetchUserData = async () => {
       if (auth.currentUser) {
         try {
-          const data = await userApi.get();
+          const [data, badgeSummary, history] = await Promise.all([
+            userApi.get(),
+            badgeApi.mine(),
+            rescueApi.history(),
+          ]);
           if (data) {
             setName(data.name || auth.currentUser.displayName || "Biker");
             setPlateNumber(data.plateNumber || "Not provided");
             setBio(data.bio || "No bio available");
+            setMotorcycleModel(data.motorcycleModel || "Not provided");
+            setMotorcycleColor(data.motorcycleColor || "Not provided");
+            setRating(data.rating);
+            setTotalRescues(data.totalRescues);
+            setLevel(badgeSummary.level);
+            setLevelEmoji(badgeSummary.levelEmoji);
+            setCoveredKm(history.filter((ride) => ride.status === "completed").reduce((sum, ride) => sum + rescueDistanceKm(ride), 0));
+            setMemberSince(data.createdAt ? new Date(data.createdAt).toLocaleDateString(undefined, { month: "long", year: "numeric" }) : "Unknown");
             setProfileEmoji(data.profileEmoji || "⛔");
+            setProfilePhotoPath(data.profilePhotoPath);
+            setIdentityDocumentStatus(data.identityDocumentStatus);
             setAvailable(
               data.availableDays || [
                 false,
@@ -70,6 +105,24 @@ export default function BikerProfileScreen() {
 
     fetchUserData();
   }, []);
+
+  useEffect(() => {
+    if (identityDocumentStatus !== "pending") return;
+    let active = true;
+    const refreshVerification = async () => {
+      try {
+        const profile = await userApi.get();
+        if (active) setIdentityDocumentStatus(profile.identityDocumentStatus);
+      } catch (error) {
+        console.error("Could not refresh license verification", error);
+      }
+    };
+    const timer = setInterval(refreshVerification, 3000);
+    return () => {
+      active = false;
+      clearInterval(timer);
+    };
+  }, [identityDocumentStatus]);
 
   const handleSignOut = async () => {
     try {
@@ -135,14 +188,14 @@ export default function BikerProfileScreen() {
             <View className="flex-row items-start justify-between mb-4">
               <View className="flex-row items-center gap-3.5">
                 <View className="relative">
-                  <View className="w-[72px] h-[72px] rounded-full bg-[#0d2318] border-[3px] border-[#34C759] items-center justify-center">
-                    <Text className="text-[32px]">{profileEmoji}</Text>
+                  <View className="rounded-full border-[3px] border-[#34C759]">
+                    <ProfilePhoto fallbackEmoji={profileEmoji} storagePath={profilePhotoPath} onStoragePathChange={setProfilePhotoPath} dark />
                   </View>
-                  <View className="absolute bottom-[-2px] right-[-2px] bg-[#34C759] rounded-full px-1.5 py-0.5 border-2 border-[#071510]">
+                  {identityDocumentStatus === "verified" && <View className="absolute bottom-[-2px] right-[-2px] bg-[#34C759] rounded-full px-1.5 py-0.5 border-2 border-[#071510]">
                     <Text className="text-[9px] font-black text-white">
                       ✓ VERIFIED
                     </Text>
-                  </View>
+                  </View>}
                 </View>
                 <View>
                   <Text className="text-[20px] font-black text-white tracking-tight">
@@ -151,11 +204,11 @@ export default function BikerProfileScreen() {
                   <View className="flex-row items-center mt-1 mb-0.5">
                     <Star size={12} color="#FF9500" fill="#FF9500" />
                     <Text className="text-[13px] text-white/70 font-semibold ml-1">
-                      4.9 · Silver Rescuer 🥈
+                      {rating.toFixed(1)} · {level} Rescuer {levelEmoji}
                     </Text>
                   </View>
                   <Text className="text-[12px] text-white/45">
-                    Member since October 2023
+                    Member since {memberSince}
                   </Text>
                 </View>
               </View>
@@ -172,9 +225,9 @@ export default function BikerProfileScreen() {
             {/* Quick Stats */}
             <View className="flex-row gap-2.5">
               {[
-                { v: "127", l: "Rescues", c: "text-[#34C759]" },
-                { v: "4.9", l: "Rating", c: "text-[#FF9500]" },
-                { v: "1,840", l: "km", c: "text-[#007AFF]" },
+                { v: String(totalRescues), l: "Rescues", c: "text-[#34C759]" },
+                { v: rating.toFixed(1), l: "Rating", c: "text-[#FF9500]" },
+                { v: coveredKm.toFixed(1), l: "km", c: "text-[#007AFF]" },
               ].map(({ v, l, c }) => (
                 <View
                   key={l}
@@ -213,9 +266,9 @@ export default function BikerProfileScreen() {
             Motorcycle
           </Text>
           {[
-            { e: "🏍", label: "Model", val: "Yamaha YBR 125" },
+            { e: "🏍", label: "Model", val: motorcycleModel },
             { e: "🔢", label: "Plate", val: plateNumber },
-            { e: "🎨", label: "Colour", val: "Dark Blue" },
+            { e: "🎨", label: "Colour", val: motorcycleColor },
           ].map(({ e, label, val }, i) => (
             <View
               key={i}
@@ -279,15 +332,18 @@ export default function BikerProfileScreen() {
               ios_backgroundColor="#D1D1D6"
             />
           </View>
-          <View className="flex-row items-center px-4 py-3 gap-3 border-b border-[#F2F2F7]">
+          <TouchableOpacity onPress={() => router.push("/(auth)/profile-biker")} className="flex-row items-center px-4 py-3 gap-3 border-b border-[#F2F2F7]">
             <Text className="text-[18px]">🆔</Text>
             <Text className="flex-1 text-[15px] text-[#1C1C1E] font-medium">
               Identity Document
             </Text>
-            <Text className="text-[13px] font-bold text-[#34C759]">
-              Verified ✓
+            <Text
+              className="text-[13px] font-bold"
+              style={{ color: identityDocumentStatus === "verified" ? "#34C759" : identityDocumentStatus === "pending" ? "#FF9500" : identityDocumentStatus === "rejected" ? "#FF3B30" : "#8E8E93" }}
+            >
+              {identityDocumentStatus === "verified" ? "Verified ✓" : identityDocumentStatus === "pending" ? "Pending" : identityDocumentStatus === "rejected" ? "Rejected" : "Upload"}
             </Text>
-          </View>
+          </TouchableOpacity>
           <TouchableOpacity className="flex-row items-center px-4 py-3 gap-3">
             <Text className="text-[18px]">❓</Text>
             <Text className="flex-1 text-[15px] text-[#1C1C1E] font-medium">

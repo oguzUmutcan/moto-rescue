@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import { auth } from "../../config/firebase";
 import { rescueApi, RescueRequest } from "../../api/rescues";
+import ProfileAvatar from "../../components/profile-avatar";
 
 // --- Minimal Map Background ---
 function MapBg() {
@@ -98,9 +99,11 @@ function HomeBar() {
 // --- The Exact Figma Biker Incoming Component ---
 export default function IncomingRequestScreen() {
   const router = useRouter();
-  const { requestId } = useLocalSearchParams<{ requestId: string }>();
+  const params = useLocalSearchParams<{ requestId?: string | string[] }>();
+  const requestId = Array.isArray(params.requestId) ? params.requestId[0] : params.requestId;
   const [secs, setSecs] = useState(30);
   const [request, setRequest] = useState<RescueRequest | null>(null);
+  const [accepting, setAccepting] = useState(false);
 
   useEffect(() => {
     if (!requestId) return;
@@ -114,12 +117,14 @@ export default function IncomingRequestScreen() {
 
   const handleAccept = async () => {
     const biker = auth.currentUser;
-    if (!biker || !requestId) return;
+    if (!biker || !requestId || accepting) return;
+    setAccepting(true);
     try {
       await rescueApi.accept(requestId);
-      router.replace({ pathname: "/(biker)/navigation", params: { requestId } });
+      router.replace(`/(biker)/navigation?requestId=${encodeURIComponent(requestId)}`);
     } catch (error) {
       Alert.alert("Could not accept request", error instanceof Error ? error.message : "Please try again");
+      setAccepting(false);
     }
   };
 
@@ -247,18 +252,8 @@ export default function IncomingRequestScreen() {
               }}
             >
               <View style={{ flexDirection: "row", alignItems: "center" }}>
-                <View
-                  style={{
-                    width: 46,
-                    height: 46,
-                    borderRadius: 23,
-                    backgroundColor: "#007AFF",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    marginRight: 12,
-                  }}
-                >
-                  <Text style={{ fontSize: 20 }}>🙋</Text>
+                <View style={{ marginRight: 12 }}>
+                  <ProfileAvatar storagePath={request?.passengerProfilePhotoPath ?? null} size={46} fallbackEmoji="🙋" />
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text
@@ -421,11 +416,12 @@ export default function IncomingRequestScreen() {
             {/* Action Buttons */}
             <TouchableOpacity
               onPress={handleAccept}
+              disabled={accepting || !request}
               style={{
                 width: "100%",
                 height: 56,
                 borderRadius: 16,
-                backgroundColor: "#34C759",
+                backgroundColor: accepting || !request ? "#8E8E93" : "#34C759",
                 alignItems: "center",
                 justifyContent: "center",
                 marginBottom: 9,
@@ -437,7 +433,7 @@ export default function IncomingRequestScreen() {
               }}
             >
               <Text style={{ color: "white", fontSize: 18, fontWeight: "900" }}>
-                ✓ Accept Rescue
+                {accepting ? "Accepting..." : "✓ Accept Rescue"}
               </Text>
             </TouchableOpacity>
 

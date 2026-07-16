@@ -3,7 +3,6 @@ import {
   ArrowLeft,
   ShieldCheck,
   Smile,
-  UploadCloud,
   X,
 } from "lucide-react-native";
 import React, { useEffect, useState } from "react";
@@ -24,6 +23,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 // --- FIREBASE IMPORTS ---
 import { auth } from "../../config/firebase";
 import { userApi } from "../../api/users";
+import IdentityDocumentUpload from "../../components/identity-document-upload";
+import ProfilePhoto from "../../components/profile-photo";
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
@@ -56,6 +57,7 @@ const AVATAR_EMOJIS = [
 
 export default function ProfileBikerScreen() {
   const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
   const [plateNumber, setPlateNumber] = useState("");
   const [bio, setBio] = useState("");
   const [motorcycleModel, setMotorcycleModel] = useState("");
@@ -70,7 +72,9 @@ export default function ProfileBikerScreen() {
     false,
   ]);
   const [hasUploadedID, setHasUploadedID] = useState(false);
+  const [identityDocumentStatus, setIdentityDocumentStatus] = useState<"not_submitted" | "pending" | "verified" | "rejected">("not_submitted");
   const [profileEmoji, setProfileEmoji] = useState("🦸"); // Default Biker Emoji
+  const [profilePhotoPath, setProfilePhotoPath] = useState<string | null>(null);
 
   const [isEmojiModalVisible, setIsEmojiModalVisible] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -79,7 +83,7 @@ export default function ProfileBikerScreen() {
   const insets = useSafeAreaInsets();
 
   const isFormValid =
-    name.length > 2 && plateNumber.length > 5 && hasUploadedID;
+    name.length > 2 && phone.replace(/\D/g, "").length >= 7 && plateNumber.length > 5 && hasUploadedID;
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -89,6 +93,7 @@ export default function ProfileBikerScreen() {
         const data = await userApi.get();
         if (data) {
           if (data.name) setName(data.name);
+          if (data.phone) setPhone(data.phone);
           if (data.plateNumber) setPlateNumber(data.plateNumber);
           if (data.bio) setBio(data.bio);
           if (data.motorcycleModel) setMotorcycleModel(data.motorcycleModel);
@@ -97,7 +102,9 @@ export default function ProfileBikerScreen() {
           if (data.identityDocumentStatus === "pending" || data.identityDocumentStatus === "verified") {
             setHasUploadedID(true);
           }
+          setIdentityDocumentStatus(data.identityDocumentStatus);
           if (data.profileEmoji) setProfileEmoji(data.profileEmoji);
+          setProfilePhotoPath(data.profilePhotoPath);
         }
       }
     };
@@ -122,19 +129,12 @@ export default function ProfileBikerScreen() {
 
       console.log("✅ Biker Profile saved in Firestore!");
       router.push("/(biker)/(tabs)/dashboard");
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error saving biker profile:", error);
-      Alert.alert("Error", "Failed to save profile. Please try again.");
+      Alert.alert("Error", error instanceof Error ? error.message : "Failed to save profile. Please try again.");
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const handleDocumentUpload = async () => {
-    Alert.alert(
-      "Coming later",
-      "Secure document upload will be enabled after the storage provider is configured.",
-    );
   };
 
   const toggleDay = (index: number) => {
@@ -175,8 +175,18 @@ export default function ProfileBikerScreen() {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          {/* Emoji Avatar Selector */}
+          {/* Profile photo and emoji fallback */}
           <View className="items-center mb-8">
+            <View className="mb-3">
+              <ProfilePhoto
+                fallbackEmoji={profileEmoji}
+                storagePath={profilePhotoPath}
+                onStoragePathChange={setProfilePhotoPath}
+              />
+            </View>
+            <Text className="text-[14px] text-[#34C759] font-bold mb-3">
+              Tap photo to add or change
+            </Text>
             <TouchableOpacity
               onPress={() => !isLoading && setIsEmojiModalVisible(true)}
               activeOpacity={0.8}
@@ -192,8 +202,23 @@ export default function ProfileBikerScreen() {
               </View>
             </TouchableOpacity>
             <Text className="text-[14px] text-[#34C759] font-bold">
-              Choose Avatar
+              Choose Emoji Fallback
             </Text>
+          </View>
+
+          <View className="mb-4">
+            <Text className="text-[12px] font-bold text-[#8E8E93] tracking-wider uppercase mb-2">
+              Contact Phone
+            </Text>
+            <TextInput
+              className="w-full bg-[#F2F2F7] rounded-[14px] px-4 py-4 text-[16px] text-[#1C1C1E] font-medium"
+              placeholder="+90 555 111 2233"
+              placeholderTextColor="#C7C7CC"
+              keyboardType="phone-pad"
+              value={phone}
+              editable={false}
+            />
+            <Text className="text-[12px] text-[#8E8E93] mt-1.5">Verified by SMS. Passengers can use it only after you accept their rescue.</Text>
           </View>
 
           <View className="mb-4">
@@ -299,40 +324,15 @@ export default function ProfileBikerScreen() {
           <Text className="text-[12px] font-bold text-[#8E8E93] tracking-wider uppercase mb-2">
             Verification Document
           </Text>
-          <TouchableOpacity
-            onPress={handleDocumentUpload}
-            activeOpacity={0.8}
-            disabled={isLoading}
-            className={`w-full border-2 border-dashed rounded-[14px] p-5 mb-8 flex-row items-center transition-colors ${
-              hasUploadedID
-                ? "border-[#34C759] bg-[#EDFAF3]"
-                : "border-[#C7C7CC] bg-[#FAFAFA]"
-            }`}
-          >
-            <View
-              className={`w-10 h-10 rounded-full items-center justify-center mr-4 ${hasUploadedID ? "bg-[#34C759]" : "bg-[#F2F2F7]"}`}
-            >
-              {hasUploadedID ? (
-                <ShieldCheck size={20} color="white" />
-              ) : (
-                <UploadCloud size={20} color="#8E8E93" />
-              )}
-            </View>
-            <View className="flex-1">
-              <Text
-                className={`text-[15px] font-bold mb-0.5 ${hasUploadedID ? "text-[#34C759]" : "text-[#1C1C1E]"}`}
-              >
-                {hasUploadedID
-                  ? "Driver's License Uploaded"
-                  : "Upload Driver's License"}
-              </Text>
-              <Text className="text-[13px] text-[#8E8E93]">
-                {hasUploadedID
-                  ? "Verification pending approval"
-                  : "Photo of front and back"}
-              </Text>
-            </View>
-          </TouchableOpacity>
+          <View className="mb-8">
+            <IdentityDocumentUpload
+              initialStatus={identityDocumentStatus}
+              onSubmitted={(profile) => {
+                setIdentityDocumentStatus(profile.identityDocumentStatus);
+                setHasUploadedID(profile.identityDocumentStatus === "pending" || profile.identityDocumentStatus === "verified");
+              }}
+            />
+          </View>
 
           <View className="flex-row bg-[#EDFAF3] rounded-2xl p-4 mb-8">
             <ShieldCheck
@@ -341,8 +341,8 @@ export default function ProfileBikerScreen() {
               className="mt-0.5 mr-3 shrink-0"
             />
             <Text className="flex-1 text-[13px] text-[#34C759] leading-snug">
-              We verify all bikers to ensure passenger safety. Your documents
-              are securely encrypted.
+              We review biker documents for passenger safety. Your images stay
+              private and cannot be viewed by other app users.
             </Text>
           </View>
         </ScrollView>

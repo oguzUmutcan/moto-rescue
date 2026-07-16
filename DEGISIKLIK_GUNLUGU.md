@@ -2,6 +2,275 @@
 
 Bu belge projede yapılan teknik değişiklikleri, değişikliklerin gerekçelerini ve doğrulama sonuçlarını kalıcı olarak kayıt altına alır. Yeni çalışmalar tarih sırasıyla bu dosyaya eklenecektir.
 
+## 15 Temmuz 2026 — Backend proxy üzerinden Google Places Autocomplete
+
+### Sorun neydi?
+
+Pickup ve destination araması yalnızca cihazın yerel geocoder'ını kullanıyordu. Okul, AVM ve işletme gibi POI adları eksik yazıldığında sonuç bulunamıyor veya aynı yer için zayıf/tekrarlı adres sonuçları çıkabiliyordu. Google Places billing daha önce etkin olmadığı için gerçek autocomplete eklenmemişti.
+
+### Neden bu sorun çıktı?
+
+Yerel geocoder tam metin adres çözümleme için uygundur ancak yazarken POI tahmini sunan bir autocomplete servisi değildir. Google Places anahtarını doğrudan Expo public environment'ına koymak anahtarı mobil bundle içinde açığa çıkaracağı için güvenli bir backend katmanı da gerekiyordu.
+
+### Çözüm yöntemi neler?
+
+- Places API (New) anahtarını yalnızca backend environment'ında tutmak.
+- Firebase Bearer token gerektiren autocomplete ve details proxy endpoint'leri oluşturmak.
+- Aramaları kullanıcının pickup konumuna 50 km location bias ile yakınlaştırmak.
+- Aynı yazma/seçme akışında session token kullanmak.
+- Autocomplete tahmini seçildiğinde Place Details ile kesin koordinatı almak.
+- Google kullanılamadığında mevcut cihaz geocoder ve harita seçimini fallback olarak korumak.
+- Google tahminleri gösterildiğinde gerekli attribution metnini göstermek.
+
+### Nasıl Çözüldü?
+
+- `POST /api/places/autocomplete` ve `GET /api/places/{placeId}` endpoint'leri eklendi.
+- Backend Google'a yalnızca gerekli field mask'lerle çağrı yapıyor; API key response veya mobil bundle içine girmiyor.
+- Input uzunluğu, koordinatlar, session token ve place ID alanları validation ile sınırlandı.
+- Frontend debounce akışı önce Google Places sonuçlarını kullanıyor; servis yapılandırılmamış veya geçici olarak erişilemezse cihaz geocoder'ına düşüyor.
+- Places tahminleri gerçek place adı, ikincil adres ve Google'ın origin mesafesiyle gösteriliyor.
+- Tahmin seçimi Details endpoint'inden gelen kesin koordinatı pickup/destination state'ine yazıyor.
+- `Powered by Google` attribution yalnızca Google kaynaklı sonuç bulunduğunda gösteriliyor.
+- Places API (New) `motorescue-d4abc` projesinde etkinleştirildi.
+- Yalnızca Places servis hedeflerine izinli ayrı `MotoRescue Places Backend` anahtarı oluşturuldu ve repo dışında Windows kullanıcı environment'ına `GOOGLE_MAPS_API_KEY` olarak kaydedildi.
+- İlk oluşturma aracının progress çıktısında görünen geçici key derhal iptal edildi; uygulama yalnızca sessiz oluşturulan replacement key'i kullanıyor.
+- Backend README ve application properties environment yapılandırmasıyla güncellendi.
+
+### Test ve doğrulama
+
+```text
+mvnw.cmd test                  başarılı — 6 test
+npx tsc --noEmit              başarılı
+npm run lint                  başarılı — 0 hata, 0 uyarı
+Places Autocomplete canlı test  HTTP 200 — 5 prediction
+Place Details canlı test        HTTP 200 — location mevcut
+Backend :8083                   dinliyor
+```
+
+## 15 Temmuz 2026 — Özel biker ehliyet belgesi yükleme ve inceleme durumu
+
+### Sorun neydi?
+
+Biker profil düzenleme ekranındaki ehliyet yükleme düğmesi yalnızca Storage'ın daha sonra etkinleştirileceğini belirten bir uyarı gösteriyordu. Profil sekmesi ise gerçek belge durumuna bakmadan her biker'ı `Verified` olarak gösteriyordu. Backend'de belge yollarını doğrulayan bir başvuru endpoint'i bulunmuyordu.
+
+### Neden bu sorun çıktı?
+
+Firebase Storage billing ve ürün kurulumu daha önce tamamlanamadığı için belge akışı kapatılmıştı. Eski UI tek bir boolean değerle “yüklenmiş” durumunu temsil ediyor, belgenin iki yüzünü ve `not_submitted / pending / verified / rejected` yaşam döngüsünü güvenilir biçimde ayırmıyordu.
+
+### Çözüm yöntemi neler?
+
+- Ehliyetin ön ve arka yüzünü sabit, kullanıcıya özel Storage yollarında ayrı tutmak.
+- Her iki dosya yüklenmeden backend başvurusu oluşturmamak.
+- Backend'in yolları doğrulanmış token UID'si ve biker rolüyle kontrol etmesini sağlamak.
+- İstemcinin yalnızca `pending` başvurusu oluşturabilmesini, kendisini `verified` yapamamasını sağlamak.
+- Belge dosyalarını diğer uygulama kullanıcılarına kapatmak.
+- Profil ekranında gerçek backend durumunu göstermek.
+
+### Nasıl Çözüldü?
+
+- `identityDocuments/{uid}/front` ve `identityDocuments/{uid}/back` sabit yolları tanımlandı.
+- Ortak belge upload bileşeni ön/arka görsel seçimi, MIME kontrolü, yüz başına 10 MB sınırı, yarım kalan upload'ı metadata ile geri yükleme ve iki yüz tamamlanınca submit davranışını uyguluyor.
+- `POST /api/users/me/identity-document` endpoint'i eklendi.
+- Backend yalnızca biker rolünü, token UID'sine ait tam iki yolu ve mevcut durumun `verified` olmadığını doğruladıktan sonra `pending` durumunu ve submit zamanını yazıyor.
+- User profile response'a iki özel Storage yolu ve `identityDocumentSubmittedAt` eklendi.
+- Biker profil sekmesindeki sabit `Verified` metni kaldırıldı; gerçek `Upload`, `Pending`, `Verified` veya `Rejected` durumu gösteriliyor.
+- Pending ve verified belgelerin istemciden tekrar yüklenmesi kilitlendi; rejected durumda yeniden başvuru yapılabiliyor.
+- Storage rules dosya adını, sahipliği, izinli MIME tiplerini ve boyut sınırını doğrulayacak şekilde sıkılaştırıldı; belge okuması yalnızca sahibine açık tutuldu.
+- Storage kuralları `motorescue-d4abc` projesine başarıyla deploy edildi ve backend yeniden başlatıldı.
+
+### Test ve doğrulama
+
+```text
+mvnw.cmd test      başarılı — 6 test
+npx tsc --noEmit  başarılı
+npm run lint      başarılı — 0 hata, 0 uyarı
+Firebase Storage rules compile/deploy başarılı
+Backend :8083 dinleme kontrolü başarılı
+```
+
+## 15 Temmuz 2026 — Firebase Storage tabanlı profil fotoğrafı sistemi
+
+### Sorun neydi?
+
+Passenger ve biker profilleri yalnızca emoji gösteriyordu. Kullanıcı gerçek bir profil fotoğrafı seçemiyor, yükleyemiyor, değiştiremiyor veya kaldıramıyordu. Backend profil modelinde fotoğraf metadata alanı ve Storage için profil fotoğrafı güvenlik kuralı yoktu.
+
+### Neden bu sorun çıktı?
+
+Firebase Storage billing daha önce etkinleştirilemediği için dosya özellikleri kapalı tutulmuştu. ImagePicker paketi projede bulunsa da Firebase Storage istemcisi başlatılmamış, profil ekranlarına bağlanmamış ve backend arbitrary download URL kabul etmeden güvenli metadata saklayacak şekilde genişletilmemişti.
+
+### Çözüm yöntemi neler?
+
+- Her kullanıcı için sabit `profilePhotos/{uid}/avatar` Storage yolu kullanmak.
+- Yalnızca JPEG, PNG ve WebP görselleri, en fazla 5 MB olacak şekilde kabul etmek.
+- Storage yazma/silme işlemlerini yalnızca dosya sahibine açmak.
+- Backend'e download URL yerine UID ile doğrulanabilen sabit Storage yolunu kaydetmek.
+- Passenger ve biker profilinde ortak seçme, değiştirme ve kaldırma bileşeni kullanmak.
+
+### Nasıl Çözüldü?
+
+- Firebase istemci yapılandırmasına `getStorage` eklendi.
+- Expo ImagePicker config plugin'i yalnızca fotoğraf kitaplığı açıklamasıyla eklendi; gereksiz kamera ve mikrofon izinleri kapatıldı.
+- Ortak `ProfilePhoto` bileşeni fotoğraf seçimi, kare crop, MIME/boyut kontrolü, upload, download URL çözümleme, değiştirme ve silme davranışlarını uyguluyor.
+- Passenger ve biker profil avatarları gerçek fotoğrafı gösterecek şekilde bağlandı; fotoğraf yoksa mevcut emoji fallback'i korunuyor.
+- Backend `profilePhotoPath` alanını profile response'a ekledi.
+- `PATCH /api/users/me/profile-photo` yalnızca token UID'sine ait tam sabit yolu kabul ediyor.
+- `DELETE /api/users/me/profile-photo` profil metadata alanını kaldırıyor.
+- Storage kurallarına authenticated read, owner-only create/update/delete, sabit dosya adı, 5 MB ve izinli görsel MIME kontrolleri eklendi.
+
+### Test ve doğrulama
+
+```text
+mvnw.cmd test      başarılı — 6 test
+npx tsc --noEmit  başarılı
+npm run lint      başarılı — 0 hata, 0 uyarı
+```
+
+İlk canlı rules deploy denemesi Firebase projesinde Storage ürünü henüz oluşturulmadığı için durmuştu:
+
+```text
+Firebase Storage has not been set up on project 'motorescue-d4abc'.
+```
+
+Firebase Console → Storage → Get Started adımı tamamlandıktan sonra aşağıdaki komut yeniden çalıştırıldı:
+
+```powershell
+npx firebase-tools deploy --only storage --project motorescue-d4abc
+```
+
+Storage kuralları başarıyla derlendi ve `motorescue-d4abc` projesine yayınlandı. Backend yeni profil fotoğrafı endpoint'leriyle yeniden başlatıldı; `8083` portu ve kimliksiz isteğe beklenen `401` yanıtı doğrulandı.
+
+## 15 Temmuz 2026 — Boarding code TextInput NativeWind çalışma zamanı hatasının düzeltilmesi
+
+### Sorun neydi?
+
+Biker'ın aktif kabul edilmiş rescue kaydı bulunduğunda login sonrasında navigation ekranı otomatik açılıyor ve `TypeError: path.split is not a function (it is undefined)` component hatası oluşuyordu. Aynı hata yeni istek kabulünün hemen ardından da görülebiliyordu.
+
+### Neden bu sorun çıktı?
+
+ADB React Native component stack kaydı hatanın router'da değil `BikerNavigationScreen` içindeki boarding code `TextInput` bileşeninde oluştuğunu gösterdi. TextInput'a verilen NativeWind arbitrary `tracking-[8px]` sınıfı Android çalışma zamanında style/path çözümleme hatasına neden oluyordu. Önceki route parametresi sağlamlaştırması gerekli bir koruma olmakla birlikte bu component hatasının doğrudan kaynağı değildi.
+
+### Çözüm yöntemi neler?
+
+- NativeWind arbitrary class kullanımını problemli TextInput'tan kaldırmak.
+- Aynı görsel özellikleri React Native'in tip güvenli doğrudan `style` nesnesiyle vermek.
+- Gerçek component stack'i ADB logcat üzerinden doğrulamak.
+
+### Nasıl Çözüldü?
+
+- Boarding code TextInput yüksekliği, radius, renk, hizalama, font ve letter spacing değerleri doğrudan React Native style nesnesine taşındı.
+- TextInput üzerinde NativeWind class çözümlemesi ortadan kaldırıldı.
+- Biker login sonrası aktif rescue restore akışının neden doğrudan bu ekrana geldiği doğrulandı.
+
+### Test ve doğrulama
+
+```text
+npx tsc --noEmit  başarılı
+npm run lint      başarılı — 0 hata, 0 uyarı
+ADB component stack: hata kaynağı BikerNavigationScreen > TextInput olarak doğrulandı
+```
+
+## 15 Temmuz 2026 — Biker kabul sonrası Expo Router path hatasının düzeltilmesi
+
+### Sorun neydi?
+
+Biker incoming rescue ekranında isteği kabul ettiğinde işlem sonrasında `TypeError: path.split is not a function (it is undefined)` hatası oluşabiliyordu ve navigation ekranına güvenilir şekilde geçilemiyordu.
+
+### Neden bu sorun çıktı?
+
+Expo Router local search parametresi çalışma zamanında `string`, `string[]` veya `undefined` olabilmesine rağmen yalnızca string kabul edilmiş ve doğrudan object tabanlı router params değerine aktarılmıştı. Geçersiz parametre şekli router'ın path çözümleme katmanına ulaşabiliyordu. Kabul düğmesi ayrıca istek yüklenmeden veya işlem sürerken tekrar çalıştırılabiliyordu.
+
+### Çözüm yöntemi neler?
+
+- Route parametresini kullanmadan önce tek bir string değere normalize etmek.
+- Kabul sonrası hedefi object params yerine encode edilmiş tam string URL olarak vermek.
+- Rescue detayı yüklenene kadar kabul düğmesini kapatmak.
+- Kabul isteği sürerken ikinci dokunmayı engellemek.
+
+### Nasıl Çözüldü?
+
+- `requestId` için `string | string[] | undefined` çalışma zamanı şekilleri açıkça ele alındı.
+- Kabul sonrası route `/(biker)/navigation?requestId=<encoded-id>` biçiminde oluşturuldu.
+- `accepting` state'i eklenerek düğme işlem sırasında kilitlendi ve kullanıcıya `Accepting...` durumu gösterildi.
+- API hatasında kilit kaldırılıyor ve mevcut açıklayıcı hata bildirimi korunuyor.
+
+### Test ve doğrulama
+
+```text
+npx tsc --noEmit  başarılı
+npm run lint      başarılı — 0 hata, 0 uyarı
+```
+
+## 15 Temmuz 2026 — Emülatörde geçici GPS erişilemezlik hatasının giderilmesi
+
+### Sorun neydi?
+
+Android Emulator'da location servisi açık, Expo Go precise location iznine sahip ve GPS koordinatı provider'a ulaşmış olmasına rağmen dashboard açılışında `Current location is unavailable` hatası yakalanmamış Promise hatası olarak uygulamayı kesiyordu.
+
+### Neden bu sorun çıktı?
+
+Passenger ve biker dashboard'ları `Location.getCurrentPositionAsync` çağrısını hata yakalama olmadan çalıştırıyordu. Emülatör wipe/boot sonrasında fused location provider ilk ölçümü kısa süre içinde sunamazsa çağrı reddediliyor ve kullanılabilir son GPS ölçümü kontrol edilmiyordu.
+
+### Çözüm yöntemi neler?
+
+- Location servisinin açık olduğunu ölçümden önce kontrol etmek.
+- Önce dengeli doğrulukta güncel ölçüm istemek.
+- Güncel ölçüm geçici olarak alınamazsa yalnızca iki dakikadan yeni ve kabul edilebilir doğruluktaki son bilinen ölçümü kullanmak.
+- Dashboard başlangıcındaki hatayı yakalayıp haritayı güvenli bir başlangıç bölgesiyle açmak.
+- Rescue formunda da aynı ortak konum çözümleyicisini kullanmak.
+
+### Nasıl Çözüldü?
+
+- `utils/device-location.ts` ortak konum yardımcısı eklendi.
+- Passenger dashboard, biker dashboard ve rescue formundaki konum çağrıları bu yardımcıya taşındı.
+- Dashboard başlangıç çağrıları `try/catch` içine alındı; GPS provider geç hazırlandığında artık yakalanmamış Promise hatası oluşmuyor.
+- Emülatörün location mode, provider, Expo Go permission ve son GPS ölçümü ADB üzerinden doğrulandı.
+- Test emülatörüne İstanbul koordinatı gönderildi.
+
+### Test ve doğrulama
+
+```text
+npx tsc --noEmit  başarılı
+npm run lint      başarılı — 0 hata, 0 uyarı
+ADB location mode açık, Expo Go fine/coarse permission granted
+GPS/fused last location 41.0082, 28.9784
+```
+
+## 15 Temmuz 2026 — Doğrulanmış passenger boarding code sistemi
+
+### Sorun neydi?
+
+Biker, passenger'ın gerçekten doğru araca bindiğini doğrulamadan yalnızca kendi onay penceresine dokunarak rescue kaydını `accepted` durumundan `in_progress` durumuna geçirebiliyordu. Önceki safety code prototipi kaldırılmış fakat yerine backend tarafından doğrulanan bir mekanizma eklenmemişti.
+
+### Neden bu sorun çıktı?
+
+İlk kabul sonrası akış UI durumlarını backend durum makinesiyle eşlemeye odaklanmıştı. Start endpoint'i request body almıyor ve yalnızca atanmış biker kimliği ile mevcut durumu kontrol ediyordu. Bu kontroller doğru biker'ın işlem yaptığını kanıtlasa da doğru passenger'ın araca bindiğini kanıtlamıyordu.
+
+### Çözüm yöntemi neler?
+
+- Biker kabulü sırasında backend'de tahmin edilmesi zor, altı haneli ve rescue'ya özel kod üretmek.
+- Kodu yalnızca ilgili passenger'ın API yanıtında göstermek; biker ve diğer kullanıcılardan gizlemek.
+- Start endpoint'inin altı haneli kod kabul etmesini ve transaction içinde doğrulamasını zorunlu kılmak.
+- Doğru kod doğrulanmadan rescue durumunun ve başlangıç zamanının değiştirilmesini engellemek.
+- Passenger ve biker ekranlarını kod paylaşma/girme akışına bağlamak.
+
+### Nasıl Çözüldü?
+
+- Rescue kabul transaction'ı `SecureRandom` ile altı haneli `boardingCode` üretiyor.
+- API response kişiselleştirmesi kodu yalnızca rescue passenger'ına ve yalnızca `accepted` durumunda döndürüyor.
+- `POST /api/rescues/{requestId}/start` artık `boardingCode` gövdesini zorunlu tutuyor ve biçimi validation ile kontrol ediyor.
+- Start transaction'ı atanmış biker, mevcut durum ve boarding code kontrollerinin tamamı geçmeden `in_progress`, `boardingVerifiedAt` ve `startedAt` alanlarını yazmıyor.
+- Passenger ride ekranı kodu ve güvenli paylaşım uyarısını gösteriyor.
+- Biker navigation ekranına yalnızca altı rakam kabul eden kod alanı eklendi; eksik ve yanlış kodlarda sürüş başlatılmıyor.
+- Controller testi start isteğinin doğrulanmış token ve boarding code ile service katmanına aktarıldığını kapsayacak şekilde genişletildi.
+
+### Test ve doğrulama
+
+```text
+mvnw.cmd test      başarılı — 6 test
+npx tsc --noEmit  başarılı
+npm run lint      başarılı — 0 hata, 0 uyarı
+```
+
 ## 14 Temmuz 2026 — Güvenlik, kimlik doğrulama ve kurtarma akışı düzeltmeleri
 
 ### 1. Firebase servis hesabı anahtarının kaynak kodda bulunması
@@ -466,6 +735,314 @@ npm run lint         başarılı — 0 hata, 0 uyarı
 git diff --check     başarılı
 ```
 
+## 15 Temmuz 2026 — Google Places yanıt dönüşümü düzeltmesi
+
+### Sorun neydi?
+
+Adres araması Google Places servisleri etkin ve API anahtarı tanımlı olmasına rağmen sonuç göstermiyordu. Backend, autocomplete isteğinde HTTP 500 hatası üretiyordu.
+
+### Neden bu sorun çıktı?
+
+Spring Boot 4, JSON dönüşümü için Jackson 3'ün `tools.jackson` paketini kullanırken Places servisi eski Jackson 2 `com.fasterxml.jackson` paketindeki `JsonNode` sınıfını kullanıyordu. RestClient bu soyut tipi uygun dönüştürücüyle oluşturamıyordu.
+
+### Çözüm yöntemi neler?
+
+- Places yanıt tipini Spring Boot 4 ile gelen Jackson 3 tipiyle uyumlu hâle getirmek.
+- Backend testlerini çalıştırıp güncel servisi yeniden başlatmak.
+- Canlı adres araması sırasında backend logunu doğrulamak.
+
+### Nasıl çözüldü?
+
+- `PlacesService` içindeki `JsonNode` importu `tools.jackson.databind.JsonNode` olarak değiştirildi.
+- Google Cloud tarafında `places.googleapis.com` ve `places-backend.googleapis.com` servislerinin etkin olduğu doğrulandı.
+- `GOOGLE_MAPS_API_KEY` değişkeninin Windows kullanıcı ortamında kayıtlı olduğu, anahtar değeri açığa çıkarılmadan doğrulandı.
+
+### Test ve doğrulama
+
+```text
+mvnw.cmd test       başarılı — 6 test
+Güncel backend      başarılı — 8083 portunda PID 32796
+Places servisleri  etkin — places.googleapis.com ve places-backend.googleapis.com
+API anahtarı        Windows User scope içinde tanımlı
+```
+
+## 15 Temmuz 2026 — Adres önerilerinin ilk karakterde başlaması
+
+### Sorun neydi?
+
+Passenger adres alanındaki Google Places önerileri ancak üç karakter yazıldıktan sonra başlıyordu. Kullanıcı önerilerin ilk karakterden itibaren görünmesini istedi.
+
+### Neden bu sorun çıktı?
+
+Adres önerisi hook'unda sorgu uzunluğu için sabit olarak üç karakterlik alt sınır uygulanmıştı.
+
+### Çözüm yöntemi neler?
+
+- Minimum sorgu uzunluğunu bir karaktere düşürmek.
+- Mevcut debounce, oturum tokenı ve fallback geocoder davranışını korumak.
+- TypeScript ve lint kontrolleriyle değişikliği doğrulamak.
+
+### Nasıl çözüldü?
+
+- `useAddressSuggestions` içindeki minimum sorgu uzunluğu kontrolü `3` değerinden `1` değerine indirildi.
+- Boş veya yalnızca boşluk içeren sorgular için öneri üretilmemesi korundu.
+
+### Test ve doğrulama
+
+```text
+npx tsc --noEmit  başarılı
+npm run lint      başarılı — 0 hata, 0 uyarı
+git diff --check  başarılı
+```
+
+## 15 Temmuz 2026 — Biker profil fotoğrafı ve belge kamera seçeneği
+
+### Sorun neydi?
+
+Biker profil oluşturma ekranında yalnızca emoji avatar seçilebiliyor, güvenli profil fotoğrafı yükleme alanı görünmüyordu. Ehliyet ön/arka yükleme alanına basıldığında ise kullanıcıya kaynak seçimi sunulmadan doğrudan galeri açılıyordu.
+
+### Neden bu sorun çıktı?
+
+Ortak `ProfilePhoto` bileşeni biker'ın sekmeli profil ekranında kullanılmış ancak onboarding ekranına bağlanmamıştı. Belge yükleme bileşeni yalnızca `launchImageLibraryAsync` kullanıyordu ve Expo ImagePicker yapılandırmasında kamera izni kapalıydı.
+
+### Çözüm yöntemi neler?
+
+- Biker onboarding profilini mevcut güvenli profil fotoğrafı akışına bağlamak.
+- Ehliyetin her iki yüzü için kamera veya galeri seçimi sunmak.
+- Kamera ve medya izinlerini yalnızca kullanıcı ilgili kaynağı seçtiğinde istemek.
+- Mevcut dosya türü, boyut ve Firebase Storage güvenlik kontrollerini korumak.
+
+### Nasıl çözüldü?
+
+- Biker profil oluşturma ekranına `ProfilePhoto` eklendi ve backend profilindeki `profilePhotoPath` ile bağlandı.
+- Emoji seçimi, fotoğraf bulunmadığında kullanılacak fallback olarak korundu.
+- Ehliyet alanına `Take photo`, `Choose from gallery` ve `Cancel` seçenekleri eklendi.
+- Kamera seçiminde `requestCameraPermissionsAsync` ve `launchCameraAsync` kullanıldı.
+- Expo ImagePicker kamera izin açıklaması uygulama yapılandırmasına eklendi.
+
+### Test ve doğrulama
+
+```text
+npx tsc --noEmit  başarılı
+npm run lint      başarılı — 0 hata, 0 uyarı
+git diff --check  başarılı
+```
+
+## 15 Temmuz 2026 — Profil fotoğrafı kamerası ve kayıt yönlendirmesi
+
+### Sorun neydi?
+
+Passenger ve diğer profil ekranlarında profil fotoğrafına basıldığında yalnızca galeri açılıyordu. Ayrıca kullanıcı `verify-creds` ekranında hesabı başarıyla oluşturduktan sonra rol seçimine ilerlemek yerine yeniden hesap oluşturma ekranına dönüyordu.
+
+### Neden bu sorun çıktı?
+
+Ortak `ProfilePhoto` bileşeni yalnızca medya kütüphanesini başlatıyordu. Kayıt akışında ise başarı sonrasında draft temizlenince `verify-creds` guard effect'i bunu eksik kayıt verisi olarak algılıyor ve `profile-select` yönlendirmesiyle aynı anda `register` yönlendirmesi başlatıyordu.
+
+### Çözüm yöntemi neler?
+
+- Ortak profil fotoğrafı bileşeninde kamera ve galeri kaynaklarını açıkça sunmak.
+- Seçilen kaynağa özgü izni istemek ve mevcut güvenli yükleme kontrollerini korumak.
+- Başarıyla tamamlanan kayıt sırasında eksik-draft guard'ının devreye girmesini engellemek.
+- Draft içindeki parolayı rol seçimine geçerken bellekten temizlemeye devam etmek.
+
+### Nasıl çözüldü?
+
+- `ProfilePhoto` aksiyonlarına `Take photo`, `Choose from gallery`, opsiyonel `Remove photo` ve `Cancel` eklendi.
+- Kamera için `requestCameraPermissionsAsync` ve `launchCameraAsync` kullanıldı.
+- Başarılı kayıt tamamlanırken `isCompletingRegistration` ref'i ayarlanarak draft temizliğinin yanlış geri yönlendirme üretmesi önlendi.
+- Expo kamera izin açıklaması profil ve doğrulama fotoğraflarını kapsayacak şekilde güncellendi.
+
+### Test ve doğrulama
+
+```text
+npx tsc --noEmit  başarılı
+npm run lint      başarılı — 0 hata, 0 uyarı
+git diff --check  başarılı
+```
+
+## 15 Temmuz 2026 — Ehliyetsiz biker'ın online olmasının engellenmesi
+
+### Sorun neydi?
+
+Biker, sürücü belgesinin ön ve arka yüzünü yüklemeden dashboard üzerinden kendisini online yapabiliyordu. Online tercihi yalnızca cihazdaki SecureStore'a kaydedildiği için backend bu durumu doğrulamıyordu.
+
+### Neden bu sorun çıktı?
+
+Dashboard online durumunu yerel UI tercihi olarak yönetiyordu. Backend profil güncelleme endpoint'i de `online=true` talebinde rol veya kimlik belgesi durumunu kontrol etmiyordu.
+
+### Çözüm yöntemi neler?
+
+- Online durumunu backend-authoritative hâle getirmek.
+- Hem belge durumu hem ön/arka belge yolları mevcut değilse backend'de online talebini reddetmek.
+- Frontend'de kullanıcıya anlaşılır uyarı ve belge yükleme ekranına geçiş sunmak.
+- Eski yerel online kaydı nedeniyle belgesiz online görünen hesapları dashboard açılışında offline yapmak.
+
+### Nasıl çözüldü?
+
+- Backend `online=true` güncellemesinde biker rolü, `pending`/`verified` belge durumu ve iki belge yolu zorunlu kılındı.
+- Biker dashboard online durumunu SecureStore yerine `/api/users/me` profilinden okumaya ve güncellemeye başladı.
+- Belgesi olmayan kullanıcı online düğmesine bastığında belge yükleme CTA'sı gösteriliyor.
+- Eski veride belgesiz olup `online=true` kalan hesaplar dashboard yüklenirken backend üzerinden offline yapılıyor.
+- Belge uygunluk kombinasyonları için backend birim testi eklendi.
+
+### Test ve doğrulama
+
+```text
+mvnw.cmd test       başarılı — 7 test
+npx tsc --noEmit    başarılı
+npm run lint        başarılı — 0 hata, 0 uyarı
+git diff --check    başarılı
+```
+
+## 15 Temmuz 2026 — Passenger'ın atanan biker'ı arayabilmesi
+
+Passenger'ın `Biker on the way` ekranında atanan biker ile telefon üzerinden iletişim kurabileceği bir işlem bulunmuyordu.
+
+- Biker rescue isteğini kabul ettiğinde profilindeki telefon numarası rescue kaydına ekleniyor ve `RescueResponse` içinde yalnızca rescue katılımcılarına ulaşıyor.
+- Accepted durumundaki passenger ride ekranına telefon ikonlu arama butonu eklendi.
+- Numara cihazın telefon uygulamasına `tel:` bağlantısıyla aktarılıyor; numara yoksa veya telefon uygulaması açılamazsa kullanıcıya açıklayıcı uyarı gösteriliyor.
+- Yolculuk başladıktan sonra arama butonu gizleniyor.
+
+### Doğrulama
+
+```text
+mvnw.cmd test       başarılı — 9 test
+npx tsc --noEmit    başarılı
+npm run lint        başarılı — 0 hata, 0 uyarı
+```
+
+## 15 Temmuz 2026 — Kamera sonrası görünmeyen kaydet düğmesi
+
+### Sorun neydi?
+
+Profil veya ehliyet fotoğrafı kamerayla çekildikten sonra Android edit/kırpma ekranı açılıyor ancak emülatör ekranında kaydet/onay düğmesi görünmüyordu. Kullanıcı çektiği fotoğrafla yükleme akışına devam edemiyordu.
+
+### Neden bu sorun çıktı?
+
+Kamera ve galeri aynı ImagePicker seçeneklerini kullanıyor, her iki kaynakta da `allowsEditing: true` gönderiliyordu. Bu değer Android'in sistem kırpma arayüzünü açıyordu; arayüzün onay kontrolü mevcut emülatör ekranına düzgün yerleşmiyordu.
+
+### Çözüm yöntemi neler?
+
+- Kamera çekiminde sistem edit/kırpma ekranını atlamak.
+- Çekilen fotoğrafı doğrudan mevcut doğrulama ve yükleme akışına vermek.
+- Galeriden seçimde kırpma özelliğini korumak.
+
+### Nasıl çözüldü?
+
+- Profil ve kimlik belgesi ImagePicker seçeneklerinde `allowsEditing`, yalnızca kaynak `library` olduğunda etkin olacak şekilde değiştirildi.
+- Kamera kaynağı artık çekim onayından sonra ekstra edit ekranı açmadan uygulamaya dönüyor.
+
+### Test ve doğrulama
+
+```text
+npx tsc --noEmit  başarılı
+npm run lint      başarılı — 0 hata, 0 uyarı
+git diff --check  başarılı
+```
+
+## 15 Temmuz 2026 — Bir dakikalık otomatik ehliyet doğrulaması
+
+### Sorun neydi?
+
+Projede gerçek bir admin paneli bulunmadığı için `pending` ehliyet belgelerini onaylayacak kullanıcı yoktu. Önceki geçici kural `pending` durumundaki biker'ın online olmasına izin veriyor, dolayısıyla onay şartı gerçekte uygulanmıyordu.
+
+### Neden bu sorun çıktı?
+
+Belge yükleme ve özel saklama akışı hazırlanmış ancak admin doğrulama iş akışı prototip kapsamına alınmamıştı. Onay durumunu otomatik ilerletecek bir mekanizma ve frontend durum yenilemesi de yoktu.
+
+### Çözüm yöntemi neler?
+
+- Prototip ortamında belge gönderiminden 60 saniye sonra otomatik doğrulama uygulamak.
+- Frontend ekranlarını kısa aralıklarla yenileyerek durum değişikliğini kullanıcıya yansıtmak.
+- Online olmayı yalnızca `verified` durumuna izin verecek şekilde sıkılaştırmak.
+- Yeniden belge gönderiminde biker'ı güvenli biçimde offline yapmak.
+
+### Nasıl çözüldü?
+
+- Backend profil okunurken `pending` belgenin gönderim zamanı 60 saniyeyi geçtiyse durum atomik güncellemeyle `verified` yapılıyor.
+- Identity upload, biker dashboard ve biker profil ekranları pending durumunda profili üç saniyede bir yeniliyor.
+- Online uygunluğu yalnızca iki belge yolu bulunan `verified` biker'lar için geçerli hâle getirildi.
+- Belge yeniden gönderildiğinde backend `online=false` kaydediyor.
+- 60 saniye sınırı ve online uygunluğu için backend testleri genişletildi.
+
+### Test ve doğrulama
+
+```text
+mvnw.cmd test       başarılı — 8 test
+npx tsc --noEmit    başarılı
+npm run lint        başarılı — 0 hata, 0 uyarı
+git diff --check    başarılı
+```
+
+## 15 Temmuz 2026 — Kalıcı badge doğrulaması, gerçek biker istatistikleri ve community reviews
+
+### Sorun neydi?
+
+Badge'lerin reinstall sonrasında sıfırlanabileceği düşünülüyordu. Biker history özetlerinde toplam, kilometre, ortalama süre ve XP; biker profilinde ise rating, seviye, rescue sayısı, kilometre, üyelik tarihi ve motosiklet bilgileri sabit örnek değerlerdi. Review'ları da yalnızca passenger kendi gönderdiği liste üzerinden görebiliyordu.
+
+### Neden bu sorun çıktı?
+
+Badge ekranı backend'e bağlı olmasına rağmen kalıcılık modeli UI'da açık değildi. History ve profil tasarımları prototip verileriyle bırakılmıştı. Review backend'i yalnızca `mine` sorgusu sunduğu için iki rolün ortak yorum akışına erişimi yoktu.
+
+### Çözüm yöntemi neler?
+
+- Badge sisteminin Firestore rescue ve rating verisinden hesaplanmaya devam ettiğini doğrulamak.
+- History ve profil özetlerini gerçek rescue koordinatları, timestamp'leri, user profili ve badge özetiyle üretmek.
+- Giriş yapmış passenger ve biker'lara son community review'larını sunan ortak endpoint ve ekran oluşturmak.
+
+### Nasıl çözüldü?
+
+- Badge'lerin cihaz depolamasında tutulmadığı; `/api/badges/me` üzerinden Firestore verisinden hesaplandığı doğrulandı.
+- Biker history sahte kayıt şablonundan ayrıldı; toplam rescue, Haversine mesafesi, ortalama süre ve rescue başına 50 XP gerçek veriden hesaplanıyor.
+- Biker profili gerçek rating, level, rescue sayısı, kilometre, üyelik tarihi, motosiklet modeli/rengi ve belge doğrulama durumuna bağlandı.
+- Kimliği doğrulanmamış biker'da sabit `VERIFIED` etiketi kaldırıldı.
+- `GET /api/reviews` ile son 100 community review giriş yapmış kullanıcılara açıldı.
+- Passenger Reviews sekmesi community akışına çevrildi ve biker tab barına aynı Reviews ekranı eklendi.
+
+### Test ve doğrulama
+
+```text
+mvnw.cmd test       başarılı — 8 test
+npx tsc --noEmit    başarılı
+npm run lint        başarılı — 0 hata, 0 uyarı
+git diff --check    başarılı
+```
+
+## 15 Temmuz 2026 — 6 km zone eşleştirmesi ve canlı biker konumu
+
+### Sorun neydi?
+
+Açık rescue istekleri mesafeden bağımsız olarak tüm biker'lara gösteriliyor ve passenger atanmış biker'ın canlı konumunu göremiyordu. Kullanıcıların kendi konum marker'ı dışında güvenli, rescue'a özel bir canlı takip hattı yoktu.
+
+### Neden bu sorun çıktı?
+
+User ve rescue modellerinde güncel biker koordinatı bulunmuyor, `/open` sorgusu yalnızca status alanına göre filtreleniyor ve harita bileşeni yalnızca hedef marker destekliyordu.
+
+### Çözüm yöntemi neler?
+
+- Zone yarıçapını 6 km olarak backend'de sabitlemek.
+- Yalnızca online, doğrulanmış ve son iki dakika içinde konum paylaşmış biker'lara yakındaki istekleri sunmak.
+- Zone kontrolünü kabul işleminde de tekrar ederek istemci tarafından atlanmasını önlemek.
+- Aktif rescue boyunca katılımcıya özel canlı biker konumu yayınlamak.
+
+### Nasıl çözüldü?
+
+- User konumu için doğrulanmış `PATCH /api/users/me/location` endpoint'i eklendi.
+- Aktif rescue için yalnızca atanmış biker'ın kullanabildiği `POST /api/rescues/{id}/biker-location` endpoint'i eklendi.
+- `/api/rescues/open` sonuçları Haversine mesafesiyle pickup'a 6 km içinde filtreleniyor.
+- Zone dışı veya iki dakikadan eski konumla kabul backend tarafından reddediliyor.
+- Online dashboard 5 saniyede/20 metrede, aktif navigation 2.5 saniyede/10 metrede foreground konum yayınlıyor.
+- Passenger ride haritasına atanmış biker için ayrı yeşil canlı marker eklendi; cihazın kendi konumu mevcut mavi sistem marker'ıyla görünmeye devam ediyor.
+- Konum paylaşımı ekran kapanınca veya rescue terminal duruma geçince subscription cleanup ile duruyor.
+
+### Test ve doğrulama
+
+```text
+mvnw.cmd test       başarılı — 9 test
+npx tsc --noEmit    başarılı
+npm run lint        başarılı — 0 hata, 0 uyarı
+```
+
 ## 15 Temmuz 2026 — Model geçişi için session handoff dokümanı
 
 ### Sorun neydi?
@@ -904,3 +1481,95 @@ npx tsc --noEmit     başarılı
 npm run lint         başarılı — 0 hata, 0 uyarı
 git diff --check     başarılı
 ```
+## 15 Temmuz 2026 — Passenger arama ekranındaki sabit biker sayısının kaldırılması
+
+Passenger rescue oluşturulduktan sonra arama ekranı, backend gerçek bir bildirim alıcısı sayısı döndürmediği hâlde `2 bikers alerted nearby` yazıyordu. Ayrıca ekrandaki zone açıklaması backend'in kullandığı 6 km yerine 3 km gösteriyordu.
+
+- Sabit biker sayısı kaldırılarak `Nearby verified bikers alerted` durum metni kullanıldı.
+- Arama yarıçapı açıklaması backend ile uyumlu olacak şekilde 6 km olarak güncellendi.
+
+## 15 Temmuz 2026 — Passenger rescue akışındaki dinamik biker verileri ve gerçek harita
+
+Passenger rescue oluşturulduktan sonraki searching, active ride ve review ekranları biker'ın profil fotoğrafı yerine sabit motosiklet emojisi gösteriyordu. Searching ekranının arka planı gerçek harita yerine çizgilerden oluşan bir mock'tu. Passenger history içinde kullanılmayan örnek sürüşler bulunuyor ve gerçek review puanları her kayıt için `null` atanıyordu.
+
+- Biker rescue isteğini kabul ederken güncel `profilePhotoPath` rescue kaydına ekleniyor ve `RescueResponse` üzerinden passenger'a dönüyor.
+- Ortak, salt okunur `ProfileAvatar` bileşeni Firebase Storage yolunu gerçek fotoğrafa çeviriyor; fotoğraf yoksa motosiklet simgesine geri düşüyor.
+- Searching, ride, review ve passenger history ekranları biker'ın gerçek profil fotoğrafını gösteriyor.
+- Searching ekranındaki mock çizgiler kaldırıldı; gerçek pickup koordinatını gösteren `LocationMap` eklendi.
+- Passenger history, rescue history ile kullanıcının review listesini `rescueId` üzerinden eşleştirerek gerçek puanı gösteriyor.
+- Kullanılmayan örnek passenger sürüş kayıtları tamamen kaldırıldı.
+
+### Doğrulama
+
+```text
+mvnw.cmd test       başarılı — 9 test
+npx tsc --noEmit    başarılı
+npm run lint        başarılı — 0 hata, 0 uyarı
+git diff --check    başarılı
+```
+
+## 15 Temmuz 2026 — Düzenlenebilir iletişim telefonu ve biker online kontrolü
+
+Kayıt sırasında telefon numarası alınmasına rağmen biker ve passenger profil düzenleme ekranlarında numarayı sonradan ekleme veya değiştirme alanı bulunmuyordu. Eski biker hesapları telefon alanı olmadan online olabildiği için passenger arama düğmesi kullanılamayabiliyordu.
+
+- Backend profil güncelleme sözleşmesine doğrulanan `phone` alanı eklendi; yalnızca isteğe bağlı `+` ve 7–15 rakam kabul ediliyor.
+- Biker ve passenger profil ekranları mevcut numarayı yüklüyor, düzenlemeye ve backend'e kaydetmeye izin veriyor.
+- Geçerli iletişim numarası bulunmayan biker'ın online olma talebi backend tarafından reddediliyor.
+- Profil kaydetme hatalarında backend'in açıklayıcı mesajı kullanıcıya gösteriliyor.
+- Telefon uygunluğu için backend birim testi eklendi.
+
+### Doğrulama
+
+```text
+mvnw.cmd test       başarılı — 10 test
+npx tsc --noEmit    başarılı
+npm run lint        başarılı — 0 hata, 0 uyarı
+git diff --check    başarılı
+```
+
+## 15 Temmuz 2026 — Rescue akışında iki yönlü profil fotoğrafı
+
+Rescue modelinde yalnızca biker profil fotoğrafı yolu bulunuyor ve bu alan kabul sırasında kaydediliyordu. Passenger profil fotoğrafı rescue oluşturulurken taşınmadığı için biker incoming request, navigation ve history ekranları gerçek fotoğraf yerine sabit emoji gösteriyordu.
+
+- Passenger rescue oluşturduğunda güncel `profilePhotoPath` rescue belgesine kaydediliyor.
+- `RescueResponse` ve frontend `RescueRequest` sözleşmelerine `passengerProfilePhotoPath` eklendi.
+- Biker incoming request, navigation ve history ekranları ortak `ProfileAvatar` bileşeniyle passenger'ın gerçek fotoğrafını gösteriyor.
+- Passenger tarafındaki biker fotoğraf akışı korunarak iki yönlü görüntüleme tamamlandı.
+- Fotoğrafı olmayan hesaplarda rol bazlı emoji fallback'i kullanılmaya devam ediyor.
+
+### Doğrulama
+
+```text
+mvnw.cmd test       başarılı — 10 test
+npx tsc --noEmit    başarılı
+npm run lint        başarılı — 0 hata, 0 uyarı
+git diff --check    başarılı
+```
+
+## 15 Temmuz 2026 — Firebase SMS ile kayıt telefonu doğrulaması
+
+Kayıt akışı email/password hesabını ve Firestore profilini telefon numarasının kullanıcıya ait olduğunu doğrulamadan oluşturuyordu. Firebase Phone Auth native uygulama doğrulaması gerektirdiği için Expo Go tabanlı çalışma gerçek SMS akışını desteklemiyordu.
+
+- Android Firebase uygulaması `com.oguzumutcan.motorescue` paketiyle yapılandırıldı ve `google-services.json` Expo config'e bağlandı.
+- Expo development client ile `@react-native-firebase/app` ve `@react-native-firebase/auth` eklendi.
+- Verify credentials ekranı SMS gönderme, 6 haneli kod girişi, 60 saniyelik yeniden gönderme sınırı ve hata durumlarını içeren iki aşamalı akışa dönüştürüldü.
+- SMS doğrulaması tamamlanınca email/password credential telefon kullanıcısına bağlanıyor; JS Firebase oturumu aynı UID ile açıldıktan sonra backend profili oluşturuluyor.
+- Backend profil oluştururken istemci telefonuna güvenmiyor; Firebase ID token içindeki doğrulanmış `phone_number` claim'ini zorunlu tutuyor ve istenen numarayla birebir eşleştiriyor.
+- Doğrulanmış telefon profil ekranlarında salt okunur gösteriliyor; numara değişikliği ayrı bir yeniden doğrulama akışı gerektiriyor.
+
+### Doğrulama
+
+```text
+mvnw.cmd test       başarılı — 11 test
+npx tsc --noEmit    başarılı
+npm run lint        başarılı — 0 hata, 0 uyarı
+npx expo-doctor     başarılı — 18/18 kontrol
+Expo config         başarılı
+Yerel Android build engeli — internet kesintisinde Google Maven bağımlılıkları indirilemedi; EAS development build kullanılacak
+```
+
+## 15 Temmuz 2026 — PC yeniden başlatma öncesi session handoff
+
+- `session_handoff.md` güncel branch/commit, SMS mimarisi, EAS build kimliği, yapılmayan manuel testler ve yeniden başlatma sonrası devam adımlarıyla baştan güncellendi.
+- Gerçek SMS testi ve development APK kurulumu tamamlanmış gibi işaretlenmedi.
+- Untracked backend loglarının commit edilmemesi gerektiği kaydedildi.

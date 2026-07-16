@@ -1,4 +1,5 @@
 import * as Location from "expo-location";
+import { getAvailablePosition } from "../../utils/device-location";
 import { useRouter } from "expo-router";
 import { ChevronDown, LocateFixed, Map, MapPin, X, Zap } from "lucide-react-native";
 import React, { useEffect, useRef, useState } from "react";
@@ -14,6 +15,7 @@ import {
   View,
 } from "react-native";
 import { rescueApi } from "../../api/rescues";
+import { placesApi } from "../../api/places";
 import { auth } from "../../config/firebase";
 import LocationMap from "../../components/location-map";
 import type { MapRegion } from "../../components/location-map.types";
@@ -28,7 +30,17 @@ const URGENCY_OPTIONS = [
 ];
 
 type Coordinates = { latitude: number; longitude: number };
-type Suggestion = Coordinates & { label: string; details: string; distanceKm: number | null };
+type Suggestion = {
+  id: string;
+  label: string;
+  details: string;
+  distanceKm: number | null;
+  coordinates?: Coordinates;
+  placeId?: string;
+  source: "google" | "device";
+};
+
+const createSessionToken = () => `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
 function distanceInKm(from: Coordinates, to: Coordinates): number {
   const radians = (degrees: number) => degrees * Math.PI / 180;
@@ -47,9 +59,10 @@ function useAddressSuggestions(
 ) {
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [loading, setLoading] = useState(false);
+  const sessionToken = useRef(createSessionToken());
 
   useEffect(() => {
-    if (!enabled || query.trim().length < 3) {
+    if (!enabled || query.trim().length < 1) {
       setSuggestions([]);
       return;
     }
@@ -58,6 +71,22 @@ function useAddressSuggestions(
       setLoading(true);
       try {
         const searchText = query.trim();
+        try {
+          const response = await placesApi.autocomplete(searchText, origin, sessionToken.current);
+          if (active && response.predictions.length > 0) {
+            setSuggestions(response.predictions.map((prediction) => ({
+              id: prediction.placeId,
+              placeId: prediction.placeId,
+              label: prediction.label,
+              details: prediction.details,
+              distanceKm: prediction.distanceMeters === null ? null : prediction.distanceMeters / 1000,
+              source: "google",
+            })));
+            return;
+          }
+        } catch {
+          // Google Places is optional at runtime; keep the device geocoder as a free/offline fallback.
+        }
         const searches = [...new Set([
           searchText,
           locationContext ? `${searchText}, ${locationContext}` : searchText,
@@ -70,19 +99,20 @@ function useAddressSuggestions(
         const resolved = await Promise.all(matches.map(async (match) => {
           const addresses = await Location.reverseGeocodeAsync(match).catch(() => []);
           return {
-            latitude: match.latitude,
-            longitude: match.longitude,
+            id: `${match.latitude}-${match.longitude}`,
+            coordinates: { latitude: match.latitude, longitude: match.longitude },
             label: placeLabel,
             details: addresses[0]
               ? addressLabel(addresses[0])
               : `${match.latitude.toFixed(5)}, ${match.longitude.toFixed(5)}`,
             distanceKm: origin ? distanceInKm(origin, match) : null,
+            source: "device" as const,
           };
         }));
         const unique = resolved.filter((item, index, all) =>
           all.findIndex((other) =>
-            Math.abs(other.latitude - item.latitude) < 0.00005 &&
-            Math.abs(other.longitude - item.longitude) < 0.00005,
+            Math.abs(other.coordinates.latitude - item.coordinates.latitude) < 0.00005 &&
+            Math.abs(other.coordinates.longitude - item.coordinates.longitude) < 0.00005,
           ) === index,
         ).sort((left, right) =>
           (left.distanceKm ?? Number.MAX_VALUE) - (right.distanceKm ?? Number.MAX_VALUE),
@@ -97,7 +127,18 @@ function useAddressSuggestions(
     return () => { active = false; clearTimeout(timer); };
   }, [enabled, locationContext, origin, query]);
 
-  return { suggestions, loading, clear: () => setSuggestions([]) };
+  const resolve = async (suggestion: Suggestion) => {
+    if (suggestion.coordinates) return { label: suggestion.label, coordinates: suggestion.coordinates };
+    if (!suggestion.placeId) throw new Error("Place coordinates are unavailable.");
+    const details = await placesApi.details(suggestion.placeId, sessionToken.current);
+    sessionToken.current = createSessionToken();
+    return {
+      label: details.label || suggestion.label,
+      coordinates: { latitude: details.latitude, longitude: details.longitude },
+    };
+  };
+
+  return { suggestions, loading, resolve, clear: () => setSuggestions([]) };
 }
 
 function addressLabel(address?: Location.LocationGeocodedAddress): string {
@@ -146,9 +187,7 @@ export default function RequestFormScreen() {
           if (active) setPickupMode("manual");
           return;
         }
-        const location = await Location.getCurrentPositionAsync({
-          accuracy: Location.Accuracy.Balanced,
-        });
+        const location = await getAvailablePosition();
         const coordinates = {
           latitude: location.coords.latitude,
           longitude: location.coords.longitude,
@@ -172,6 +211,23 @@ export default function RequestFormScreen() {
     const results = await Location.geocodeAsync(label.trim());
     if (!results.length) throw new Error(`${fieldName} address could not be found. Please enter a more specific address.`);
     return { latitude: results[0].latitude, longitude: results[0].longitude };
+  };
+
+  const chooseSuggestion = async (target: "pickup" | "destination", item: Suggestion) => {
+    try {
+      const search = target === "pickup" ? pickupSearch : destinationSearch;
+      const resolved = await search.resolve(item);
+      if (target === "pickup") {
+        setManualPickup(resolved.label);
+        setManualPickupCoordinates(resolved.coordinates);
+      } else {
+        setDestination(resolved.label);
+        setDestinationCoordinates(resolved.coordinates);
+      }
+      search.clear();
+    } catch (error) {
+      Alert.alert("Could not select place", error instanceof Error ? error.message : "Please try again.");
+    }
   };
 
   const openMap = (target: "pickup" | "destination") => {
@@ -281,11 +337,12 @@ export default function RequestFormScreen() {
               {pickupSearch.suggestions.length > 0 && (
                 <ScrollView nestedScrollEnabled keyboardShouldPersistTaps="handled" className="rounded-xl border border-[#E5E5EA] mt-1" style={{ maxHeight: 220 }}>
                   {pickupSearch.suggestions.map((item) => (
-                    <TouchableOpacity key={`${item.latitude}-${item.longitude}`} onPress={() => { setManualPickup(item.label); setManualPickupCoordinates(item); pickupSearch.clear(); }} className="bg-white px-3 py-3 border-b border-[#E5E5EA] flex-row">
+                    <TouchableOpacity key={item.id} onPress={() => void chooseSuggestion("pickup", item)} className="bg-white px-3 py-3 border-b border-[#E5E5EA] flex-row">
                       <MapPin size={15} color="#007AFF" />
                       <View className="ml-2 flex-1"><View className="flex-row justify-between"><Text className="font-bold text-[#1C1C1E] flex-1">{item.label}</Text>{item.distanceKm !== null && <Text className="text-[11px] font-bold text-[#007AFF] ml-2">{item.distanceKm < 1 ? `${Math.round(item.distanceKm * 1000)} m` : `${item.distanceKm.toFixed(1)} km`}</Text>}</View><Text className="text-[12px] text-[#8E8E93] mt-0.5">{item.details}</Text></View>
                     </TouchableOpacity>
                   ))}
+                  {pickupSearch.suggestions.some((item) => item.source === "google") && <Text className="bg-white px-3 py-2 text-right text-[11px] font-bold text-[#8E8E93]">Powered by Google</Text>}
                 </ScrollView>
               )}
             </View>
@@ -308,11 +365,12 @@ export default function RequestFormScreen() {
           {destinationSearch.suggestions.length > 0 && (
             <ScrollView nestedScrollEnabled keyboardShouldPersistTaps="handled" className="rounded-xl border border-[#E5E5EA] mt-1 mb-3" style={{ maxHeight: 240 }}>
               {destinationSearch.suggestions.map((item) => (
-                <TouchableOpacity key={`${item.latitude}-${item.longitude}`} onPress={() => { setDestination(item.label); setDestinationCoordinates(item); destinationSearch.clear(); }} className="bg-white px-3 py-3 border-b border-[#E5E5EA] flex-row">
+                <TouchableOpacity key={item.id} onPress={() => void chooseSuggestion("destination", item)} className="bg-white px-3 py-3 border-b border-[#E5E5EA] flex-row">
                   <MapPin size={15} color="#FF3B30" />
                   <View className="ml-2 flex-1"><View className="flex-row justify-between"><Text className="font-bold text-[#1C1C1E] flex-1">{item.label}</Text>{item.distanceKm !== null && <Text className="text-[11px] font-bold text-[#007AFF] ml-2">{item.distanceKm < 1 ? `${Math.round(item.distanceKm * 1000)} m` : `${item.distanceKm.toFixed(1)} km`}</Text>}</View><Text className="text-[12px] text-[#8E8E93] mt-0.5">{item.details}</Text></View>
                 </TouchableOpacity>
               ))}
+              {destinationSearch.suggestions.some((item) => item.source === "google") && <Text className="bg-white px-3 py-2 text-right text-[11px] font-bold text-[#8E8E93]">Powered by Google</Text>}
             </ScrollView>
           )}
           {destinationSearch.suggestions.length === 0 && <View className="mb-4" />}

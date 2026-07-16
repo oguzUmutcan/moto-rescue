@@ -1,10 +1,10 @@
 import * as Location from "expo-location";
 import { useRouter } from "expo-router";
-import * as SecureStore from "expo-secure-store";
+import { getAvailablePosition } from "../../../utils/device-location";
 import { onAuthStateChanged } from "firebase/auth";
 import { Navigation2 } from "lucide-react-native";
 import React, { useEffect, useRef, useState } from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { auth } from "../../../config/firebase";
 import LocationMap from "../../../components/location-map";
@@ -18,7 +18,10 @@ export default function BikerDashboardScreen() {
   const mapRef = useRef<LocationMapHandle>(null);
   const presentedRequestId = useRef<string | null>(null);
 
-  const [online, setOnline] = useState(true);
+  const [online, setOnline] = useState(false);
+  const [onlineBusy, setOnlineBusy] = useState(false);
+  const [profileLoaded, setProfileLoaded] = useState(false);
+  const [identityDocumentStatus, setIdentityDocumentStatus] = useState<"not_submitted" | "pending" | "verified" | "rejected">("not_submitted");
   const [name, setName] = useState("Loading...");
   const [pendingRequestId, setPendingRequestId] = useState<string | null>(null);
 
@@ -48,18 +51,35 @@ export default function BikerDashboardScreen() {
 
   const handleToggleOnline = async () => {
     const newStatus = !online;
-    setOnline(newStatus);
-
+    const hasVerifiedLicense = identityDocumentStatus === "verified";
+    if (newStatus && !hasVerifiedLicense) {
+      Alert.alert(
+        identityDocumentStatus === "pending" ? "Verification pending" : "Driver's license required",
+        identityDocumentStatus === "pending"
+          ? "Your driver's license will be verified automatically about one minute after upload."
+          : "Upload both sides of your driver's license before going online.",
+        [
+          { text: "Upload license", onPress: () => router.push("/(auth)/profile-biker") },
+          { text: "Cancel", style: "cancel" },
+        ],
+      );
+      return;
+    }
+    setOnlineBusy(true);
     try {
-      await SecureStore.setItemAsync("biker_online_status", String(newStatus));
+      const profile = await userApi.update({ online: newStatus });
+      setOnline(profile.online);
     } catch (error) {
       console.error("Error saving online status:", error);
+      Alert.alert("Could not change status", error instanceof Error ? error.message : "Please try again.");
+    } finally {
+      setOnlineBusy(false);
     }
   };
 
   const handleLocateMe = async () => {
     try {
-      let currentLoc = await Location.getCurrentPositionAsync({});
+      const currentLoc = await getAvailablePosition();
       mapRef.current?.animateToRegion(
         {
           latitude: currentLoc.coords.latitude,
@@ -73,23 +93,6 @@ export default function BikerDashboardScreen() {
       console.error("Could not get location", error);
     }
   };
-
-  // 1. Load SecureStore Online Status
-  useEffect(() => {
-    const loadOnlineStatus = async () => {
-      try {
-        const savedStatus = await SecureStore.getItemAsync(
-          "biker_online_status",
-        );
-        if (savedStatus !== null) {
-          setOnline(savedStatus === "true");
-        }
-      } catch (error) {
-        console.error("Error loading online status:", error);
-      }
-    };
-    loadOnlineStatus();
-  }, []);
 
   useEffect(() => {
     if (!online) {
@@ -120,6 +123,20 @@ export default function BikerDashboardScreen() {
     };
   }, [online, router]);
 
+  useEffect(() => {
+    if (!online) return;
+    let subscription: Location.LocationSubscription | null = null;
+    let active = true;
+    void Location.watchPositionAsync(
+      { accuracy: Location.Accuracy.High, timeInterval: 5000, distanceInterval: 20 },
+      (position) => {
+        if (active) void userApi.updateLocation(position.coords.latitude, position.coords.longitude)
+          .catch((error) => console.error("Could not publish online location", error));
+      },
+    ).then((value) => { if (active) subscription = value; else value.remove(); });
+    return () => { active = false; subscription?.remove(); };
+  }, [online]);
+
   // 2. Fetch User Data
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -128,6 +145,14 @@ export default function BikerDashboardScreen() {
           const data = await userApi.get();
           if (data) {
             setName(data.name || user.displayName || "Biker");
+            const hasVerifiedLicense = data.identityDocumentStatus === "verified";
+            setIdentityDocumentStatus(data.identityDocumentStatus);
+            if (data.online && !hasVerifiedLicense) {
+              await userApi.update({ online: false });
+              setOnline(false);
+            } else {
+              setOnline(data.online);
+            }
 
             // FETCH STATS FROM FIRESTORE (with safe fallbacks)
             setTodayRescues("0");
@@ -139,14 +164,35 @@ export default function BikerDashboardScreen() {
         } catch (error) {
           console.error("Error fetching profile data:", error);
           setName("Biker");
+        } finally {
+          setProfileLoaded(true);
         }
       } else {
         setName("Biker");
+        setProfileLoaded(true);
       }
     });
 
     return () => unsubscribe();
   }, []);
+
+  useEffect(() => {
+    if (identityDocumentStatus !== "pending") return;
+    let active = true;
+    const refreshVerification = async () => {
+      try {
+        const profile = await userApi.get();
+        if (active) setIdentityDocumentStatus(profile.identityDocumentStatus);
+      } catch (error) {
+        console.error("Could not refresh license verification", error);
+      }
+    };
+    const timer = setInterval(refreshVerification, 3000);
+    return () => {
+      active = false;
+      clearInterval(timer);
+    };
+  }, [identityDocumentStatus]);
 
   // 3. Request Location Permissions & Set Initial Region
   useEffect(() => {
@@ -164,14 +210,18 @@ export default function BikerDashboardScreen() {
         return;
       }
 
-      let currentLoc = await Location.getCurrentPositionAsync({});
-      // Calculate and set the initial region based on real GPS
-      setInitialRegion({
-        latitude: currentLoc.coords.latitude,
-        longitude: currentLoc.coords.longitude,
-        latitudeDelta: 0.01,
-        longitudeDelta: 0.01,
-      });
+      try {
+        const currentLoc = await getAvailablePosition();
+        setInitialRegion({
+          latitude: currentLoc.coords.latitude,
+          longitude: currentLoc.coords.longitude,
+          latitudeDelta: 0.01,
+          longitudeDelta: 0.01,
+        });
+      } catch (error) {
+        console.warn("Current location is unavailable", error);
+        setInitialRegion({ latitude: 41.0082, longitude: 28.9784, latitudeDelta: 0.0922, longitudeDelta: 0.0421 });
+      }
     })();
   }, []);
 
@@ -225,6 +275,7 @@ export default function BikerDashboardScreen() {
             {/* Online Toggle */}
             <TouchableOpacity
               onPress={handleToggleOnline}
+              disabled={!profileLoaded || onlineBusy}
               activeOpacity={0.8}
               className={`flex-row items-center rounded-full px-4 py-2.5 ${online ? "bg-[#34C759]" : "bg-[#F2F2F7]"}`}
             >

@@ -56,6 +56,15 @@ export default function BikerTabsLayout() {
         }}
       />
       <Tabs.Screen
+        name="reviews"
+        options={{
+          title: "Reviews",
+          tabBarIcon: ({ focused }) => (
+            <Text style={{ fontSize: 22, opacity: focused ? 1 : 0.4 }}>⭐</Text>
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="profile"
         options={{
           title: "Profile",

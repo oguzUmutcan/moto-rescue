@@ -14,6 +14,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import LocationMap from "../../../components/location-map";
 import type { LocationMapHandle, MapRegion } from "../../../components/location-map.types";
 import { rescueApi } from "../../../api/rescues";
+import { getAvailablePosition } from "../../../utils/device-location";
 
 export default function PassengerDashboardScreen() {
   const router = useRouter();
@@ -54,14 +55,18 @@ export default function PassengerDashboardScreen() {
         return;
       }
 
-      let currentLoc = await Location.getCurrentPositionAsync({});
-      // Calculate and set the initial region based on real GPS
-      setInitialRegion({
-        latitude: currentLoc.coords.latitude,
-        longitude: currentLoc.coords.longitude,
-        latitudeDelta: 0.01,
-        longitudeDelta: 0.01,
-      });
+      try {
+        const currentLoc = await getAvailablePosition();
+        setInitialRegion({
+          latitude: currentLoc.coords.latitude,
+          longitude: currentLoc.coords.longitude,
+          latitudeDelta: 0.01,
+          longitudeDelta: 0.01,
+        });
+      } catch (error) {
+        console.warn("Current location is unavailable", error);
+        setInitialRegion({ latitude: 41.0082, longitude: 28.9784, latitudeDelta: 0.0922, longitudeDelta: 0.0421 });
+      }
     })();
   }, []);
 
@@ -107,7 +112,7 @@ export default function PassengerDashboardScreen() {
 
   const handleLocateMe = async () => {
     try {
-      let currentLoc = await Location.getCurrentPositionAsync({});
+      const currentLoc = await getAvailablePosition();
       // Animate the camera back to the user's location smoothly
       mapRef.current?.animateToRegion(
         {

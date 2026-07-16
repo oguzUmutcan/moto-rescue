@@ -51,6 +51,7 @@ const AVATAR_EMOJIS = [
 export default function ProfilePassengerScreen() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [emergencyContact, setEmergencyContact] = useState("");
   const [profileEmoji, setProfileEmoji] = useState("🙋"); // Default Emoji
 
@@ -72,6 +73,7 @@ export default function ProfilePassengerScreen() {
         if (data) {
           if (data.name) setName(data.name);
           if (data.email) setEmail(data.email);
+          if (data.phone) setPhone(data.phone);
           if (data.profileEmoji) setProfileEmoji(data.profileEmoji);
           const emergency = data.emergencyContact;
           if (emergency) {
@@ -111,9 +113,9 @@ export default function ProfilePassengerScreen() {
 
       console.log("✅ Passenger Profile saved in Firestore!");
       router.push("/(passenger)/(tabs)/dashboard");
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error saving profile:", error);
-      Alert.alert("Error", "Failed to save profile. Please try again.");
+      Alert.alert("Error", error instanceof Error ? error.message : "Failed to save profile. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -189,6 +191,20 @@ export default function ProfilePassengerScreen() {
 
           <View className="mb-4">
             <Text className="text-[12px] font-bold text-[#8E8E93] tracking-wider uppercase mb-2">
+              Contact Phone
+            </Text>
+            <TextInput
+              className="w-full bg-[#F2F2F7] rounded-[14px] px-4 py-4 text-[16px] text-[#1C1C1E] font-medium"
+              placeholder="+90 555 111 2233"
+              placeholderTextColor="#C7C7CC"
+              keyboardType="phone-pad"
+              value={phone}
+              editable={false}
+            />
+          </View>
+
+          <View className="mb-4">
+            <Text className="text-[12px] font-bold text-[#8E8E93] tracking-wider uppercase mb-2">
               Email Address
             </Text>
             <TextInput
@@ -250,8 +266,8 @@ export default function ProfilePassengerScreen() {
           <TouchableOpacity
             onPress={handleSaveProfile}
             activeOpacity={0.8}
-            className={`w-full h-14 rounded-2xl items-center justify-center ${name.length > 2 && !isLoading ? "bg-[#007AFF]" : "bg-[#007AFF]/50"}`}
-            disabled={name.length <= 2 || isLoading}
+            className={`w-full h-14 rounded-2xl items-center justify-center ${name.length > 2 && phone.replace(/\D/g, "").length >= 7 && !isLoading ? "bg-[#007AFF]" : "bg-[#007AFF]/50"}`}
+            disabled={name.length <= 2 || phone.replace(/\D/g, "").length < 7 || isLoading}
           >
             <Text className="text-white text-[17px] font-extrabold">
               {isLoading ? "Saving..." : "Save Profile"}

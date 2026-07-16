@@ -3,6 +3,7 @@ package com.motorescue.auth.dto;
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 import java.time.Instant;
@@ -22,10 +23,15 @@ public final class RescueDtos {
             boolean needsHelmet
     ) {}
 
+    public record StartRescueRequest(
+            @NotBlank @Pattern(regexp = "\\d{6}") String boardingCode
+    ) {}
+
     public record RescueResponse(
             String id,
             String passengerId,
             String passengerName,
+            String passengerProfilePhotoPath,
             double latitude,
             double longitude,
             String pickupLabel,
@@ -37,10 +43,17 @@ public final class RescueDtos {
             String status,
             String bikerId,
             String bikerName,
+            String bikerProfilePhotoPath,
+            String bikerPhoneNumber,
             Instant createdAt,
             Instant expiresAt,
             Instant acceptedAt,
+            String boardingCode,
+            Instant boardingVerifiedAt,
             Instant startedAt,
-            Instant completedAt
+            Instant completedAt,
+            Double bikerLatitude,
+            Double bikerLongitude,
+            Instant bikerLocationUpdatedAt
     ) {}
 }

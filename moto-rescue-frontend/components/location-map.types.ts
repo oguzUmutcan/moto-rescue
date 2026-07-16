@@ -12,5 +12,6 @@ export type LocationMapHandle = {
 export type LocationMapProps = {
   initialRegion: MapRegion;
   selectedCoordinate?: { latitude: number; longitude: number } | null;
+  bikerCoordinate?: { latitude: number; longitude: number } | null;
   onCoordinateSelect?: (coordinate: { latitude: number; longitude: number }) => void;
 };

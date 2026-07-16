@@ -4,6 +4,7 @@ export type RescueRequest = {
   id: string;
   passengerId: string;
   passengerName: string;
+  passengerProfilePhotoPath: string | null;
   latitude: number;
   longitude: number;
   pickupLabel: string;
@@ -15,11 +16,18 @@ export type RescueRequest = {
   status: "searching" | "accepted" | "in_progress" | "cancelled" | "completed";
   bikerId: string | null;
   bikerName: string | null;
+  bikerProfilePhotoPath: string | null;
+  bikerPhoneNumber: string | null;
   createdAt: string;
   expiresAt: string;
   acceptedAt: string | null;
+  boardingCode: string | null;
+  boardingVerifiedAt: string | null;
   startedAt: string | null;
   completedAt: string | null;
+  bikerLatitude: number | null;
+  bikerLongitude: number | null;
+  bikerLocationUpdatedAt: string | null;
 };
 
 type CreateRescueInput = {
@@ -44,8 +52,16 @@ export const rescueApi = {
     apiRequest<RescueRequest>(`/api/rescues/${encodeURIComponent(id)}/accept`, { method: "POST" }),
   cancel: (id: string) =>
     apiRequest<RescueRequest>(`/api/rescues/${encodeURIComponent(id)}/cancel`, { method: "POST" }),
-  start: (id: string) =>
-    apiRequest<RescueRequest>(`/api/rescues/${encodeURIComponent(id)}/start`, { method: "POST" }),
+  start: (id: string, boardingCode: string) =>
+    apiRequest<RescueRequest>(`/api/rescues/${encodeURIComponent(id)}/start`, {
+      method: "POST",
+      body: JSON.stringify({ boardingCode }),
+    }),
   complete: (id: string) =>
     apiRequest<RescueRequest>(`/api/rescues/${encodeURIComponent(id)}/complete`, { method: "POST" }),
+  updateBikerLocation: (id: string, latitude: number, longitude: number) =>
+    apiRequest<void>(`/api/rescues/${encodeURIComponent(id)}/biker-location`, {
+      method: "POST",
+      body: JSON.stringify({ latitude, longitude }),
+    }),
 };

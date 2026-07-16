@@ -2,8 +2,11 @@ package com.motorescue.auth.controller;
 
 import com.motorescue.auth.dto.UserDtos.CreateProfileRequest;
 import com.motorescue.auth.dto.UserDtos.RoleRequest;
+import com.motorescue.auth.dto.UserDtos.ProfilePhotoRequest;
+import com.motorescue.auth.dto.UserDtos.IdentityDocumentRequest;
 import com.motorescue.auth.dto.UserDtos.UpdateProfileRequest;
 import com.motorescue.auth.dto.UserDtos.UserProfileResponse;
+import com.motorescue.auth.dto.UserDtos.LocationRequest;
 import com.motorescue.auth.service.AuthService;
 import com.motorescue.auth.service.UserService;
 import jakarta.validation.Valid;
@@ -53,6 +56,33 @@ public class UserController {
     public UserProfileResponse update(@RequestHeader("Authorization") String authorization,
                                       @Valid @RequestBody UpdateProfileRequest request) {
         return userService.update(authService.authenticate(authorization), request);
+    }
+
+    @PatchMapping("/profile-photo")
+    public UserProfileResponse profilePhoto(@RequestHeader("Authorization") String authorization,
+                                            @Valid @RequestBody ProfilePhotoRequest request) {
+        return userService.setProfilePhoto(authService.authenticate(authorization), request.storagePath());
+    }
+
+    @DeleteMapping("/profile-photo")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteProfilePhoto(@RequestHeader("Authorization") String authorization) {
+        userService.clearProfilePhoto(authService.authenticate(authorization));
+    }
+
+    @PatchMapping("/location")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void location(@RequestHeader("Authorization") String authorization,
+                         @Valid @RequestBody LocationRequest request) {
+        userService.updateLocation(authService.authenticate(authorization), request.latitude(), request.longitude());
+    }
+
+    @PostMapping("/identity-document")
+    public UserProfileResponse submitIdentityDocument(@RequestHeader("Authorization") String authorization,
+                                                      @Valid @RequestBody IdentityDocumentRequest request) {
+        return userService.submitIdentityDocument(
+                authService.authenticate(authorization), request.frontStoragePath(), request.backStoragePath()
+        );
     }
 
     @DeleteMapping
