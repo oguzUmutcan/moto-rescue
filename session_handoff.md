@@ -60,18 +60,19 @@ git diff --check    basarili
 Notlar:
 
 - Expo, Doctor'in bekledigi uyumlu patch surumu olan `~54.0.36` duzeyine yukseltildi.
-- `npm audit` ilk basta 17 moderate vulnerability bildirdi. Dar `js-yaml` override'i ile bu 16 moderate uyariya dustu.
+- `npm audit` push notification paketleri eklendikten sonra 17 moderate vulnerability bildiriyor.
 - Kalan audit fix onerileri Expo 57 major upgrade veya NativeWind/react-native-css major/downgrade gerektirdigi icin otomatik uygulanmadi.
-- 16 Temmuz 2026 saat 11:36 civarinda backend test, TypeScript, lint ve Expo Doctor yeniden basarili calisti.
+- 16 Temmuz 2026 saat 12:21 civarinda backend test, TypeScript ve lint yeniden basarili calisti.
+- Expo Go uzerinde email/password kayit, profil olusturma, role selection, passenger/biker profil telefon guncelleme ve review akislari manuel olarak dogrulandi.
 - Backend veya Metro uzun sureli servis olarak baslatilmadi.
-- Yeni email/password kayit akisi henuz cihazda manuel test edilmedi.
 
 ## Acik Isler
 
-1. Yeni email/password kayit akisi Expo Go'da manuel test edilmeli.
-2. Passenger ve biker profil telefon guncelleme akislari manuel test edilmeli.
-3. Kalan 16 moderate `npm audit` uyarisi Expo SDK 57 major upgrade veya NativeWind/react-native-css major/downgrade gerektirdigi icin ayri planlanmali.
-4. Degisiklikler feature branch uzerinde commitlenip pushlanmali; dogrudan `master` kullanilmamali.
+1. Foreground disi canli location tracking yok.
+2. Uygulama ici rota/polyline ve gercek ETA yok; Google Maps deep link kullaniliyor.
+3. Kalan 17 moderate `npm audit` uyarisi Expo SDK 57 major upgrade veya NativeWind/react-native-css major/downgrade gerektirdigi icin ayri planlanmali.
+4. Push notification akisi fiziksel cihazda manuel olarak dogrulanmali.
+5. Degisiklikler feature branch uzerinde commitlenip pushlanmali; dogrudan `master` kullanilmamali.
 
 ## Google Cloud API Key Durumu
 
@@ -103,16 +104,23 @@ cd "C:\Users\umuto\Desktop\Lecture\zMy Works\Actual Projects\MotoRescue\moto-res
 npm start
 ```
 
-Manuel olarak dogrulanacaklar:
+Manuel olarak dogrulananlar:
 
 1. Yeni email/password kaydi.
 2. Backend profil olusturma.
 3. Role selection gecisi.
 4. Passenger profil tamamlama ve telefon guncelleme.
 5. Biker profil tamamlama, telefon guncelleme ve belge yukleme durumu.
-6. Ayni e-posta ile tekrar kayit hatasi.
-7. Backend profil olusturma basarisiz olursa Firebase kullanici cleanup davranisi.
-8. Login ve mevcut profil restore akisi.
+6. Passenger review verme akisi.
+7. Biker Reviews sekmesinde yalnizca gelen yorumlarin gorunmesi.
+8. Passenger Reviews sekmesinde yalnizca verilen yorumlarin gorunmesi.
+9. Review kartlarinda profil fotograflarinin gorunmesi.
+
+Henuz ozellikle tekrar kontrol edilebilecek durumlar:
+
+1. Ayni e-posta ile tekrar kayit hatasi.
+2. Backend profil olusturma basarisiz olursa Firebase kullanici cleanup davranisi.
+3. Login ve mevcut profil restore akisi.
 
 ## Otomatik Kontrol Komutlari
 
@@ -135,14 +143,20 @@ npx expo-doctor
 - Passenger accepted asamasinda biker'i telefon uygulamasiyla arayabilir.
 - Passenger ve biker profil fotograflari rescue olusturma/kabul sirasinda rescue belgesine snapshot olarak kaydedilir ve karsi tarafa gosterilir.
 - Passenger searching ekrani gercek pickup haritasi gosterir; sabit 2 biker/3 km metinleri kaldirildi.
+- Biker incoming rescue ekrani gercek pickup haritasi gosterir; sabit passenger rating, pickup mesafesi ve ETA metinleri kaldirildi.
+- Biker dashboard `Today` sayaci gercek completed rescue history verisinden hesaplanir.
+- Notification preference switch'leri backend'e yazilir; kapatilinca push token temizlenir, acilinca token yeniden kaydedilir.
+- Backend Expo Push API ile yeni yakindaki rescue isteklerini online/fresh biker'lara, accept/start/complete/cancel durumlarini ilgili tarafa bildirir.
+- Notification tap data'si Expo Router ile ilgili rescue ekranina yonlendirilir.
+- Android Expo Go, SDK 53+ ile remote push token desteklemedigi icin push token kaydi Expo Go'da devre disi birakilir; gercek push testi development veya production build gerektirir.
 - Passenger history gercek review puanini, sureyi ve biker fotografini gosterir; ornek veriler kaldirildi.
 - Boarding code backend tarafindan uretilir ve biker start sirasinda dogrulanir.
 - Badge, profile stats, rescue history ve community reviews backend verisine baglidir.
 
 ## Bilinen Sinirlamalar
 
-- Push notification henuz yok; rescue kesfi polling ile calisiyor.
+- Polling push notification icin foreground/fallback mekanizmasi olarak korunuyor.
+- Android Expo Go remote push desteklemez; push token ve teslimat testi development/production build ile yapilmalidir.
 - Foreground disi canli location tracking yok.
 - Uygulama ici rota/polyline ve gercek ETA yok; Google Maps deep link kullaniliyor.
-- Incoming ekraninda bazi prototip sabitleri hala olabilir; rating/ETA/distance alanlari ayrica taranmali.
 - Telefon numarasi su anda dogrulanmis kimlik kaniti degildir.

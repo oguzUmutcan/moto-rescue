@@ -43,6 +43,12 @@
       ],
       "expo-secure-store",
       [
+        "expo-notifications",
+        {
+          "color": "#FF9500"
+        }
+      ],
+      [
         "expo-image-picker",
         {
           "photosPermission": "MotoRescue uses your selected photo as your profile picture.",

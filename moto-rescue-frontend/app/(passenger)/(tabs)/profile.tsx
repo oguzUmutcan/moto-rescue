@@ -20,6 +20,7 @@ import { auth } from "../../../config/firebase";
 import { userApi } from "../../../api/users";
 import ProfilePhoto from "../../../components/profile-photo";
 import { rescueApi } from "../../../api/rescues";
+import { registerPushNotifications, unregisterPushNotifications } from "../../../utils/push-notifications";
 
 export default function PassengerProfileScreen() {
   const router = useRouter();
@@ -50,6 +51,7 @@ export default function PassengerProfileScreen() {
             setEmail(data.email || auth.currentUser.email || "");
             setPhone(data.phone || "");
             setEmergencyContact(data.emergencyContact || "Not set");
+            setNotifs(data.notificationsEnabled);
             setProfileEmoji(data.profileEmoji || "⛔");
             setProfilePhotoPath(data.profilePhotoPath);
             setMemberSince(data.createdAt ? new Date(data.createdAt).toLocaleDateString(undefined, { month: "short", year: "numeric" }) : "Unknown");
@@ -69,12 +71,29 @@ export default function PassengerProfileScreen() {
   // Handle Firebase Sign Out
   const handleSignOut = async () => {
     try {
+      await unregisterPushNotifications().catch((error) => console.warn("Could not clear push token", error));
       await signOut(auth);
       // Route back to the login screen, clearing the navigation stack
       router.replace("/(auth)/login");
     } catch (error: any) {
       console.error("Sign out error:", error);
       Alert.alert("Error", "Failed to sign out. Please try again.");
+    }
+  };
+
+  const handleNotificationsChange = async (enabled: boolean) => {
+    const previous = notifs;
+    setNotifs(enabled);
+    try {
+      await userApi.update({ notificationsEnabled: enabled });
+      if (enabled) {
+        await registerPushNotifications();
+      } else {
+        await unregisterPushNotifications();
+      }
+    } catch (error) {
+      setNotifs(previous);
+      Alert.alert("Could not update notifications", error instanceof Error ? error.message : "Please try again.");
     }
   };
 
@@ -198,7 +217,7 @@ export default function PassengerProfileScreen() {
               e: "🔔",
               label: "Push notifications",
               val: notifs,
-              set: setNotifs,
+              set: handleNotificationsChange,
             },
             {
               e: "📍",
