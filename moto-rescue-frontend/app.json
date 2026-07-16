@@ -12,7 +12,6 @@
       "supportsTablet": true
     },
     "android": {
-      "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -50,9 +49,7 @@
           "cameraPermission": "MotoRescue uses your camera to take profile and verification photos.",
           "microphonePermission": false
         }
-      ],
-      "@react-native-firebase/app",
-      "@react-native-firebase/auth"
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

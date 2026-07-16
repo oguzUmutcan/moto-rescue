@@ -16,6 +16,7 @@ public final class ReviewDtos {
 
     public record ReviewResponse(
             String id, String rescueId, String passengerId, String passengerName,
-            String bikerId, String bikerName, int rating, String comment, Instant createdAt
+            String passengerProfilePhotoPath, String bikerId, String bikerName,
+            String bikerProfilePhotoPath, int rating, String comment, Instant createdAt
     ) {}
 }

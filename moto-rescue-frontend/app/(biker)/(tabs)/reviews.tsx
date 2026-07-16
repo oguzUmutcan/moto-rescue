@@ -1,3 +1,5 @@
 import CommunityReviews from "../../../components/community-reviews";
 
-export default CommunityReviews;
+export default function BikerReviewsScreen() {
+  return <CommunityReviews mode="received" />;
+}

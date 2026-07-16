@@ -33,15 +33,11 @@ public class UserService {
     }
 
     public UserProfileResponse create(FirebaseToken token, CreateProfileRequest request) {
-        String verifiedPhone = token.getClaims().get("phone_number") instanceof String value ? value : null;
-        if (!verifiedPhoneMatches(verifiedPhone, request.phone())) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Verify this phone number with Firebase before creating a profile");
-        }
         Map<String, Object> data = new HashMap<>();
         data.put("name", request.name().trim());
         data.put("email", token.getEmail());
-        data.put("phone", verifiedPhone);
-        data.put("phoneVerified", true);
+        data.put("phone", request.phone().trim());
+        data.put("phoneVerified", false);
         data.put("role", null);
         data.put("online", false);
         data.put("notificationsEnabled", true);
@@ -79,6 +75,7 @@ public class UserService {
     public UserProfileResponse update(FirebaseToken token, UpdateProfileRequest request) {
         Map<String, Object> updates = new HashMap<>();
         put(updates, "name", request.name());
+        put(updates, "phone", request.phone());
         put(updates, "emergencyContact", request.emergencyContact());
         put(updates, "profileEmoji", request.profileEmoji());
         put(updates, "bio", request.bio());
@@ -118,10 +115,6 @@ public class UserService {
 
     static boolean hasContactPhone(String phone) {
         return phone != null && phone.matches("^\\+?[0-9]{7,15}$");
-    }
-
-    static boolean verifiedPhoneMatches(String verifiedPhone, String requestedPhone) {
-        return hasContactPhone(verifiedPhone) && requestedPhone != null && verifiedPhone.equals(requestedPhone.trim());
     }
 
     public UserProfileResponse setProfilePhoto(FirebaseToken token, String storagePath) {
