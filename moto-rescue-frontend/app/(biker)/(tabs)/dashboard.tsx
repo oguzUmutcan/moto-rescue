@@ -40,7 +40,7 @@ export default function BikerDashboardScreen() {
     }).catch((error) => console.error("Could not restore active rescue", error));
   }, [router]);
 
-  const handleSimulateIncoming = () => {
+  const handleViewPendingRequest = () => {
     if (pendingRequestId) {
       router.push({
         pathname: "/(biker)/incoming",
@@ -137,12 +137,15 @@ export default function BikerDashboardScreen() {
     return () => { active = false; subscription?.remove(); };
   }, [online]);
 
-  // 2. Fetch User Data
+  // 2. Fetch user data and live stats
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         try {
-          const data = await userApi.get();
+          const [data, history] = await Promise.all([
+            userApi.get(),
+            rescueApi.history(),
+          ]);
           if (data) {
             setName(data.name || user.displayName || "Biker");
             const hasVerifiedLicense = data.identityDocumentStatus === "verified";
@@ -154,8 +157,13 @@ export default function BikerDashboardScreen() {
               setOnline(data.online);
             }
 
-            // FETCH STATS FROM FIRESTORE (with safe fallbacks)
-            setTodayRescues("0");
+            const today = new Date().toDateString();
+            const completedToday = history.filter((ride) =>
+              ride.status === "completed"
+              && ride.completedAt
+              && new Date(ride.completedAt).toDateString() === today
+            ).length;
+            setTodayRescues(String(completedToday));
             setRating(data.rating?.toString() || "5.0");
             setTotalRescues(data.totalRescues?.toString() || "0");
           } else {
@@ -362,7 +370,7 @@ export default function BikerDashboardScreen() {
           </View>
 
           <TouchableOpacity
-            onPress={handleSimulateIncoming}
+            onPress={handleViewPendingRequest}
             disabled={!pendingRequestId}
             activeOpacity={0.8}
             className="w-full h-12 rounded-xl bg-[#FF9500] items-center justify-center shadow-sm"

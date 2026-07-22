@@ -1,85 +1,11 @@
-import React, { useEffect, useState } from "react";
-// Pure React Native implementation
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { AlertCircle, MapPin, Star } from "lucide-react-native";
-import {
-  Alert,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View
-} from "react-native";
-import { auth } from "../../config/firebase";
+import { AlertCircle, MapPin } from "lucide-react-native";
+import React, { useEffect, useState } from "react";
+import { Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { rescueApi, RescueRequest } from "../../api/rescues";
+import LocationMap from "../../components/location-map";
 import ProfileAvatar from "../../components/profile-avatar";
-
-// --- Minimal Map Background ---
-function MapBg() {
-  return (
-    <View
-      style={[
-        StyleSheet.absoluteFill,
-        { backgroundColor: "#1a2a4a", opacity: 0.5 },
-      ]}
-    >
-      {/* Mock map lines */}
-      <View
-        style={{
-          position: "absolute",
-          left: 62,
-          width: 10,
-          height: "100%",
-          backgroundColor: "rgba(255,255,255,0.1)",
-        }}
-      />
-      <View
-        style={{
-          position: "absolute",
-          left: 146,
-          width: 10,
-          height: "100%",
-          backgroundColor: "rgba(255,255,255,0.1)",
-        }}
-      />
-      <View
-        style={{
-          position: "absolute",
-          top: 316,
-          width: "100%",
-          height: 10,
-          backgroundColor: "rgba(255,255,255,0.1)",
-        }}
-      />
-      {/* Mock User Location */}
-      <View
-        style={{
-          position: "absolute",
-          left: 190,
-          top: 415,
-          width: 56,
-          height: 56,
-          borderRadius: 28,
-          backgroundColor: "rgba(0,122,255,0.2)",
-          marginLeft: -28,
-          marginTop: -28,
-        }}
-      />
-      <View
-        style={{
-          position: "absolute",
-          left: 190,
-          top: 415,
-          width: 16,
-          height: 16,
-          borderRadius: 8,
-          backgroundColor: "#007AFF",
-          marginLeft: -8,
-          marginTop: -8,
-        }}
-      />
-    </View>
-  );
-}
+import { auth } from "../../config/firebase";
 
 function HomeBar() {
   return (
@@ -96,7 +22,17 @@ function HomeBar() {
   );
 }
 
-// --- The Exact Figma Biker Incoming Component ---
+function distanceKm(request: RescueRequest) {
+  const radians = (degrees: number) => degrees * Math.PI / 180;
+  const dLat = radians(request.destinationLatitude - request.latitude);
+  const dLon = radians(request.destinationLongitude - request.longitude);
+  const a = Math.sin(dLat / 2) ** 2
+    + Math.cos(radians(request.latitude))
+    * Math.cos(radians(request.destinationLatitude))
+    * Math.sin(dLon / 2) ** 2;
+  return 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
 export default function IncomingRequestScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ requestId?: string | string[] }>();
@@ -115,6 +51,20 @@ export default function IncomingRequestScreen() {
       });
   }, [requestId, router]);
 
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setSecs((current) => {
+        if (current <= 1) {
+          clearInterval(timer);
+          router.back();
+          return 0;
+        }
+        return current - 1;
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [router]);
+
   const handleAccept = async () => {
     const biker = auth.currentUser;
     if (!biker || !requestId || accepting) return;
@@ -128,43 +78,29 @@ export default function IncomingRequestScreen() {
     }
   };
 
-  const handleDecline = () => {
-    // Go back to the Biker Dashboard
-    router.back();
-  };
-
-  useEffect(() => {
-    const t = setInterval(() => {
-      setSecs((s) => {
-        if (s <= 1) {
-          clearInterval(t);
-          router.back(); // Auto-decline when timer hits 0
-          return 0;
-        }
-        return s - 1;
-      });
-    }, 1000);
-    return () => clearInterval(t);
-  }, [router]);
-
   const pct = (secs / 30) * 100;
+  const pickupCoordinate = request ? { latitude: request.latitude, longitude: request.longitude } : null;
+  const rideDistanceKm = request ? distanceKm(request) : null;
 
   return (
     <View style={{ flex: 1, backgroundColor: "#0A0F1E" }}>
-      {/* Dark Map Background */}
       <View style={StyleSheet.absoluteFill}>
-        <MapBg />
+        {pickupCoordinate ? (
+          <LocationMap
+            initialRegion={{
+              ...pickupCoordinate,
+              latitudeDelta: 0.04,
+              longitudeDelta: 0.04,
+            }}
+            selectedCoordinate={pickupCoordinate}
+          />
+        ) : (
+          <View style={[StyleSheet.absoluteFill, { backgroundColor: "#1a2a4a" }]} />
+        )}
       </View>
 
-      {/* Dark Overlay Tint */}
-      <View
-        style={[
-          StyleSheet.absoluteFill,
-          { backgroundColor: "rgba(10,15,30,0.72)" },
-        ]}
-      />
+      <View style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(10,15,30,0.72)" }]} />
 
-      {/* Bottom Sheet Container */}
       <View style={[StyleSheet.absoluteFill, { justifyContent: "flex-end" }]}>
         <View
           style={{
@@ -174,21 +110,11 @@ export default function IncomingRequestScreen() {
             overflow: "hidden",
           }}
         >
-          {/* Red Countdown bar */}
-          <View
-            style={{ height: 5, backgroundColor: "#F2F2F7", width: "100%" }}
-          >
-            <View
-              style={{
-                height: "100%",
-                backgroundColor: "#FF3B30",
-                width: `${pct}%`,
-              }}
-            />
+          <View style={{ height: 5, backgroundColor: "#F2F2F7", width: "100%" }}>
+            <View style={{ height: "100%", backgroundColor: "#FF3B30", width: `${pct}%` }} />
           </View>
 
           <View style={{ paddingHorizontal: 20, paddingTop: 16 }}>
-            {/* Header: Title and Timer */}
             <View
               style={{
                 flexDirection: "row",
@@ -204,22 +130,10 @@ export default function IncomingRequestScreen() {
                     height: 8,
                     borderRadius: 4,
                     backgroundColor: "#FF3B30",
-                    shadowColor: "#FF3B30",
-                    shadowOffset: { width: 0, height: 0 },
-                    shadowOpacity: 0.25,
-                    shadowRadius: 3,
-                    elevation: 2,
                     marginRight: 8,
                   }}
                 />
-                <Text
-                  style={{
-                    fontSize: 13,
-                    fontWeight: "900",
-                    color: "#FF3B30",
-                    letterSpacing: 0.5,
-                  }}
-                >
+                <Text style={{ fontSize: 13, fontWeight: "900", color: "#FF3B30", letterSpacing: 0.5 }}>
                   INCOMING RESCUE REQUEST
                 </Text>
               </View>
@@ -234,51 +148,22 @@ export default function IncomingRequestScreen() {
                   justifyContent: "center",
                 }}
               >
-                <Text
-                  style={{ fontSize: 18, fontWeight: "900", color: "white" }}
-                >
-                  {secs}
-                </Text>
+                <Text style={{ fontSize: 18, fontWeight: "900", color: "white" }}>{secs}</Text>
               </View>
             </View>
 
-            {/* Passenger Info Card */}
-            <View
-              style={{
-                backgroundColor: "#F2F2F7",
-                borderRadius: 16,
-                padding: 14,
-                marginBottom: 12,
-              }}
-            >
+            <View style={{ backgroundColor: "#F2F2F7", borderRadius: 16, padding: 14, marginBottom: 12 }}>
               <View style={{ flexDirection: "row", alignItems: "center" }}>
                 <View style={{ marginRight: 12 }}>
-                  <ProfileAvatar storagePath={request?.passengerProfilePhotoPath ?? null} size={46} fallbackEmoji="🙋" />
+                  <ProfileAvatar storagePath={request?.passengerProfilePhotoPath ?? null} size={46} fallbackEmoji="P" />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text
-                    style={{
-                      fontSize: 15,
-                      fontWeight: "800",
-                      color: "#1C1C1E",
-                    }}
-                  >
+                  <Text style={{ fontSize: 15, fontWeight: "800", color: "#1C1C1E" }}>
                     {request?.passengerName ?? "Passenger"}
                   </Text>
-                  <View
-                    style={{
-                      flexDirection: "row",
-                      alignItems: "center",
-                      marginTop: 2,
-                    }}
-                  >
-                    <Star size={11} color="#FF9500" fill="#FF9500" />
-                    <Text
-                      style={{ fontSize: 12, color: "#8E8E93", marginLeft: 4 }}
-                    >
-                      4.8 · First request
-                    </Text>
-                  </View>
+                  <Text style={{ fontSize: 12, color: "#8E8E93", marginTop: 2 }}>
+                    Passenger request
+                  </Text>
                 </View>
                 <View
                   style={{
@@ -290,22 +175,14 @@ export default function IncomingRequestScreen() {
                     borderColor: "#FF3B30",
                   }}
                 >
-                  <Text
-                    style={{
-                      fontSize: 11,
-                      fontWeight: "800",
-                      color: "#FF3B30",
-                    }}
-                  >
-                    {request?.urgency ?? "URGENT"}
+                  <Text style={{ fontSize: 11, fontWeight: "800", color: "#FF3B30" }}>
+                    {request?.urgency ?? "REQUEST"}
                   </Text>
                 </View>
               </View>
             </View>
 
-            {/* Route Summary */}
             <View style={{ marginBottom: 12 }}>
-              {/* Pickup Point */}
               <View style={{ flexDirection: "row", alignItems: "center" }}>
                 <View
                   style={{
@@ -321,38 +198,16 @@ export default function IncomingRequestScreen() {
                   <MapPin size={13} color="white" />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 11, color: "#8E8E93" }}>
-                    Pickup · 850 m away
-                  </Text>
-                  <Text
-                    style={{
-                      fontSize: 14,
-                      fontWeight: "700",
-                      color: "#1C1C1E",
-                    }}
-                  >
+                  <Text style={{ fontSize: 11, color: "#8E8E93" }}>Pickup</Text>
+                  <Text style={{ fontSize: 14, fontWeight: "700", color: "#1C1C1E" }}>
                     {request?.pickupLabel ?? "Loading pickup..."}
                   </Text>
                 </View>
-                <Text
-                  style={{ fontSize: 14, fontWeight: "800", color: "#007AFF" }}
-                >
-                  ~3 min
-                </Text>
+                <Text style={{ fontSize: 14, fontWeight: "800", color: "#007AFF" }}>Nearby</Text>
               </View>
 
-              {/* Connecting Line */}
-              <View
-                style={{
-                  width: 2,
-                  height: 18,
-                  backgroundColor: "#E5E5EA",
-                  marginLeft: 14,
-                  marginVertical: 4,
-                }}
-              />
+              <View style={{ width: 2, height: 18, backgroundColor: "#E5E5EA", marginLeft: 14, marginVertical: 4 }} />
 
-              {/* Destination Point */}
               <View style={{ flexDirection: "row", alignItems: "center" }}>
                 <View
                   style={{
@@ -368,28 +223,17 @@ export default function IncomingRequestScreen() {
                   <MapPin size={13} color="white" />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 11, color: "#8E8E93" }}>
-                    Destination
-                  </Text>
-                  <Text
-                    style={{
-                      fontSize: 14,
-                      fontWeight: "700",
-                      color: "#1C1C1E",
-                    }}
-                  >
+                  <Text style={{ fontSize: 11, color: "#8E8E93" }}>Destination</Text>
+                  <Text style={{ fontSize: 14, fontWeight: "700", color: "#1C1C1E" }}>
                     {request?.destinationLabel ?? "Loading destination..."}
                   </Text>
                 </View>
-                <Text
-                  style={{ fontSize: 14, fontWeight: "800", color: "#FF3B30" }}
-                >
-                  ~12 min
+                <Text style={{ fontSize: 14, fontWeight: "800", color: "#FF3B30" }}>
+                  {rideDistanceKm === null ? "" : `${rideDistanceKm.toFixed(1)} km`}
                 </Text>
               </View>
             </View>
 
-            {/* Urgency Banner */}
             <View
               style={{
                 backgroundColor: "#FFE5E5",
@@ -401,19 +245,12 @@ export default function IncomingRequestScreen() {
                 marginBottom: 14,
               }}
             >
-              <AlertCircle
-                size={15}
-                color="#FF3B30"
-                style={{ marginRight: 8 }}
-              />
-              <Text
-                style={{ fontSize: 13, color: "#FF3B30", fontWeight: "700" }}
-              >
-                {request?.urgency ?? "Urgent request"} · {request?.needsHelmet ? "Needs helmet" : "Helmet not requested"}
+              <AlertCircle size={15} color="#FF3B30" style={{ marginRight: 8 }} />
+              <Text style={{ fontSize: 13, color: "#FF3B30", fontWeight: "700" }}>
+                {request?.urgency ?? "Rescue request"} - {request?.needsHelmet ? "Needs helmet" : "Helmet not requested"}
               </Text>
             </View>
 
-            {/* Action Buttons */}
             <TouchableOpacity
               onPress={handleAccept}
               disabled={accepting || !request}
@@ -425,33 +262,18 @@ export default function IncomingRequestScreen() {
                 alignItems: "center",
                 justifyContent: "center",
                 marginBottom: 9,
-                shadowColor: "#34C759",
-                shadowOffset: { width: 0, height: 6 },
-                shadowOpacity: 0.4,
-                shadowRadius: 20,
-                elevation: 8,
               }}
             >
               <Text style={{ color: "white", fontSize: 18, fontWeight: "900" }}>
-                {accepting ? "Accepting..." : "✓ Accept Rescue"}
+                {accepting ? "Accepting..." : "Accept Rescue"}
               </Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              onPress={handleDecline}
-              style={{
-                width: "100%",
-                paddingVertical: 12,
-                alignItems: "center",
-                justifyContent: "center",
-                marginBottom: 10,
-              }}
+              onPress={() => router.back()}
+              style={{ width: "100%", paddingVertical: 12, alignItems: "center", justifyContent: "center", marginBottom: 10 }}
             >
-              <Text
-                style={{ color: "#8E8E93", fontSize: 15, fontWeight: "700" }}
-              >
-                Decline
-              </Text>
+              <Text style={{ color: "#8E8E93", fontSize: 15, fontWeight: "700" }}>Decline</Text>
             </TouchableOpacity>
           </View>
           <HomeBar />

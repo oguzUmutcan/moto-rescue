@@ -4,6 +4,7 @@ import com.motorescue.auth.dto.UserDtos.CreateProfileRequest;
 import com.motorescue.auth.dto.UserDtos.RoleRequest;
 import com.motorescue.auth.dto.UserDtos.ProfilePhotoRequest;
 import com.motorescue.auth.dto.UserDtos.IdentityDocumentRequest;
+import com.motorescue.auth.dto.UserDtos.PushTokenRequest;
 import com.motorescue.auth.dto.UserDtos.UpdateProfileRequest;
 import com.motorescue.auth.dto.UserDtos.UserProfileResponse;
 import com.motorescue.auth.dto.UserDtos.LocationRequest;
@@ -75,6 +76,18 @@ public class UserController {
     public void location(@RequestHeader("Authorization") String authorization,
                          @Valid @RequestBody LocationRequest request) {
         userService.updateLocation(authService.authenticate(authorization), request.latitude(), request.longitude());
+    }
+
+    @PatchMapping("/push-token")
+    public UserProfileResponse pushToken(@RequestHeader("Authorization") String authorization,
+                                         @Valid @RequestBody PushTokenRequest request) {
+        return userService.setPushToken(authService.authenticate(authorization), request.expoPushToken());
+    }
+
+    @DeleteMapping("/push-token")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deletePushToken(@RequestHeader("Authorization") String authorization) {
+        userService.clearPushToken(authService.authenticate(authorization));
     }
 
     @PostMapping("/identity-document")

@@ -32,9 +32,11 @@ public class RescueService {
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
     private static final double ZONE_KM = 6.0;
     private final Firestore firestore;
+    private final NotificationService notificationService;
 
-    public RescueService(Firestore firestore) {
+    public RescueService(Firestore firestore, NotificationService notificationService) {
         this.firestore = firestore;
+        this.notificationService = notificationService;
     }
 
     public RescueResponse create(FirebaseToken token, CreateRescueRequest request) {
@@ -63,7 +65,9 @@ public class RescueService {
         Instant expiresAt = now.plusSeconds(300);
         data.put("expiresAt", Timestamp.ofTimeSecondsAndNanos(expiresAt.getEpochSecond(), expiresAt.getNano()));
         await(reference.create(data));
-        return forUser(token, from(reference.getId(), data));
+        RescueResponse response = forUser(token, from(reference.getId(), data));
+        notificationService.notifyNearbyBikers(response);
+        return response;
     }
 
     public RescueResponse get(FirebaseToken token, String requestId) {
@@ -181,7 +185,9 @@ public class RescueService {
                 transaction.update(reference, acceptance);
                 return null;
             }).get();
-            return forUser(token, from(getDocument(requestId)));
+            RescueResponse response = forUser(token, from(getDocument(requestId)));
+            notificationService.notifyPassengerAccepted(response);
+            return response;
         } catch (InterruptedException exception) {
             Thread.currentThread().interrupt();
             throw unavailable(exception);
@@ -211,7 +217,9 @@ public class RescueService {
                 transaction.update(reference, "status", "cancelled");
                 return null;
             }).get();
-            return forUser(token, from(getDocument(requestId)));
+            RescueResponse response = forUser(token, from(getDocument(requestId)));
+            notificationService.notifyBikerCancelled(response);
+            return response;
         } catch (InterruptedException exception) {
             Thread.currentThread().interrupt();
             throw unavailable(exception);
@@ -249,7 +257,9 @@ public class RescueService {
                 ));
                 return null;
             }).get();
-            return forUser(token, from(getDocument(requestId)));
+            RescueResponse response = forUser(token, from(getDocument(requestId)));
+            notificationService.notifyPassengerStarted(response);
+            return response;
         } catch (InterruptedException exception) {
             Thread.currentThread().interrupt();
             throw unavailable(exception);
@@ -286,7 +296,11 @@ public class RescueService {
                 }
                 return null;
             }).get();
-            return forUser(token, from(getDocument(requestId)));
+            RescueResponse response = forUser(token, from(getDocument(requestId)));
+            if ("completed".equals(nextStatus)) {
+                notificationService.notifyPassengerCompleted(response);
+            }
+            return response;
         } catch (InterruptedException exception) {
             Thread.currentThread().interrupt();
             throw unavailable(exception);

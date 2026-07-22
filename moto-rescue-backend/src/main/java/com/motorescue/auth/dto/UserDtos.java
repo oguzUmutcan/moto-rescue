@@ -47,6 +47,10 @@ public final class UserDtos {
             Boolean notificationsEnabled
     ) {}
 
+    public record PushTokenRequest(
+            @NotBlank @Size(max = 200) String expoPushToken
+    ) {}
+
     public record UserProfileResponse(
             String uid, String name, String email, String phone, boolean phoneVerified,
             String role, String emergencyContact, String profileEmoji, String bio,

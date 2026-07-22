@@ -1728,3 +1728,47 @@ npm run lint        basarili
 npx expo-doctor     basarili - 18/18
 npm audit           16 moderate vulnerability kaldi; breaking fix gerektiriyor
 ```
+
+## 16 Temmuz 2026 - Handoff ve incoming prototip kalintilarinin temizlenmesi
+
+- `session_handoff.md` manuel test durumu guncellendi; email/password kayit, profil olusturma, role selection, passenger/biker profil telefon guncelleme ve review akislari manuel dogrulanmis olarak kaydedildi.
+- Biker incoming rescue ekranindaki mock map arka plani kaldirildi ve gercek `LocationMap` pickup marker'i kullanildi.
+- Incoming ekranindaki sabit passenger rating, `First request`, `850 m away`, `~3 min` ve `~12 min` metinleri kaldirildi.
+- Incoming ekraninda bilinmeyen biker-pickup mesafesi/ETA yerine net `Nearby` durumu ve rescue pickup-destination verisinden hesaplanan trip mesafesi gosteriliyor.
+- Biker dashboard'daki `Today` istatistigi sabit `0` yerine completed rescue history verisinden bugune ait tamamlanan rescue sayisi olarak hesaplanmaya baslandi.
+
+### Dogrulama
+
+```text
+npx tsc --noEmit    basarili
+npm run lint        basarili
+```
+
+## 16 Temmuz 2026 - Notification tercihleri ve Expo push bildirimleri
+
+- Frontend'e SDK 54 uyumlu `expo-notifications` ve `expo-device` paketleri eklendi.
+- Uygulama acilisinda signed-in kullanici icin Expo push token alinir ve `/api/users/me/push-token` endpoint'i ile backend profiline kaydedilir.
+- Notification response listener eklendi; bildirime tiklaninca data icindeki role/type/requestId bilgisine gore ilgili biker veya passenger rescue ekranina yonlendirme yapilir.
+- Passenger ve biker profil ekranlarindaki notification switch'leri artik sadece lokal state degil, backend `notificationsEnabled` alanini gunceller.
+- Notification kapatilinca push token backend'den temizlenir; tekrar acilinca izin/token kaydi yeniden denenir.
+- Android Expo Go SDK 53+ remote push token desteklemedigi icin token kaydi Expo Go'da guard ile devre disi birakildi; development/production build'de aktif kalir.
+- Backend'e `NotificationService` eklendi; Expo Push API hatalari rescue akisini bozmadan loglanir.
+- Yeni rescue olusturuldugunda 6 km icindeki online/fresh, notification acik biker'lara push bildirimi gider.
+- Rescue accept/start/complete/cancel durumlarinda ilgili passenger veya biker'a state-specific push bildirimi gonderilir.
+- `session_handoff.md` acik isler ve bilinen sinirlamalar push notification durumuna gore guncellendi.
+
+### Dogrulama
+
+```text
+mvnw.cmd test                         basarili - 10 test, 0 failure/error
+npx tsc --noEmit                      basarili
+npm run lint                          basarili
+npm audit --omit=dev --audit-level=moderate  17 moderate; force fix Expo 57 major upgrade gerektiriyor
+```
+
+### Sonraki duzeltme
+
+```text
+npx tsc --noEmit    basarili - Expo Go remote push guard sonrasi
+npm run lint        basarili - Expo Go remote push guard sonrasi
+```

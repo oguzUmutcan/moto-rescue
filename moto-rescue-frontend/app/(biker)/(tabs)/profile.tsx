@@ -19,6 +19,7 @@ import { userApi } from "../../../api/users";
 import ProfilePhoto from "../../../components/profile-photo";
 import { badgeApi } from "../../../api/badges";
 import { RescueRequest, rescueApi } from "../../../api/rescues";
+import { registerPushNotifications, unregisterPushNotifications } from "../../../utils/push-notifications";
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
@@ -82,6 +83,7 @@ export default function BikerProfileScreen() {
             setLevelEmoji(badgeSummary.levelEmoji);
             setCoveredKm(history.filter((ride) => ride.status === "completed").reduce((sum, ride) => sum + rescueDistanceKm(ride), 0));
             setMemberSince(data.createdAt ? new Date(data.createdAt).toLocaleDateString(undefined, { month: "long", year: "numeric" }) : "Unknown");
+            setNotifs(data.notificationsEnabled);
             setProfileEmoji(data.profileEmoji || "⛔");
             setProfilePhotoPath(data.profilePhotoPath);
             setIdentityDocumentStatus(data.identityDocumentStatus);
@@ -126,11 +128,28 @@ export default function BikerProfileScreen() {
 
   const handleSignOut = async () => {
     try {
+      await unregisterPushNotifications().catch((error) => console.warn("Could not clear push token", error));
       await signOut(auth);
       router.replace("/(auth)/login");
     } catch (error: any) {
       console.error("Sign out error:", error);
       Alert.alert("Error", "Failed to sign out. Please try again.");
+    }
+  };
+
+  const handleNotificationsChange = async (enabled: boolean) => {
+    const previous = notifs;
+    setNotifs(enabled);
+    try {
+      await userApi.update({ notificationsEnabled: enabled });
+      if (enabled) {
+        await registerPushNotifications();
+      } else {
+        await unregisterPushNotifications();
+      }
+    } catch (error) {
+      setNotifs(previous);
+      Alert.alert("Could not update notifications", error instanceof Error ? error.message : "Please try again.");
     }
   };
 
@@ -320,7 +339,7 @@ export default function BikerProfileScreen() {
             </Text>
             <Switch
               value={notifs}
-              onValueChange={setNotifs}
+              onValueChange={handleNotificationsChange}
               trackColor={{ false: "#D1D1D6", true: "#34C759" }}
               thumbColor={
                 Platform.OS === "ios"

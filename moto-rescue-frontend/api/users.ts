@@ -31,6 +31,13 @@ export const userApi = {
     }),
   clearProfilePhoto: () =>
     apiRequest<void>("/api/users/me/profile-photo", { method: "DELETE" }),
+  setPushToken: (expoPushToken: string) =>
+    apiRequest<UserProfile>("/api/users/me/push-token", {
+      method: "PATCH",
+      body: JSON.stringify({ expoPushToken }),
+    }),
+  clearPushToken: () =>
+    apiRequest<void>("/api/users/me/push-token", { method: "DELETE" }),
   submitIdentityDocument: (frontStoragePath: string, backStoragePath: string) =>
     apiRequest<UserProfile>("/api/users/me/identity-document", {
       method: "POST",

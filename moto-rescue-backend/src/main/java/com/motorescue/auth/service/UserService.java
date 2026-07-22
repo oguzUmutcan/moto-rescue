@@ -139,6 +139,24 @@ public class UserService {
         )));
     }
 
+    public UserProfileResponse setPushToken(FirebaseToken token, String expoPushToken) {
+        if (!expoPushToken.startsWith("ExponentPushToken[") && !expoPushToken.startsWith("ExpoPushToken[")) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid Expo push token");
+        }
+        await(firestore.collection("users").document(token.getUid()).update(Map.of(
+                "expoPushToken", expoPushToken.trim(),
+                "pushTokenUpdatedAt", Timestamp.now()
+        )));
+        return get(token);
+    }
+
+    public void clearPushToken(FirebaseToken token) {
+        await(firestore.collection("users").document(token.getUid()).update(Map.of(
+                "expoPushToken", FieldValue.delete(),
+                "pushTokenUpdatedAt", Timestamp.now()
+        )));
+    }
+
     public UserProfileResponse submitIdentityDocument(FirebaseToken token, String frontPath, String backPath) {
         DocumentSnapshot current = profile(token.getUid());
         if (!"biker".equals(current.getString("role"))) {
