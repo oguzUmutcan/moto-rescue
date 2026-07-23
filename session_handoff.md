@@ -1,5 +1,44 @@
 ﻿# MotoRescue Session Handoff
 
+## 22 Temmuz 2026 - Android Maps ve Development Build Durumu
+
+- Android `MapView` acilisindaki `API key not found` crash'i giderildi.
+- `moto-rescue-frontend/app.config.js`, Maps key'ini `GOOGLE_MAPS_ANDROID_API_KEY` veya `EXPO_PUBLIC_GOOGLE_MAPS_ANDROID_API_KEY` ortam degiskeninden alip `expo.android.config.googleMaps.apiKey` alanina yaziyor.
+- Aktif yerel degisken `EXPO_PUBLIC_GOOGLE_MAPS_ANDROID_API_KEY`. Key'in sonundaki hatali `p` karakteri kaldirildi; key degeri bu dosyaya yazilmamalidir.
+- Expo SDK 54 ile uyumlu `react-native-maps` surumu `1.20.1`. Bu surum ayri bir Expo config plugin export etmedigi icin `expo.plugins` altina `react-native-maps` eklenmemeli; SDK 54'un dahili Maps entegrasyonu `android.config.googleMaps.apiKey` uzerinden manifest metadata'sini uretiyor.
+- Uretilen `AndroidManifest.xml` icinde `com.google.android.geo.API_KEY` metadata'si ve duzeltilmis key dogrulandi.
+- Yerel x86_64 debug APK basariyla olusturuldu, `emulator-5554` uzerine kuruldu ve acildi. Logcat'te `FATAL EXCEPTION`, `API key not found` veya MotoRescue process crash gorulmedi.
+- Emulator'daki onceki APK farkli imzaya sahip oldugu icin kaldirildi; emulator-local uygulama verisi sifirlandi.
+
+### Zorunlu Yerel Calisma Yolu ve Toolchain
+
+- Eski Desktop yolu native CMake/Ninja path limitini asiyor. Frontend artik fiziksel olarak kisa checkout'tan calistirilmalidir: `C:\src\MotoRescue\moto-rescue-frontend`.
+- `subst` ile drive alias kullanilamaz; React Native codegen gercek `C:` yollarini cozup mixed-root hatasi uretiyor.
+- Eski `C:\Users\umuto\Desktop\Lecture\zMy Works\Actual Projects\MotoRescue` kopyasindan Android build baslatilmamali. IDE yeni `C:\src\MotoRescue` klasorunde acilmalidir.
+- Sistem Java 25 ile `com.facebook.react.settings` cozumlemesi Kotlin tarafinda `IllegalArgumentException: 25.0.3` ile kiriliyor. Android Studio JBR (Java 21) kullanilmali.
+- Gerekli PowerShell ortam ayarlari:
+
+```powershell
+$env:JAVA_HOME = "C:\Program Files\Android\Android Studio\jbr"
+$env:ANDROID_HOME = "$env:LOCALAPPDATA\Android\Sdk"
+$env:Path = "$env:JAVA_HOME\bin;$env:ANDROID_HOME\platform-tools;$env:Path"
+```
+
+### EAS Internal Development Build
+
+- `eas.json` development profili dogru: `developmentClient: true`, `distribution: internal`, Android `buildType: apk`.
+- Firebase icin 6 ve Google Maps icin 1 olmak uzere toplam 7 adet `EXPO_PUBLIC_*` degisken, EAS `development` environment'ina `sensitive` visibility ile kaydedildi.
+- Android internal development build ID: `8855d994-1317-4523-b393-3c0be42f96c9`.
+- Build sayfasi: https://expo.dev/accounts/oguzumutcan/projects/moto-rescue/builds/8855d994-1317-4523-b393-3c0be42f96c9
+- Bu handoff guncellenirken build durumu `IN_QUEUE`. Tamamlaninca ayni install URL/QR iki Android cihaza da kurulabilir.
+- Development client kurulduktan sonra Metro yeni kisa yoldan baslatilmali:
+
+```powershell
+cd C:\src\MotoRescue\moto-rescue-frontend
+npx expo start --dev-client --lan --port 8082
+```
+- EAS upload arsivi 341 MB idi. Build icin gereksiz `dist` ve diger uretilen dosyalar daha sonra `.easignore` ile dislanmali.
+
 ## 16 Temmuz 2026 - Guncel Durum
 
 Zorunlu Firebase SMS kaydi kaldirildi. Bootloader acik/rootlu cihazlarin Firebase Play Integrity kontrolu nedeniyle kayit disi kalmasi urun gereksinimine uygun bulunmadi. Kayit akisi yeniden Firebase JS SDK email/password hesabi + backend profil olusturma modeline donduruldu.
@@ -11,10 +50,10 @@ Telefon numarasi artik dogrulanmis kimlik kaniti degil, profil iletisim verisidi
 - `moto-rescue-frontend/app/(auth)/verify-creds.tsx` SMS istemez. Kullanici bilgilerini onaylayinca Firebase email/password hesabini ve backend profilini olusturur.
 - Backend `UserService.create`, Firebase ID token icinde `phone_number` claim'i zorunlu tutmaz.
 - Passenger ve biker profil ekranlarinda iletisim telefonu tekrar duzenlenebilir.
-- `@react-native-firebase/app`, `@react-native-firebase/auth` ve `expo-dev-client` kaldirildi.
+- `@react-native-firebase/app` ve `@react-native-firebase/auth` kaldirildi. `expo-dev-client`, Android Maps/push ve coklu cihaz development testi icin yeniden projede mevcut.
 - Expo config'ten RNFirebase pluginleri ve `android.googleServicesFile` kaldirildi.
 - `moto-rescue-frontend/google-services.json` repodan silindi.
-- `npm start`, `expo start --go --lan` calistirir. Uygulama Expo Go ile calistirilabilir; yeni development APK gerekmez.
+- `npm start`, `expo start --go --lan` calistirir ve Expo Go ile temel akislarda kullanilabilir. Native Maps metadata, remote push ve iki cihaz testi icin development APK + `npm run start:dev-client` gerekir.
 - Onceki native SMS APK'si `application-e2860996-767e-42d7-8720-55ad9e3deb75.apk` yalnizca yerel untracked dosyadir ve commit edilmemelidir.
 
 ## Git Durumu
@@ -22,6 +61,7 @@ Telefon numarasi artik dogrulanmis kimlik kaniti degil, profil iletisim verisidi
 - Remote: `https://github.com/oguzUmutcan/moto-rescue.git`
 - Aktif branch: `feat/backend-api-consolidation`
 - Son gorulen commitler:
+  - `c70eee1 feat: add rescue push notifications`
   - `9af65e4 docs: clean handoff formatting`
   - `d1102ba docs: refresh SMS verification handoff`
   - `cffd367 feat: verify registrations with Firebase SMS`
@@ -46,7 +86,7 @@ Telefon numarasi artik dogrulanmis kimlik kaniti degil, profil iletisim verisidi
 
 ## Son Dogrulama
 
-Bu dogrulamalar zorunlu SMS kaldirildiktan sonraki son otomatik kontroldur:
+Bu dogrulamalar 16 Temmuz'da zorunlu SMS kaldirildiktan sonraki otomatik kontroldur; 22 Temmuz Android build dogrulamasi yukaridaki yeni bolumde tutulur:
 
 ```text
 Backend tests       basarili - 10 test, 0 failure/error
@@ -60,7 +100,7 @@ git diff --check    basarili
 Notlar:
 
 - Expo, Doctor'in bekledigi uyumlu patch surumu olan `~54.0.36` duzeyine yukseltildi.
-- `npm audit` push notification paketleri eklendikten sonra 17 moderate vulnerability bildiriyor.
+- 22 Temmuz temiz `npm ci`, 21 moderate ve 4 high olmak uzere 25 vulnerability bildiriyor; otomatik `npm audit fix --force` uygulanmadi.
 - Kalan audit fix onerileri Expo 57 major upgrade veya NativeWind/react-native-css major/downgrade gerektirdigi icin otomatik uygulanmadi.
 - 16 Temmuz 2026 saat 12:21 civarinda backend test, TypeScript ve lint yeniden basarili calisti.
 - Expo Go uzerinde email/password kayit, profil olusturma, role selection, passenger/biker profil telefon guncelleme ve review akislari manuel olarak dogrulandi.
@@ -70,8 +110,8 @@ Notlar:
 
 1. Foreground disi canli location tracking yok.
 2. Uygulama ici rota/polyline ve gercek ETA yok; Google Maps deep link kullaniliyor.
-3. Kalan 17 moderate `npm audit` uyarisi Expo SDK 57 major upgrade veya NativeWind/react-native-css major/downgrade gerektirdigi icin ayri planlanmali.
-4. Push notification akisi fiziksel cihazda manuel olarak dogrulanmali.
+3. Kalan 25 `npm audit` uyarisi (21 moderate, 4 high) bagimlilik uyumlulugu korunarak ayri planlanmali.
+4. Push notification akisi EAS development APK iki fiziksel cihaza kurulduktan sonra manuel olarak dogrulanmali.
 5. Degisiklikler feature branch uzerinde commitlenip pushlanmali; dogrudan `master` kullanilmamali.
 
 ## Google Cloud API Key Durumu
@@ -79,7 +119,7 @@ Notlar:
 - Frontend `.env` icindeki Firebase key, `Browser key (auto created by Firebase)` ile eslesiyor.
 - Browser key API allowlist'i Auth ve Storage icin gerekli Firebase API'lerine daraltildi: Firebase Management, Cloud Logging, Identity Toolkit, Token Service, Firebase Rules ve Cloud Storage for Firebase.
 - Browser key icin application restriction eklenmedi; Expo Go / React Native JS SDK akisi sabit browser referrer veya native Android package header'i saglamadigi icin bu kısıt kayit akisini kirabilir.
-- Artik runtime'da kullanilmayan Android key, `com.oguzumutcan.motorescue` paketi ve Firebase'deki mevcut EAS SHA-1 fingerprint'i ile application-restricted hale getirildi.
+- Android Maps key artik `react-native-maps` tarafindan runtime'da kullaniliyor. Google Cloud'da Maps SDK for Android acik olmali; key `com.oguzumutcan.motorescue` paketi ve kullanilan local/EAS signing SHA-1 fingerprint'leri ile application-restricted tutulmali.
 - `MotoRescue Places Backend` key'i ayri kaldi ve yalnizca Places API hedeflerine kisitli oldugu dogrulandi.
 
 ## Manuel Test Plani
@@ -97,11 +137,11 @@ Gerekli backend environment degiskenleri kullanici environment'inda kayitli olma
 - `GOOGLE_CLOUD_PROJECT` veya `FIREBASE_PROJECT_ID`
 - `GOOGLE_MAPS_API_KEY`
 
-Frontend'i Expo Go icin baslat:
+Frontend development client'i baslat:
 
 ```powershell
-cd "C:\Users\umuto\Desktop\Lecture\zMy Works\Actual Projects\MotoRescue\moto-rescue-frontend"
-npm start
+cd "C:\src\MotoRescue\moto-rescue-frontend"
+npm run start:dev-client -- --port 8082
 ```
 
 Manuel olarak dogrulananlar:
