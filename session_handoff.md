@@ -24,6 +24,13 @@
   see `DEPENDENCY_AUDIT.md`.
 - Still manual: accepted/started/completed/cancelled push delivery across two
   devices and one cold-start login restoration check.
+- Reviews are now private to the signed-in user: passengers see reviews they
+  wrote and bikers see reviews they received. The former global latest-review
+  feed was removed.
+- Authenticated users can search verified bikers from the Reviews tab and open a
+  public biker profile. Public profiles show biker-owned profile fields,
+  anonymized reviews, and sanitized completion history without passenger IDs,
+  photos, contact data, coordinates, route labels, or rescue IDs.
 
 ## 22 Temmuz 2026 - Android Maps ve Development Build Durumu
 
