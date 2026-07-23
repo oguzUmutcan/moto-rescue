@@ -1,7 +1,7 @@
 import { Stack } from "expo-router";
 import React from "react";
 // Pure React Native implementation
-import { View } from "react-native";
+import { View } from "@/components/localized-native";
 
 export default function PassengerStackLayout() {
   return (

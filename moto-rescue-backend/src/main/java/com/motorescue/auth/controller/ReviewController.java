@@ -41,9 +41,4 @@ public class ReviewController {
         return reviewService.received(authService.authenticate(authorization));
     }
 
-    @GetMapping
-    public List<ReviewResponse> latest(@RequestHeader("Authorization") String authorization) {
-        authService.authenticate(authorization);
-        return reviewService.latest();
-    }
 }

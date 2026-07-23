@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from "react";
-import { ScrollView, Text, View } from "react-native";
+import { ScrollView, Text, View } from "@/components/localized-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { BadgeSummary, badgeApi } from "../../../api/badges";
+import { formatDate } from "../../../localization/i18n";
 
 export default function BikerBadgesScreen() {
   const insets = useSafeAreaInsets();
@@ -48,7 +49,7 @@ export default function BikerBadgesScreen() {
                 <View className="w-11 h-11 rounded-[14px] bg-[#EEF4FF] items-center justify-center mb-2"><Text className="text-[23px]">{badge.emoji}</Text></View>
                 <Text className="text-[13px] font-black text-[#1C1C1E]">{badge.name}</Text>
                 <Text className="text-[11px] text-[#8E8E93] mt-1 leading-4">{badge.description}</Text>
-                <Text className="text-[10px] font-bold text-[#34C759] mt-2">Earned {badge.earnedAt ? new Date(badge.earnedAt).toLocaleDateString() : "recently"}</Text>
+                <Text className="text-[10px] font-bold text-[#34C759] mt-2">Earned {badge.earnedAt ? formatDate(badge.earnedAt) : "recently"}</Text>
               </View>
             ))}
           </View>

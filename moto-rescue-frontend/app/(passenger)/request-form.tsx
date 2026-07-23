@@ -13,7 +13,7 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-} from "react-native";
+} from "@/components/localized-native";
 import { rescueApi } from "../../api/rescues";
 import { placesApi } from "../../api/places";
 import { auth } from "../../config/firebase";

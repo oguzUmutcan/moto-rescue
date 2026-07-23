@@ -9,7 +9,7 @@ import {
   Text,
   TouchableOpacity,
   View,
-} from "react-native";
+} from "@/components/localized-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 // --- FIREBASE IMPORTS ---
@@ -20,6 +20,8 @@ import ProfilePhoto from "../../../components/profile-photo";
 import { badgeApi } from "../../../api/badges";
 import { RescueRequest, rescueApi } from "../../../api/rescues";
 import { registerPushNotifications, unregisterPushNotifications } from "../../../utils/push-notifications";
+import LanguageSelector from "../../../components/language-selector";
+import { formatDate } from "../../../localization/i18n";
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
@@ -82,7 +84,7 @@ export default function BikerProfileScreen() {
             setLevel(badgeSummary.level);
             setLevelEmoji(badgeSummary.levelEmoji);
             setCoveredKm(history.filter((ride) => ride.status === "completed").reduce((sum, ride) => sum + rescueDistanceKm(ride), 0));
-            setMemberSince(data.createdAt ? new Date(data.createdAt).toLocaleDateString(undefined, { month: "long", year: "numeric" }) : "Unknown");
+            setMemberSince(data.createdAt ? formatDate(data.createdAt, { month: "long", year: "numeric" }) : "Unknown");
             setNotifs(data.notificationsEnabled);
             setProfileEmoji(data.profileEmoji || "⛔");
             setProfilePhotoPath(data.profilePhotoPath);
@@ -232,7 +234,7 @@ export default function BikerProfileScreen() {
                 </View>
               </View>
               <TouchableOpacity
-                onPress={() => router.push("/(auth)/profile-biker")}
+                onPress={() => router.navigate("/(auth)/profile-biker")}
                 className="bg-white/10 rounded-xl px-3 py-1.5"
               >
                 <Text className="text-[13px] font-bold text-white/60">
@@ -351,7 +353,7 @@ export default function BikerProfileScreen() {
               ios_backgroundColor="#D1D1D6"
             />
           </View>
-          <TouchableOpacity onPress={() => router.push("/(auth)/profile-biker")} className="flex-row items-center px-4 py-3 gap-3 border-b border-[#F2F2F7]">
+          <TouchableOpacity onPress={() => router.navigate("/(auth)/profile-biker")} className="flex-row items-center px-4 py-3 gap-3 border-b border-[#F2F2F7]">
             <Text className="text-[18px]">🆔</Text>
             <Text className="flex-1 text-[15px] text-[#1C1C1E] font-medium">
               Identity Document
@@ -370,6 +372,10 @@ export default function BikerProfileScreen() {
             </Text>
             <ChevronRight size={14} color="#C7C7CC" />
           </TouchableOpacity>
+        </View>
+
+        <View className="mb-3">
+          <LanguageSelector />
         </View>
 
         <TouchableOpacity

@@ -1,5 +1,5 @@
 import React from "react";
-import { ScrollView, Text, TouchableOpacity, View } from "react-native";
+import { ScrollView, Text, TouchableOpacity, View } from "@/components/localized-native";
 // Note: In Expo, install and import from 'lucide-react-native'
 import { useRouter } from "expo-router";
 import { ArrowLeft, ChevronRight } from "lucide-react-native";
@@ -10,7 +10,7 @@ export default function App() {
   const insets = useSafeAreaInsets(); // Hook to get safe area insets for padding
   const handleNext = () => {
     console.log("Next button pressed! Ready for next screen.");
-    router.push("/onboarding/bikers");
+    router.navigate("/onboarding/bikers");
   };
   const handleBack = () => {
     console.log("Back Button Pressed");

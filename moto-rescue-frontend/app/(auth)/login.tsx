@@ -12,7 +12,7 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-} from "react-native";
+} from "@/components/localized-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 // --- CENTRAL FIREBASE IMPORTS ---
@@ -22,6 +22,7 @@ import {
 } from "firebase/auth";
 import { auth } from "../../config/firebase";
 import { userApi } from "../../api/users";
+import { profileRoute } from "../../utils/app-routing";
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -61,18 +62,7 @@ export default function LoginScreen() {
       );
       const userData = await userApi.get();
 
-      if (userData) {
-
-        if (userData.role === "passenger") {
-          router.replace("/(passenger)/(tabs)/dashboard");
-        } else if (userData.role === "biker") {
-          router.replace("/(biker)/(tabs)/dashboard");
-        } else {
-          router.replace("/(auth)/profile-select");
-        }
-      } else {
-        router.replace("/(auth)/profile-select");
-      }
+      router.replace(userData ? profileRoute(userData) : "/(auth)/profile-select");
     } catch (error: any) {
       let friendlyError = "An error occurred during login.";
 
@@ -214,7 +204,7 @@ export default function LoginScreen() {
             <Text className="text-[#8E8E93] text-[15px]">
               Don&apos;t have an account?{" "}
             </Text>
-            <TouchableOpacity onPress={() => router.push("/(auth)/register")}>
+            <TouchableOpacity onPress={() => router.navigate("/(auth)/register")}>
               <Text className="text-[#007AFF] text-[15px] font-bold">
                 Sign Up
               </Text>

@@ -1,17 +1,21 @@
-import { Star } from "lucide-react-native";
+import { Search, Star } from "lucide-react-native";
+import { useRouter } from "expo-router";
+import type { Href } from "expo-router";
 import React, { useEffect, useState } from "react";
-import { ScrollView, Text, View } from "react-native";
+import { ScrollView, Text, TouchableOpacity, View } from "@/components/localized-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Review, reviewApi } from "../api/reviews";
 import ProfileAvatar from "./profile-avatar";
+import { formatDate } from "../localization/i18n";
 
 type ReviewMode = "given" | "received";
 
-type CommunityReviewsProps = {
+type UserReviewsProps = {
   mode: ReviewMode;
 };
 
-export default function CommunityReviews({ mode }: CommunityReviewsProps) {
+export default function UserReviews({ mode }: UserReviewsProps) {
+  const router = useRouter();
   const insets = useSafeAreaInsets();
   const [reviews, setReviews] = useState<Review[]>([]);
   const isReceived = mode === "received";
@@ -24,7 +28,7 @@ export default function CommunityReviews({ mode }: CommunityReviewsProps) {
   const average = reviews.length
     ? (reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length).toFixed(1)
     : "-";
-  const title = isReceived ? "Your Reviews" : "Reviews You Gave";
+  const title = "Your Reviews";
   const subtitle = isReceived ? "Passenger feedback about your completed rescues" : "Your feedback for completed rescues";
 
   return (
@@ -57,6 +61,14 @@ export default function CommunityReviews({ mode }: CommunityReviewsProps) {
         </View>
       </View>
 
+      <TouchableOpacity
+        className="bg-[#007AFF] mx-4 mt-3 rounded-2xl px-5 py-4 flex-row items-center justify-center"
+        onPress={() => router.navigate("/bikers" as Href)}
+      >
+        <Search size={18} color="white" />
+        <Text className="text-white font-black ml-2">Find a biker</Text>
+      </TouchableOpacity>
+
       <ScrollView className="flex-1 px-4 pt-4" contentContainerStyle={{ paddingBottom: 28 }}>
         {reviews.length === 0 ? (
           <View className="bg-white rounded-2xl p-7 items-center">
@@ -85,7 +97,7 @@ export default function CommunityReviews({ mode }: CommunityReviewsProps) {
                     ))}
                   </View>
                 </View>
-                <Text className="text-[11px] text-[#AEAEB2]">{new Date(review.createdAt).toLocaleDateString()}</Text>
+                <Text className="text-[11px] text-[#AEAEB2]">{formatDate(review.createdAt)}</Text>
               </View>
               {!!review.comment && <Text className="text-[14px] text-[#3C3C43] leading-5 mt-3">{review.comment}</Text>}
             </View>

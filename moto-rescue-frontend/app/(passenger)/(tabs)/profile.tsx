@@ -11,7 +11,7 @@ import {
   Text,
   TouchableOpacity,
   View,
-} from "react-native";
+} from "@/components/localized-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 // --- FIREBASE IMPORTS ---
@@ -21,6 +21,8 @@ import { userApi } from "../../../api/users";
 import ProfilePhoto from "../../../components/profile-photo";
 import { rescueApi } from "../../../api/rescues";
 import { registerPushNotifications, unregisterPushNotifications } from "../../../utils/push-notifications";
+import LanguageSelector from "../../../components/language-selector";
+import { formatDate } from "../../../localization/i18n";
 
 export default function PassengerProfileScreen() {
   const router = useRouter();
@@ -54,7 +56,7 @@ export default function PassengerProfileScreen() {
             setNotifs(data.notificationsEnabled);
             setProfileEmoji(data.profileEmoji || "⛔");
             setProfilePhotoPath(data.profilePhotoPath);
-            setMemberSince(data.createdAt ? new Date(data.createdAt).toLocaleDateString(undefined, { month: "short", year: "numeric" }) : "Unknown");
+            setMemberSince(data.createdAt ? formatDate(data.createdAt, { month: "short", year: "numeric" }) : "Unknown");
           }
           const history = await rescueApi.history();
           setTotalRequests(history.length);
@@ -133,7 +135,7 @@ export default function PassengerProfileScreen() {
             Profile
           </Text>
           <TouchableOpacity
-            onPress={() => router.push("/(auth)/profile-passenger")}
+            onPress={() => router.navigate("/(auth)/profile-passenger")}
           >
             <Text className="text-[14px] font-bold text-[#007AFF]">Edit</Text>
           </TouchableOpacity>
@@ -269,6 +271,10 @@ export default function PassengerProfileScreen() {
               <ChevronRight size={14} color="#C7C7CC" />
             </TouchableOpacity>
           ))}
+        </View>
+
+        <View className="mb-3">
+          <LanguageSelector />
         </View>
 
         {/* Sign Out Button */}

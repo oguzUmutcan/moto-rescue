@@ -37,6 +37,7 @@ public class UserService {
         data.put("name", request.name().trim());
         data.put("email", token.getEmail());
         data.put("phone", request.phone().trim());
+        data.put("language", request.language() == null ? "en" : request.language());
         data.put("phoneVerified", false);
         data.put("role", null);
         data.put("online", false);
@@ -107,6 +108,7 @@ public class UserService {
         }
         if (request.online() != null) updates.put("online", request.online());
         if (request.notificationsEnabled() != null) updates.put("notificationsEnabled", request.notificationsEnabled());
+        if (request.language() != null) updates.put("language", request.language());
         if (updates.isEmpty()) return get(token);
         await(firestore.collection("users").document(token.getUid()).update(updates));
         if (request.name() != null && !request.name().isBlank()) updateAuthDisplayName(token.getUid(), request.name().trim());
@@ -209,7 +211,7 @@ public class UserService {
         Timestamp documentSubmittedAt = value.getTimestamp("identityDocumentSubmittedAt");
         return new UserProfileResponse(
                 uid, value.getString("name"), value.getString("email"), value.getString("phone"),
-                Boolean.TRUE.equals(value.getBoolean("phoneVerified")), value.getString("role"),
+                Boolean.TRUE.equals(value.getBoolean("phoneVerified")), value.getString("language"), value.getString("role"),
                 value.getString("emergencyContact"), value.getString("profileEmoji"), value.getString("bio"),
                 value.getString("profilePhotoPath"),
                 value.getString("plateNumber"), value.getString("motorcycleModel"), value.getString("motorcycleColor"),

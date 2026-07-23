@@ -3,6 +3,7 @@ import * as Device from "expo-device";
 import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
 import { userApi } from "../api/users";
+import { translate } from "../localization/i18n";
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -34,7 +35,7 @@ export async function registerPushNotifications() {
 
   if (Platform.OS === "android") {
     await Notifications.setNotificationChannelAsync("default", {
-      name: "Rescue alerts",
+      name: translate("Rescue alerts"),
       importance: Notifications.AndroidImportance.MAX,
       vibrationPattern: [0, 250, 250, 250],
       lightColor: "#FF9500",

@@ -1,11 +1,12 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { useIsFocused } from "@react-navigation/native";
 import { CheckCircle, Clock } from "lucide-react-native";
 import React, { useEffect, useState } from "react";
 import {
     Text,
     TouchableOpacity,
     View
-} from "react-native";
+} from "@/components/localized-native";
 import Animated, {
     Easing,
     useAnimatedStyle,
@@ -56,6 +57,7 @@ const AnimatedDot = ({
 
 export default function PassengerSearchingScreen() {
   const router = useRouter();
+  const isFocused = useIsFocused();
   const { requestId } = useLocalSearchParams<{ requestId: string }>();
   const [secs, setSecs] = useState(300); // 5 minutes
   const [matched, setMatched] = useState(false);
@@ -83,6 +85,7 @@ export default function PassengerSearchingScreen() {
   }, [rotation]);
 
   useEffect(() => {
+    if (!isFocused) return;
     if (!requestId || !auth.currentUser) {
       router.replace("/(passenger)/(tabs)/dashboard");
       return;
@@ -111,7 +114,7 @@ export default function PassengerSearchingScreen() {
       active = false;
       clearInterval(timer);
     };
-  }, [requestId, router]);
+  }, [isFocused, requestId, router]);
 
   const animatedSpin = useAnimatedStyle(() => ({
     transform: [{ rotate: `${rotation.value}deg` }],

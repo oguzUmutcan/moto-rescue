@@ -1,0 +1,30 @@
+# Dependencies and generated Expo output
+node_modules/
+.expo/
+dist/
+web-build/
+coverage/
+*.tsbuildinfo
+expo-env.d.ts
+
+# Generated native projects (EAS Prebuild recreates them)
+/android/
+/ios/
+.kotlin/
+
+# Local environments, editor files, and logs
+.env
+.env.*
+!.env.example
+.vscode/
+.claude/
+*.log
+*.apk
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+
+# Local-only and obsolete project material
+app-example/
+CLAUDE.md
+AGENTS.md

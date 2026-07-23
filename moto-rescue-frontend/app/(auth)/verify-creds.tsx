@@ -1,12 +1,17 @@
 import { useRouter } from "expo-router";
 import { ArrowLeft, Edit2, Phone, User } from "lucide-react-native";
 import React, { useEffect, useRef, useState } from "react";
-import { Alert, StatusBar, Text, TouchableOpacity, View } from "react-native";
+import { Alert, StatusBar, Text, TouchableOpacity, View } from "@/components/localized-native";
 import { createUserWithEmailAndPassword, deleteUser, updateProfile } from "firebase/auth";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { userApi } from "../../api/users";
 import { auth } from "../../config/firebase";
 import { useRegistration } from "../../contexts/registration";
+import {
+  createRegistrationAccount,
+  registrationErrorMessage,
+} from "../../utils/registration-workflow";
+import { getActiveLanguage } from "../../localization/i18n";
 
 export default function ConfirmPhoneScreen() {
   const router = useRouter();
@@ -25,19 +30,24 @@ export default function ConfirmPhoneScreen() {
   const handleConfirm = async () => {
     if (isLoading) return;
     setIsLoading(true);
-    let createdUser = false;
     try {
-      const credential = await createUserWithEmailAndPassword(auth, email, password);
-      createdUser = true;
-      await updateProfile(credential.user, { displayName: name.trim() });
-      await userApi.create({ name: name.trim(), phone: `${dialCode}${phone}` });
+      await createRegistrationAccount(
+        { email, password, name, phone: `${dialCode}${phone}` },
+        {
+          createAuthUser: async (accountEmail, accountPassword) =>
+            (await createUserWithEmailAndPassword(auth, accountEmail, accountPassword)).user,
+          updateAuthProfile: (user, displayName) => updateProfile(user, { displayName }),
+          createBackendProfile: (profileName, profilePhone) =>
+            userApi.create({ name: profileName, phone: profilePhone, language: getActiveLanguage() }),
+          deleteAuthUser: deleteUser,
+        },
+      );
 
       isCompletingRegistration.current = true;
       clearDraft();
       router.replace("/(auth)/profile-select");
     } catch (error) {
-      if (createdUser && auth.currentUser) await deleteUser(auth.currentUser).catch(() => undefined);
-      Alert.alert("Registration Failed", error instanceof Error ? error.message : "Please try again.");
+      Alert.alert("Registration Failed", registrationErrorMessage(error));
     } finally {
       setIsLoading(false);
     }
