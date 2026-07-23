@@ -1,5 +1,5 @@
-import CommunityReviews from "../../../components/community-reviews";
+import UserReviews from "../../../components/user-reviews";
 
 export default function BikerReviewsScreen() {
-  return <CommunityReviews mode="received" />;
+  return <UserReviews mode="received" />;
 }

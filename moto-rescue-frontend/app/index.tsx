@@ -9,7 +9,7 @@ export default function App() {
   const insets = useSafeAreaInsets(); // Hook to get safe area insets for padding
   // When we set up navigation later, we will use Expo Router here
   const handleNext = () => {
-    router.push("/onboarding/passenger");
+    router.navigate("/onboarding/passenger");
   };
 
   return <WelcomeScreen onNext={handleNext} insets={insets} />;

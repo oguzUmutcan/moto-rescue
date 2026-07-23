@@ -1,19 +1,21 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { useIsFocused } from "@react-navigation/native";
 import { MapPin, Phone, ShieldCheck } from "lucide-react-native";
 import React, { useEffect, useRef, useState } from "react";
-import { Alert, Linking, Text, TouchableOpacity, View } from "react-native";
+import { Alert, Linking, Text, TouchableOpacity, View } from "@/components/localized-native";
 import { rescueApi, RescueRequest } from "../../api/rescues";
 import LocationMap from "../../components/location-map";
 import ProfileAvatar from "../../components/profile-avatar";
 
 export default function PassengerRideScreen() {
   const router = useRouter();
+  const isFocused = useIsFocused();
   const { requestId } = useLocalSearchParams<{ requestId: string }>();
   const [request, setRequest] = useState<RescueRequest | null>(null);
   const completionHandled = useRef(false);
 
   useEffect(() => {
-    if (!requestId) return;
+    if (!isFocused || !requestId) return;
     let active = true;
     const load = async () => {
       try {
@@ -32,7 +34,7 @@ export default function PassengerRideScreen() {
     void load();
     const timer = setInterval(load, 2500);
     return () => { active = false; clearInterval(timer); };
-  }, [requestId, router]);
+  }, [isFocused, requestId, router]);
 
   const handleCancel = async () => {
     if (!requestId) return;

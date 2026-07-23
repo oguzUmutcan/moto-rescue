@@ -1,7 +1,7 @@
 import { useRouter } from "expo-router";
 import { ArrowLeft, Check } from "lucide-react-native";
 import React, { useState } from "react";
-import { Alert, Text, TouchableOpacity, View } from "react-native";
+import { Alert, Text, TouchableOpacity, View } from "@/components/localized-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 // --- FIREBASE IMPORTS ---
@@ -44,9 +44,9 @@ export default function ProfileSelectScreen() {
 
       // Navigate to the selected profile setup screen.
       if (selectedRole === "passenger") {
-        router.push("/(auth)/profile-passenger");
+        router.navigate("/(auth)/profile-passenger");
       } else if (selectedRole === "biker") {
-        router.push("/(auth)/profile-biker");
+        router.navigate("/(auth)/profile-biker");
       }
     } catch (error: any) {
       console.error("Error updating role:", error);

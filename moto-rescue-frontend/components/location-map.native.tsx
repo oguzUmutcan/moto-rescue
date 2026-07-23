@@ -1,5 +1,5 @@
 import React, { forwardRef, useImperativeHandle, useRef } from "react";
-import { StyleSheet } from "react-native";
+import { StyleSheet } from "@/components/localized-native";
 import MapView, { MapPressEvent, Marker, PROVIDER_GOOGLE } from "react-native-maps";
 import type { LocationMapHandle, LocationMapProps } from "./location-map.types";
 

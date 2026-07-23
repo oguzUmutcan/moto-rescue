@@ -1,6 +1,6 @@
 import { getDownloadURL, ref } from "firebase/storage";
 import React, { useEffect, useState } from "react";
-import { Image, Text, View } from "react-native";
+import { Image, Text, View } from "@/components/localized-native";
 import { storage } from "../config/firebase";
 
 type ProfileAvatarProps = {
@@ -18,7 +18,11 @@ export default function ProfileAvatar({ storagePath, size = 48, fallbackEmoji = 
     if (!storagePath) return () => { active = false; };
     getDownloadURL(ref(storage, storagePath))
       .then((url) => { if (active) setPhotoUrl(url); })
-      .catch((error) => console.error("Could not load biker profile photo", error));
+      .catch((error: { code?: string }) => {
+        if (error.code !== "storage/object-not-found") {
+          console.warn("Could not load profile photo", error);
+        }
+      });
     return () => { active = false; };
   }, [storagePath]);
 

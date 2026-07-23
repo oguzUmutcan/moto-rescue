@@ -1,5 +1,5 @@
-import CommunityReviews from "../../../components/community-reviews";
+import UserReviews from "../../../components/user-reviews";
 
 export default function PassengerReviewsScreen() {
-  return <CommunityReviews mode="given" />;
+  return <UserReviews mode="given" />;
 }

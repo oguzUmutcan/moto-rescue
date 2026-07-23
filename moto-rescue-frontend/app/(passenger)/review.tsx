@@ -1,7 +1,7 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Star } from "lucide-react-native";
 import React, { useEffect, useState } from "react";
-import { Alert, KeyboardAvoidingView, Platform, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { Alert, KeyboardAvoidingView, Platform, Text, TextInput, TouchableOpacity, View } from "@/components/localized-native";
 import { reviewApi } from "../../api/reviews";
 import { rescueApi } from "../../api/rescues";
 import ProfileAvatar from "../../components/profile-avatar";

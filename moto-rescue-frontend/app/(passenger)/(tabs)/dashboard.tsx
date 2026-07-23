@@ -1,6 +1,7 @@
 // Native Expo application. Web preview resolution errors are expected and should be ignored.
 import * as Location from "expo-location";
 import { useRouter } from "expo-router";
+import { useIsFocused } from "@react-navigation/native";
 import { Bell, Navigation2, Search, Zap } from "lucide-react-native";
 import React, { useEffect, useRef, useState } from "react";
 import {
@@ -9,29 +10,35 @@ import {
   Text,
   TouchableOpacity,
   View,
-} from "react-native";
+} from "@/components/localized-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import LocationMap from "../../../components/location-map";
 import type { LocationMapHandle, MapRegion } from "../../../components/location-map.types";
-import { rescueApi } from "../../../api/rescues";
+import { rescueApi, RescueRequest } from "../../../api/rescues";
+import { passengerRescueRoute } from "../../../utils/app-routing";
 import { getAvailablePosition } from "../../../utils/device-location";
 
 export default function PassengerDashboardScreen() {
   const router = useRouter();
+  const isFocused = useIsFocused();
   const insets = useSafeAreaInsets();
   const mapRef = useRef<LocationMapHandle>(null);
 
   const [initialRegion, setInitialRegion] = useState<MapRegion | null>(null);
+  const [activeRequest, setActiveRequest] = useState<RescueRequest | null>(null);
 
   useEffect(() => {
-    rescueApi.active().then((request) => {
-      if (!request) return;
-      router.replace({
-        pathname: request.status === "searching" ? "/(passenger)/searching" : "/(passenger)/ride",
-        params: { requestId: request.id },
-      });
-    }).catch((error) => console.error("Could not restore active rescue", error));
-  }, [router]);
+    if (!isFocused) return;
+    let active = true;
+    rescueApi.active()
+      .then((request) => {
+        if (active) setActiveRequest(request);
+      })
+      .catch((error) => console.error("Could not load active rescue", error));
+    return () => {
+      active = false;
+    };
+  }, [isFocused]);
 
   // SOS Button Pulse Animation setup
   const scale1 = useRef(new Animated.Value(1)).current;
@@ -129,8 +136,16 @@ export default function PassengerDashboardScreen() {
   };
 
   const handleSOSPress = () => {
-    // Navigate to the full-screen SOS form
-    router.push("/(passenger)/request-form");
+    if (activeRequest) {
+      router.navigate(passengerRescueRoute(activeRequest));
+      return;
+    }
+    router.navigate("/(passenger)/request-form");
+  };
+
+  const handleOpenActiveRequest = () => {
+    if (!activeRequest) return;
+    router.navigate(passengerRescueRoute(activeRequest));
   };
 
   return (
@@ -180,20 +195,28 @@ export default function PassengerDashboardScreen() {
       </View>
 
       {/* Status Widget */}
-      <View className="absolute bottom-[100px] left-4 right-[90px] bg-white rounded-2xl p-3.5 flex-row items-center shadow-lg gap-3">
+      <TouchableOpacity
+        onPress={activeRequest ? handleOpenActiveRequest : undefined}
+        disabled={!activeRequest}
+        className="absolute bottom-[100px] left-4 right-[90px] bg-white rounded-2xl p-3.5 flex-row items-center shadow-lg gap-3"
+      >
         <View className="w-9 h-9 rounded-full bg-[#EEF4FF] items-center justify-center">
           <Text className="text-[18px]">😊</Text>
         </View>
         <View className="flex-1">
           <Text className="text-[13px] font-black text-[#1C1C1E]">
-            No active request
+            {activeRequest ? "Active rescue request" : "No active request"}
           </Text>
           <Text className="text-[12px] text-[#8E8E93]">
-            Tap SOS if you need help
+            {activeRequest
+              ? activeRequest.status === "searching"
+                ? "Searching for a nearby biker · tap to reopen"
+                : "Biker assigned · tap to reopen"
+              : "Tap SOS if you need help"}
           </Text>
         </View>
-        <View className="w-2.5 h-2.5 rounded-full bg-[#34C759]" />
-      </View>
+        <View className={`w-2.5 h-2.5 rounded-full ${activeRequest ? "bg-[#FF9500]" : "bg-[#34C759]"}`} />
+      </TouchableOpacity>
 
       {/* Locate Me Button */}
       <TouchableOpacity

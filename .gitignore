@@ -17,4 +17,5 @@
 **/dist/
 **/.expo/
 **/*.tsbuildinfo
-
+**/*.log
+**/*.apk

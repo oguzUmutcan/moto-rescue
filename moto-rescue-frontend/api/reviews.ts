@@ -14,5 +14,4 @@ export const reviewApi = {
     }),
   mine: () => apiRequest<Review[]>("/api/reviews/mine"),
   received: () => apiRequest<Review[]>("/api/reviews/received"),
-  latest: () => apiRequest<Review[]>("/api/reviews"),
 };

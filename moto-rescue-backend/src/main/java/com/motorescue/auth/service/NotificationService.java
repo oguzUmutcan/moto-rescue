@@ -1,15 +1,20 @@
 package com.motorescue.auth.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.cloud.firestore.DocumentReference;
 import com.google.cloud.Timestamp;
 import com.google.cloud.firestore.DocumentSnapshot;
+import com.google.cloud.firestore.FieldValue;
 import com.google.cloud.firestore.Firestore;
 import com.google.cloud.firestore.GeoPoint;
+import com.google.cloud.firestore.QueryDocumentSnapshot;
 import com.motorescue.auth.dto.RescueDtos.RescueResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -19,6 +24,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -29,6 +35,10 @@ import java.util.concurrent.ExecutionException;
 public class NotificationService {
     private static final Logger LOGGER = LoggerFactory.getLogger(NotificationService.class);
     private static final URI EXPO_PUSH_URL = URI.create("https://exp.host/--/api/v2/push/send");
+    private static final URI EXPO_RECEIPTS_URL = URI.create("https://exp.host/--/api/v2/push/getReceipts");
+    private static final String RECEIPTS_COLLECTION = "pushNotificationReceipts";
+    private static final Duration RECEIPT_DELAY = Duration.ofMinutes(15);
+    private static final Duration RECEIPT_EXPIRY = Duration.ofHours(24);
 
     private final Firestore firestore;
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -50,8 +60,9 @@ public class NotificationService {
                     .filter(this::acceptsNotifications)
                     .filter(biker -> isNearbyAvailableBiker(biker, pickup))
                     .forEach(biker -> send(
+                            biker.getId(),
                             biker.getString("expoPushToken"),
-                            "New rescue nearby",
+                            localized(biker.getString("language"), "New rescue nearby"),
                             rescue.pickupLabel(),
                             Map.of("type", "rescue_request", "role", "biker", "requestId", rescue.id())
                     ));
@@ -112,7 +123,14 @@ public class NotificationService {
         try {
             DocumentSnapshot user = firestore.collection("users").document(uid).get().get();
             if (!user.exists() || !acceptsNotifications(user)) return;
-            send(user.getString("expoPushToken"), title, body, data);
+            String language = user.getString("language");
+            send(
+                    uid,
+                    user.getString("expoPushToken"),
+                    localized(language, title),
+                    localized(language, body),
+                    data
+            );
         } catch (InterruptedException exception) {
             Thread.currentThread().interrupt();
             LOGGER.warn("Interrupted while loading push recipient {}", uid, exception);
@@ -128,7 +146,7 @@ public class NotificationService {
                 && !Boolean.FALSE.equals(user.getBoolean("notificationsEnabled"));
     }
 
-    private void send(String expoPushToken, String title, String body, Map<String, Object> data) {
+    private void send(String uid, String expoPushToken, String title, String body, Map<String, Object> data) {
         if (expoPushToken == null || expoPushToken.isBlank()) return;
         Map<String, Object> message = new HashMap<>();
         message.put("to", expoPushToken);
@@ -147,14 +165,168 @@ public class NotificationService {
             HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
             if (response.statusCode() < 200 || response.statusCode() >= 300) {
                 LOGGER.warn("Expo push failed with status {}: {}", response.statusCode(), response.body());
+                return;
+            }
+
+            PushResult ticket = parsePushTicket(response.body());
+            if (ticket.error() != null) {
+                LOGGER.warn("Expo rejected push for user {}: {} ({})", uid, ticket.message(), ticket.error());
+                if ("DeviceNotRegistered".equals(ticket.error())) {
+                    removeTokenIfCurrent(uid, expoPushToken);
+                }
+            } else if (ticket.ticketId() != null) {
+                savePendingReceipt(ticket.ticketId(), uid, expoPushToken);
             }
         } catch (JsonProcessingException exception) {
-            LOGGER.warn("Could not serialize Expo push payload", exception);
+            LOGGER.warn("Could not serialize or parse Expo push data", exception);
         } catch (IOException exception) {
             LOGGER.warn("Could not send Expo push notification", exception);
         } catch (InterruptedException exception) {
             Thread.currentThread().interrupt();
             LOGGER.warn("Interrupted while sending Expo push notification", exception);
+        } catch (ExecutionException exception) {
+            LOGGER.warn("Could not persist Expo push ticket or remove a stale token", exception);
         }
+    }
+
+    @Scheduled(fixedDelayString = "${notifications.receipt-check-ms:60000}")
+    public void checkPushReceipts() {
+        Instant now = Instant.now();
+        try {
+            List<QueryDocumentSnapshot> pending = firestore.collection(RECEIPTS_COLLECTION)
+                    .whereLessThanOrEqualTo("checkAfter", timestamp(now))
+                    .limit(1000)
+                    .get().get().getDocuments();
+            if (pending.isEmpty()) return;
+
+            List<String> ticketIds = new ArrayList<>();
+            for (QueryDocumentSnapshot document : pending) {
+                Timestamp createdAt = document.getTimestamp("createdAt");
+                if (createdAt != null && createdAt.toDate().toInstant().isBefore(now.minus(RECEIPT_EXPIRY))) {
+                    document.getReference().delete().get();
+                } else {
+                    ticketIds.add(document.getId());
+                }
+            }
+            if (ticketIds.isEmpty()) return;
+
+            String payload = objectMapper.writeValueAsString(Map.of("ids", ticketIds));
+            HttpRequest request = HttpRequest.newBuilder(EXPO_RECEIPTS_URL)
+                    .timeout(Duration.ofSeconds(8))
+                    .header("Content-Type", "application/json")
+                    .POST(HttpRequest.BodyPublishers.ofString(payload))
+                    .build();
+            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() < 200 || response.statusCode() >= 300) {
+                LOGGER.warn("Expo receipt lookup failed with status {}: {}", response.statusCode(), response.body());
+                return;
+            }
+
+            Map<String, PushResult> receipts = parsePushReceipts(response.body());
+            for (QueryDocumentSnapshot document : pending) {
+                PushResult receipt = receipts.get(document.getId());
+                if (receipt == null) continue;
+                if (receipt.error() != null) {
+                    LOGGER.warn("Expo could not deliver push ticket {}: {} ({})",
+                            document.getId(), receipt.message(), receipt.error());
+                    if ("DeviceNotRegistered".equals(receipt.error())) {
+                        removeTokenIfCurrent(document.getString("uid"), document.getString("expoPushToken"));
+                    }
+                }
+                document.getReference().delete().get();
+            }
+        } catch (JsonProcessingException exception) {
+            LOGGER.warn("Could not serialize or parse Expo receipt data", exception);
+        } catch (IOException exception) {
+            LOGGER.warn("Could not query Expo push receipts", exception);
+        } catch (InterruptedException exception) {
+            Thread.currentThread().interrupt();
+            LOGGER.warn("Interrupted while checking Expo push receipts", exception);
+        } catch (ExecutionException exception) {
+            LOGGER.warn("Could not load pending Expo push receipts", exception);
+        }
+    }
+
+    private void savePendingReceipt(String ticketId, String uid, String expoPushToken)
+            throws ExecutionException, InterruptedException {
+        Instant now = Instant.now();
+        Map<String, Object> receipt = Map.of(
+                "uid", uid,
+                "expoPushToken", expoPushToken,
+                "createdAt", timestamp(now),
+                "checkAfter", timestamp(now.plus(RECEIPT_DELAY))
+        );
+        firestore.collection(RECEIPTS_COLLECTION).document(ticketId).set(receipt).get();
+    }
+
+    private void removeTokenIfCurrent(String uid, String rejectedToken)
+            throws ExecutionException, InterruptedException {
+        if (uid == null || rejectedToken == null) return;
+        DocumentReference user = firestore.collection("users").document(uid);
+        firestore.runTransaction(transaction -> {
+            DocumentSnapshot current = transaction.get(user).get();
+            if (rejectedToken.equals(current.getString("expoPushToken"))) {
+                transaction.update(user, Map.of(
+                        "expoPushToken", FieldValue.delete(),
+                        "pushTokenUpdatedAt", Timestamp.now()
+                ));
+            }
+            return null;
+        }).get();
+    }
+
+    static PushResult parsePushTicket(String responseBody) throws JsonProcessingException {
+        JsonNode data = new ObjectMapper().readTree(responseBody).path("data");
+        JsonNode ticket = data.isArray() ? data.path(0) : data;
+        return parseResult(ticket);
+    }
+
+    static Map<String, PushResult> parsePushReceipts(String responseBody) throws JsonProcessingException {
+        JsonNode data = new ObjectMapper().readTree(responseBody).path("data");
+        Map<String, PushResult> receipts = new HashMap<>();
+        data.fields().forEachRemaining(entry -> receipts.put(entry.getKey(), parseResult(entry.getValue())));
+        return receipts;
+    }
+
+    private static PushResult parseResult(JsonNode node) {
+        String status = textOrNull(node, "status");
+        String ticketId = textOrNull(node, "id");
+        String message = textOrNull(node, "message");
+        String error = textOrNull(node.path("details"), "error");
+        if (!"ok".equals(status) && error == null) {
+            error = status == null ? "MalformedExpoResponse" : "UnknownExpoError";
+        }
+        return new PushResult(ticketId, message, error);
+    }
+
+    private static String textOrNull(JsonNode node, String field) {
+        JsonNode value = node.path(field);
+        return value.isTextual() ? value.textValue() : null;
+    }
+
+    private static Timestamp timestamp(Instant instant) {
+        return Timestamp.ofTimeSecondsAndNanos(instant.getEpochSecond(), instant.getNano());
+    }
+
+    record PushResult(String ticketId, String message, String error) {
+    }
+
+    static String localized(String language, String message) {
+        if (!"tr".equals(language) || message == null) return message;
+        return switch (message) {
+            case "New rescue nearby" -> "Yakında yeni yardım talebi";
+            case "Biker accepted your request" -> "Motosikletçi talebinizi kabul etti";
+            case "Your biker is on the way." -> "Motosikletçiniz yolda.";
+            case "Ride started" -> "Yolculuk başladı";
+            case "Your rescue ride is now in progress." -> "Yardım yolculuğunuz başladı.";
+            case "Ride completed" -> "Yolculuk tamamlandı";
+            case "Please review your biker when you have a moment." ->
+                    "Uygun olduğunuzda motosikletçinizi değerlendirin.";
+            case "Rescue cancelled" -> "Yardım iptal edildi";
+            case "The passenger cancelled this rescue request." -> "Yolcu yardım talebini iptal etti.";
+            default -> message.endsWith(" is on the way.")
+                    ? message.substring(0, message.length() - " is on the way.".length()) + " yolda."
+                    : message;
+        };
     }
 }

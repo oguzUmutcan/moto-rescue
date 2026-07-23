@@ -13,7 +13,7 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-} from "react-native";
+} from "@/components/localized-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { COUNTRIES } from "../../constants/countries";
 import { useRegistration } from "../../contexts/registration";
@@ -43,7 +43,7 @@ export default function RegisterScreen() {
       email: email.trim().toLowerCase(),
       password,
     });
-    router.push("/(auth)/verify-creds");
+    router.navigate("/(auth)/verify-creds");
   };
 
   const renderCountryItem = ({ item }: { item: (typeof COUNTRIES)[0] }) => (

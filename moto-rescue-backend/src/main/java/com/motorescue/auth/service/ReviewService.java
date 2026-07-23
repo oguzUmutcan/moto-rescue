@@ -113,20 +113,6 @@ public class ReviewService {
         }
     }
 
-    public List<ReviewResponse> latest() {
-        try {
-            return firestore.collection("reviews").limit(100).get().get().getDocuments().stream()
-                    .map(this::from)
-                    .sorted((left, right) -> right.createdAt().compareTo(left.createdAt()))
-                    .toList();
-        } catch (InterruptedException exception) {
-            Thread.currentThread().interrupt();
-            throw unavailable(exception);
-        } catch (ExecutionException exception) {
-            throw unavailable(exception);
-        }
-    }
-
     private ReviewResponse from(DocumentSnapshot snapshot) {
         Number rating = (Number) snapshot.get("rating");
         Timestamp createdAt = snapshot.getTimestamp("createdAt");

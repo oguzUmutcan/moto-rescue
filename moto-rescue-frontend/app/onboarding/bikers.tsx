@@ -1,7 +1,7 @@
 import { useRouter } from "expo-router";
 import { ArrowLeft, ChevronRight } from "lucide-react-native"; // Make sure you installed lucide-react-native
 import React from "react";
-import { ScrollView, Text, TouchableOpacity, View } from "react-native";
+import { ScrollView, Text, TouchableOpacity, View } from "@/components/localized-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function BikerPitchScreen() {
@@ -10,7 +10,7 @@ export default function BikerPitchScreen() {
 
   const handleNext = () => {
     // Navigates to the Login screen (assuming you put it in an (auth) folder)
-    router.push("/(auth)/login");
+    router.navigate("/(auth)/login");
   };
 
   const handleBack = () => {

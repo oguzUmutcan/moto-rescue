@@ -1,7 +1,8 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { useIsFocused } from "@react-navigation/native";
 import { AlertCircle, MapPin } from "lucide-react-native";
 import React, { useEffect, useState } from "react";
-import { Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Alert, StyleSheet, Text, TouchableOpacity, View } from "@/components/localized-native";
 import { rescueApi, RescueRequest } from "../../api/rescues";
 import LocationMap from "../../components/location-map";
 import ProfileAvatar from "../../components/profile-avatar";
@@ -35,6 +36,7 @@ function distanceKm(request: RescueRequest) {
 
 export default function IncomingRequestScreen() {
   const router = useRouter();
+  const isFocused = useIsFocused();
   const params = useLocalSearchParams<{ requestId?: string | string[] }>();
   const requestId = Array.isArray(params.requestId) ? params.requestId[0] : params.requestId;
   const [secs, setSecs] = useState(30);
@@ -42,28 +44,30 @@ export default function IncomingRequestScreen() {
   const [accepting, setAccepting] = useState(false);
 
   useEffect(() => {
-    if (!requestId) return;
+    if (!isFocused || !requestId) return;
     rescueApi.get(requestId)
       .then(setRequest)
       .catch((error) => {
         console.error("Could not load rescue request", error);
         router.back();
       });
-  }, [requestId, router]);
+  }, [isFocused, requestId, router]);
 
   useEffect(() => {
-    const timer = setInterval(() => {
-      setSecs((current) => {
-        if (current <= 1) {
-          clearInterval(timer);
-          router.back();
-          return 0;
-        }
-        return current - 1;
-      });
+    if (!isFocused) return;
+    setSecs(30);
+    const countdownTimer = setInterval(() => {
+      setSecs((current) => Math.max(0, current - 1));
     }, 1000);
-    return () => clearInterval(timer);
-  }, [router]);
+    const expiryTimer = setTimeout(() => {
+      router.back();
+    }, 30_000);
+
+    return () => {
+      clearInterval(countdownTimer);
+      clearTimeout(expiryTimer);
+    };
+  }, [isFocused, requestId, router]);
 
   const handleAccept = async () => {
     const biker = auth.currentUser;

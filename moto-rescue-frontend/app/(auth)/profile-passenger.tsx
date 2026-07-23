@@ -13,7 +13,7 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-} from "react-native";
+} from "@/components/localized-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { COUNTRIES } from "../../constants/countries";
 
@@ -113,7 +113,7 @@ export default function ProfilePassengerScreen() {
       });
 
       console.log("✅ Passenger Profile saved in Firestore!");
-      router.push("/(passenger)/(tabs)/dashboard");
+      router.navigate("/(passenger)/(tabs)/dashboard");
     } catch (error: unknown) {
       console.error("Error saving profile:", error);
       Alert.alert("Error", error instanceof Error ? error.message : "Failed to save profile. Please try again.");

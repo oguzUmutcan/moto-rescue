@@ -14,7 +14,8 @@ public final class UserDtos {
 
     public record CreateProfileRequest(
             @NotBlank @Size(max = 100) String name,
-            @NotBlank @Pattern(regexp = "^\\+?[0-9]{7,15}$", message = "phone must contain 7 to 15 digits") String phone
+            @NotBlank @Pattern(regexp = "^\\+?[0-9]{7,15}$", message = "phone must contain 7 to 15 digits") String phone,
+            @Pattern(regexp = "en|tr") String language
     ) {}
 
     public record RoleRequest(@Pattern(regexp = "passenger|biker") String role) {}
@@ -44,7 +45,8 @@ public final class UserDtos {
             @Size(max = 50) String motorcycleColor,
             List<Boolean> availableDays,
             Boolean online,
-            Boolean notificationsEnabled
+            Boolean notificationsEnabled,
+            @Pattern(regexp = "en|tr") String language
     ) {}
 
     public record PushTokenRequest(
@@ -52,7 +54,7 @@ public final class UserDtos {
     ) {}
 
     public record UserProfileResponse(
-            String uid, String name, String email, String phone, boolean phoneVerified,
+            String uid, String name, String email, String phone, boolean phoneVerified, String language,
             String role, String emergencyContact, String profileEmoji, String bio,
             String profilePhotoPath,
             String plateNumber, String motorcycleModel, String motorcycleColor,
