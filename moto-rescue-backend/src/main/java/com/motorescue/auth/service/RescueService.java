@@ -168,9 +168,7 @@ public class RescueService {
                 if (!snapshot.exists()) {
                     throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Rescue request not found");
                 }
-                if (!"searching".equals(snapshot.getString("status")) || isExpired(snapshot)) {
-                    throw new ResponseStatusException(HttpStatus.CONFLICT, "Rescue request is no longer available");
-                }
+                validateAcceptable(snapshot.getString("status"), isExpired(snapshot));
                 if (distanceKm(bikerLocation, (GeoPoint) snapshot.get("pickup")) > ZONE_KM) {
                     throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Rescue is outside the 6 km zone");
                 }
@@ -207,13 +205,11 @@ public class RescueService {
                 if (!snapshot.exists()) {
                     throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Rescue request not found");
                 }
-                if (!token.getUid().equals(snapshot.getString("passengerId"))) {
-                    throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only the passenger can cancel this rescue");
-                }
-                String status = snapshot.getString("status");
-                if (!"searching".equals(status) && !"accepted".equals(status)) {
-                    throw new ResponseStatusException(HttpStatus.CONFLICT, "Rescue request cannot be cancelled");
-                }
+                validateCancellation(
+                        token.getUid(),
+                        snapshot.getString("passengerId"),
+                        snapshot.getString("status")
+                );
                 transaction.update(reference, "status", "cancelled");
                 return null;
             }).get();
@@ -240,15 +236,13 @@ public class RescueService {
                 if (!snapshot.exists()) {
                     throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Rescue request not found");
                 }
-                if (!token.getUid().equals(snapshot.getString("bikerId"))) {
-                    throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only the assigned biker can start this rescue");
-                }
-                if (!"accepted".equals(snapshot.getString("status"))) {
-                    throw new ResponseStatusException(HttpStatus.CONFLICT, "Invalid rescue status transition");
-                }
-                if (!request.boardingCode().equals(snapshot.getString("boardingCode"))) {
-                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Boarding code is incorrect");
-                }
+                validateStart(
+                        token.getUid(),
+                        snapshot.getString("bikerId"),
+                        snapshot.getString("status"),
+                        request.boardingCode(),
+                        snapshot.getString("boardingCode")
+                );
                 Timestamp now = Timestamp.now();
                 transaction.update(reference, Map.of(
                         "status", "in_progress",
@@ -283,12 +277,12 @@ public class RescueService {
                 if (!snapshot.exists()) {
                     throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Rescue request not found");
                 }
-                if (!token.getUid().equals(snapshot.getString("bikerId"))) {
-                    throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only the assigned biker can update this rescue");
-                }
-                if (!expectedStatus.equals(snapshot.getString("status"))) {
-                    throw new ResponseStatusException(HttpStatus.CONFLICT, "Invalid rescue status transition");
-                }
+                validateBikerTransition(
+                        token.getUid(),
+                        snapshot.getString("bikerId"),
+                        snapshot.getString("status"),
+                        expectedStatus
+                );
                 transaction.update(reference, Map.of("status", nextStatus, timestampField, Timestamp.now()));
                 if ("completed".equals(nextStatus)) {
                     transaction.update(firestore.collection(USERS).document(token.getUid()),
@@ -313,6 +307,43 @@ public class RescueService {
     private void requireRole(String uid, String expectedRole) {
         if (!hasRole(uid, expectedRole)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "The " + expectedRole + " role is required");
+        }
+    }
+
+    static void validateAcceptable(String status, boolean expired) {
+        if (!"searching".equals(status) || expired) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Rescue request is no longer available");
+        }
+    }
+
+    static void validateCancellation(String uid, String passengerId, String status) {
+        if (!uid.equals(passengerId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only the passenger can cancel this rescue");
+        }
+        if (!"searching".equals(status) && !"accepted".equals(status)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Rescue request cannot be cancelled");
+        }
+    }
+
+    static void validateStart(String uid, String bikerId, String status,
+                              String boardingCode, String expectedBoardingCode) {
+        if (!uid.equals(bikerId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only the assigned biker can start this rescue");
+        }
+        if (!"accepted".equals(status)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Invalid rescue status transition");
+        }
+        if (!boardingCode.equals(expectedBoardingCode)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Boarding code is incorrect");
+        }
+    }
+
+    static void validateBikerTransition(String uid, String bikerId, String status, String expectedStatus) {
+        if (!uid.equals(bikerId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only the assigned biker can update this rescue");
+        }
+        if (!expectedStatus.equals(status)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Invalid rescue status transition");
         }
     }
 

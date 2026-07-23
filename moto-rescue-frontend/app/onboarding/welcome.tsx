@@ -14,7 +14,7 @@ export default function WelcomeScreen({
   const router = useRouter();
   // When we set up navigation later, we will use Expo Router here
   const handleNext = () => {
-    router.push("/onboarding/passenger");
+    router.navigate("/onboarding/passenger");
   };
 
   return (

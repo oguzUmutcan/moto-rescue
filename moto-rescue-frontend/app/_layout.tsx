@@ -1,15 +1,18 @@
 import { Stack, useRouter } from "expo-router";
 import { onAuthStateChanged } from "firebase/auth";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 import "@/global.css";
 import { RegistrationProvider } from "@/contexts/registration";
 import { auth } from "@/config/firebase";
 import { userApi } from "@/api/users";
 import { addNotificationResponseListener, registerPushNotifications, unregisterPushNotifications } from "@/utils/push-notifications";
+import { notificationRoute, profileRoute } from "@/utils/app-routing";
 
 export default function RootLayout() {
   const router = useRouter();
+  const lastNotificationNavigation = useRef<{ key: string; handledAt: number } | null>(null);
+  const notificationNavigationHandled = useRef(false);
 
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
@@ -21,6 +24,9 @@ export default function RootLayout() {
           } else {
             await unregisterPushNotifications();
           }
+          if (!notificationNavigationHandled.current) {
+            router.replace(profileRoute(profile));
+          }
         })
         .catch((error) => {
           console.warn("Could not sync push notifications", error);
@@ -28,24 +34,19 @@ export default function RootLayout() {
     });
 
     const subscription = addNotificationResponseListener((data) => {
-      if (!data.requestId) return;
-      if (data.role === "biker") {
-        if (data.type === "rescue_cancelled") {
-          router.push("/(biker)/(tabs)/dashboard");
-          return;
-        }
-        router.push({ pathname: "/(biker)/incoming", params: { requestId: data.requestId } });
+      const destination = notificationRoute(data);
+      if (!destination || !data.requestId) return;
+      const navigationKey = `${data.type ?? "unknown"}:${data.role ?? "unknown"}:${data.requestId}`;
+      const now = Date.now();
+      if (
+        lastNotificationNavigation.current?.key === navigationKey
+        && now - lastNotificationNavigation.current.handledAt < 2_000
+      ) {
         return;
       }
-      if (data.type === "rescue_completed") {
-        router.push({ pathname: "/(passenger)/review", params: { requestId: data.requestId } });
-        return;
-      }
-      if (data.type === "rescue_started") {
-        router.push({ pathname: "/(passenger)/ride", params: { requestId: data.requestId } });
-        return;
-      }
-      router.push({ pathname: "/(passenger)/searching", params: { requestId: data.requestId } });
+      lastNotificationNavigation.current = { key: navigationKey, handledAt: now };
+      notificationNavigationHandled.current = true;
+      router.navigate(destination);
     });
 
     return () => {

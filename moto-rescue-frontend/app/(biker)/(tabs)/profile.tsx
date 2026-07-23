@@ -232,7 +232,7 @@ export default function BikerProfileScreen() {
                 </View>
               </View>
               <TouchableOpacity
-                onPress={() => router.push("/(auth)/profile-biker")}
+                onPress={() => router.navigate("/(auth)/profile-biker")}
                 className="bg-white/10 rounded-xl px-3 py-1.5"
               >
                 <Text className="text-[13px] font-bold text-white/60">
@@ -351,7 +351,7 @@ export default function BikerProfileScreen() {
               ios_backgroundColor="#D1D1D6"
             />
           </View>
-          <TouchableOpacity onPress={() => router.push("/(auth)/profile-biker")} className="flex-row items-center px-4 py-3 gap-3 border-b border-[#F2F2F7]">
+          <TouchableOpacity onPress={() => router.navigate("/(auth)/profile-biker")} className="flex-row items-center px-4 py-3 gap-3 border-b border-[#F2F2F7]">
             <Text className="text-[18px]">🆔</Text>
             <Text className="flex-1 text-[15px] text-[#1C1C1E] font-medium">
               Identity Document

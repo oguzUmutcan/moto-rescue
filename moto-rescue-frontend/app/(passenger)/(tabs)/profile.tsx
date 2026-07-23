@@ -133,7 +133,7 @@ export default function PassengerProfileScreen() {
             Profile
           </Text>
           <TouchableOpacity
-            onPress={() => router.push("/(auth)/profile-passenger")}
+            onPress={() => router.navigate("/(auth)/profile-passenger")}
           >
             <Text className="text-[14px] font-bold text-[#007AFF]">Edit</Text>
           </TouchableOpacity>

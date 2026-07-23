@@ -129,7 +129,7 @@ export default function ProfileBikerScreen() {
       });
 
       console.log("✅ Biker Profile saved in Firestore!");
-      router.push("/(biker)/(tabs)/dashboard");
+      router.navigate("/(biker)/(tabs)/dashboard");
     } catch (error: unknown) {
       console.error("Error saving biker profile:", error);
       Alert.alert("Error", error instanceof Error ? error.message : "Failed to save profile. Please try again.");

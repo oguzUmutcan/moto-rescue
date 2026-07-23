@@ -1,5 +1,6 @@
 import * as Location from "expo-location";
 import { useRouter } from "expo-router";
+import { useIsFocused } from "@react-navigation/native";
 import { getAvailablePosition } from "../../../utils/device-location";
 import { onAuthStateChanged } from "firebase/auth";
 import { Navigation2 } from "lucide-react-native";
@@ -9,14 +10,15 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { auth } from "../../../config/firebase";
 import LocationMap from "../../../components/location-map";
 import type { LocationMapHandle, MapRegion } from "../../../components/location-map.types";
-import { rescueApi } from "../../../api/rescues";
+import { rescueApi, RescueRequest } from "../../../api/rescues";
 import { userApi } from "../../../api/users";
+import { bikerRescueRoute } from "../../../utils/app-routing";
 
 export default function BikerDashboardScreen() {
   const router = useRouter();
+  const isFocused = useIsFocused();
   const insets = useSafeAreaInsets();
   const mapRef = useRef<LocationMapHandle>(null);
-  const presentedRequestId = useRef<string | null>(null);
 
   const [online, setOnline] = useState(false);
   const [onlineBusy, setOnlineBusy] = useState(false);
@@ -24,6 +26,7 @@ export default function BikerDashboardScreen() {
   const [identityDocumentStatus, setIdentityDocumentStatus] = useState<"not_submitted" | "pending" | "verified" | "rejected">("not_submitted");
   const [name, setName] = useState("Loading...");
   const [pendingRequestId, setPendingRequestId] = useState<string | null>(null);
+  const [activeRequest, setActiveRequest] = useState<RescueRequest | null>(null);
 
   // ADD NEW STATES FOR STATS
   const [todayRescues, setTodayRescues] = useState("0");
@@ -33,16 +36,25 @@ export default function BikerDashboardScreen() {
   const [initialRegion, setInitialRegion] = useState<MapRegion | null>(null);
 
   useEffect(() => {
-    rescueApi.active().then((request) => {
-      if (request && (request.status === "accepted" || request.status === "in_progress")) {
-        router.replace({ pathname: "/(biker)/navigation", params: { requestId: request.id } });
-      }
-    }).catch((error) => console.error("Could not restore active rescue", error));
-  }, [router]);
+    if (!isFocused) return;
+    let active = true;
+    rescueApi.active()
+      .then((request) => {
+        if (active) setActiveRequest(request);
+      })
+      .catch((error) => console.error("Could not load active rescue", error));
+    return () => {
+      active = false;
+    };
+  }, [isFocused]);
 
   const handleViewPendingRequest = () => {
+    if (activeRequest) {
+      router.navigate(bikerRescueRoute(activeRequest));
+      return;
+    }
     if (pendingRequestId) {
-      router.push({
+      router.navigate({
         pathname: "/(biker)/incoming",
         params: { requestId: pendingRequestId },
       });
@@ -59,7 +71,7 @@ export default function BikerDashboardScreen() {
           ? "Your driver's license will be verified automatically about one minute after upload."
           : "Upload both sides of your driver's license before going online.",
         [
-          { text: "Upload license", onPress: () => router.push("/(auth)/profile-biker") },
+          { text: "Upload license", onPress: () => router.navigate("/(auth)/profile-biker") },
           { text: "Cancel", style: "cancel" },
         ],
       );
@@ -67,6 +79,10 @@ export default function BikerDashboardScreen() {
     }
     setOnlineBusy(true);
     try {
+      if (newStatus) {
+        const position = await getAvailablePosition();
+        await userApi.updateLocation(position.coords.latitude, position.coords.longitude);
+      }
       const profile = await userApi.update({ online: newStatus });
       setOnline(profile.online);
     } catch (error) {
@@ -95,7 +111,7 @@ export default function BikerDashboardScreen() {
   };
 
   useEffect(() => {
-    if (!online) {
+    if (!online || activeRequest) {
       setPendingRequestId(null);
       return;
     }
@@ -106,10 +122,6 @@ export default function BikerDashboardScreen() {
         const nextRequestId = requests[0]?.id ?? null;
         if (active) {
           setPendingRequestId(nextRequestId);
-          if (nextRequestId && presentedRequestId.current !== nextRequestId) {
-            presentedRequestId.current = nextRequestId;
-            router.push({ pathname: "/(biker)/incoming", params: { requestId: nextRequestId } });
-          }
         }
       } catch (error) {
         console.error("Could not load open rescue requests", error);
@@ -121,19 +133,32 @@ export default function BikerDashboardScreen() {
       active = false;
       clearInterval(timer);
     };
-  }, [online, router]);
+  }, [activeRequest, online]);
 
   useEffect(() => {
     if (!online) return;
     let subscription: Location.LocationSubscription | null = null;
     let active = true;
-    void Location.watchPositionAsync(
-      { accuracy: Location.Accuracy.High, timeInterval: 5000, distanceInterval: 20 },
-      (position) => {
-        if (active) void userApi.updateLocation(position.coords.latitude, position.coords.longitude)
-          .catch((error) => console.error("Could not publish online location", error));
-      },
-    ).then((value) => { if (active) subscription = value; else value.remove(); });
+    void getAvailablePosition()
+      .then((position) => userApi.updateLocation(position.coords.latitude, position.coords.longitude))
+      .then(() => Location.watchPositionAsync(
+        { accuracy: Location.Accuracy.High, timeInterval: 5000, distanceInterval: 20 },
+        (position) => {
+          if (active) void userApi.updateLocation(position.coords.latitude, position.coords.longitude)
+            .catch((error) => console.error("Could not publish online location", error));
+        },
+      ))
+      .then((value) => { if (active) subscription = value; else value.remove(); })
+      .catch((error) => {
+        if (!active) return;
+        console.warn("Online location tracking stopped", error);
+        setOnline(false);
+        void userApi.update({ online: false }).catch(() => undefined);
+        Alert.alert(
+          "Location unavailable",
+          error instanceof Error ? error.message : "Location access is required to remain online.",
+        );
+      });
     return () => { active = false; subscription?.remove(); };
   }, [online]);
 
@@ -204,20 +229,7 @@ export default function BikerDashboardScreen() {
 
   // 3. Request Location Permissions & Set Initial Region
   useEffect(() => {
-    (async () => {
-      let { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== "granted") {
-        console.warn("Permission to access location was denied");
-        // Fallback region if user denies location
-        setInitialRegion({
-          latitude: 36.7538,
-          longitude: 3.0588,
-          latitudeDelta: 0.0922,
-          longitudeDelta: 0.0421,
-        });
-        return;
-      }
-
+    void (async () => {
       try {
         const currentLoc = await getAvailablePosition();
         setInitialRegion({
@@ -362,23 +374,28 @@ export default function BikerDashboardScreen() {
                 Online · Accepting requests
               </Text>
               <Text className="text-[12px] text-[#34C759] font-bold mt-0.5">
-                {pendingRequestId
-                  ? "A passenger needs help nearby"
-                  : "Waiting for nearby requests"}
+                {activeRequest
+                  ? activeRequest.status === "in_progress"
+                    ? "Rescue ride in progress"
+                    : "Passenger pickup in progress"
+                  : pendingRequestId
+                    ? "A passenger needs help nearby"
+                    : "Waiting for nearby requests"}
               </Text>
             </View>
           </View>
 
-          <TouchableOpacity
-            onPress={handleViewPendingRequest}
-            disabled={!pendingRequestId}
-            activeOpacity={0.8}
-            className="w-full h-12 rounded-xl bg-[#FF9500] items-center justify-center shadow-sm"
-          >
-            <Text className="text-white text-[15px] font-bold">
-              🔔 View Rescue Request
-            </Text>
-          </TouchableOpacity>
+          {(activeRequest || pendingRequestId) && (
+            <TouchableOpacity
+              onPress={handleViewPendingRequest}
+              activeOpacity={0.8}
+              className="w-full h-12 rounded-xl bg-[#FF9500] items-center justify-center shadow-sm"
+            >
+              <Text className="text-white text-[15px] font-bold">
+                {activeRequest ? "Resume Active Rescue" : "View Rescue Request"}
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
       )}
     </View>

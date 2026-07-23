@@ -10,7 +10,7 @@ export default function App() {
   const insets = useSafeAreaInsets(); // Hook to get safe area insets for padding
   const handleNext = () => {
     console.log("Next button pressed! Ready for next screen.");
-    router.push("/onboarding/bikers");
+    router.navigate("/onboarding/bikers");
   };
   const handleBack = () => {
     console.log("Back Button Pressed");

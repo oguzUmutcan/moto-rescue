@@ -10,7 +10,7 @@ export default function BikerPitchScreen() {
 
   const handleNext = () => {
     // Navigates to the Login screen (assuming you put it in an (auth) folder)
-    router.push("/(auth)/login");
+    router.navigate("/(auth)/login");
   };
 
   const handleBack = () => {

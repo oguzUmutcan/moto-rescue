@@ -43,7 +43,7 @@ export default function RegisterScreen() {
       email: email.trim().toLowerCase(),
       password,
     });
-    router.push("/(auth)/verify-creds");
+    router.navigate("/(auth)/verify-creds");
   };
 
   const renderCountryItem = ({ item }: { item: (typeof COUNTRIES)[0] }) => (

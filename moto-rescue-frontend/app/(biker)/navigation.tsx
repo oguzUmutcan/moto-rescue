@@ -1,4 +1,5 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { useIsFocused } from "@react-navigation/native";
 import { ExternalLink, MapPin } from "lucide-react-native";
 import React, { useEffect, useRef, useState } from "react";
 import { Alert, Linking, Platform, Text, TextInput, TouchableOpacity, View } from "react-native";
@@ -11,21 +12,28 @@ import * as Location from "expo-location";
 
 export default function BikerNavigationScreen() {
   const router = useRouter();
+  const isFocused = useIsFocused();
   const { requestId } = useLocalSearchParams<{ requestId: string }>();
   const mapRef = useRef<LocationMapHandle>(null);
+  const cancellationHandled = useRef(false);
   const [request, setRequest] = useState<RescueRequest | null>(null);
   const [busy, setBusy] = useState(false);
   const [boardingCode, setBoardingCode] = useState("");
 
   useEffect(() => {
-    if (!requestId) return;
+    cancellationHandled.current = false;
+  }, [requestId]);
+
+  useEffect(() => {
+    if (!isFocused || !requestId) return;
     let active = true;
     const load = async () => {
       try {
         const data = await rescueApi.get(requestId);
         if (!active) return;
         setRequest(data);
-        if (data.status === "cancelled") {
+        if (data.status === "cancelled" && !cancellationHandled.current) {
+          cancellationHandled.current = true;
           Alert.alert("Request cancelled", "The passenger cancelled this rescue.", [
             { text: "OK", onPress: () => router.replace("/(biker)/(tabs)/dashboard") },
           ]);
@@ -37,21 +45,34 @@ export default function BikerNavigationScreen() {
     void load();
     const timer = setInterval(load, 2500);
     return () => { active = false; clearInterval(timer); };
-  }, [requestId, router]);
+  }, [isFocused, requestId, router]);
 
   useEffect(() => {
-    if (!requestId || (request?.status !== "accepted" && request?.status !== "in_progress")) return;
+    if (!isFocused || !requestId || (request?.status !== "accepted" && request?.status !== "in_progress")) return;
     let subscription: Location.LocationSubscription | null = null;
     let active = true;
-    void Location.watchPositionAsync(
-      { accuracy: Location.Accuracy.High, timeInterval: 2500, distanceInterval: 10 },
-      (position) => {
-        if (active) void rescueApi.updateBikerLocation(requestId, position.coords.latitude, position.coords.longitude)
-          .catch((error) => console.error("Could not publish biker location", error));
-      },
-    ).then((value) => { if (active) subscription = value; else value.remove(); });
+    void Location.getForegroundPermissionsAsync()
+      .then((permission) => {
+        if (permission.status !== "granted") {
+          throw new Error("Location permission is required to share the biker's live location.");
+        }
+        return Location.watchPositionAsync(
+          { accuracy: Location.Accuracy.High, timeInterval: 2500, distanceInterval: 10 },
+          (position) => {
+            if (active) void rescueApi.updateBikerLocation(requestId, position.coords.latitude, position.coords.longitude)
+              .catch((error) => {
+                if (error instanceof Error && error.message === "Conflict") return;
+                console.error("Could not publish biker location", error);
+              });
+          },
+        );
+      })
+      .then((value) => { if (active) subscription = value; else value.remove(); })
+      .catch((error) => {
+        if (active) console.warn("Live biker location is unavailable", error);
+      });
     return () => { active = false; subscription?.remove(); };
-  }, [request?.status, requestId]);
+  }, [isFocused, request?.status, requestId]);
 
   const inProgress = request?.status === "in_progress";
   const targetLatitude = request
@@ -74,7 +95,7 @@ export default function BikerNavigationScreen() {
         setRequest(await rescueApi.start(requestId, boardingCode));
         setBoardingCode("");
       } else if (request.status === "in_progress") {
-        await rescueApi.complete(requestId);
+        setRequest(await rescueApi.complete(requestId));
         const badges = await badgeApi.mine().catch(() => null);
         const justEarned = badges?.badges.find((badge) =>
           badge.earnedAt && Date.now() - new Date(badge.earnedAt).getTime() < 60_000,

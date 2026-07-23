@@ -1,5 +1,30 @@
 ﻿# MotoRescue Session Handoff
 
+## 23 Temmuz 2026 - Rescue Restoration and Push Reliability
+
+- Authoritative checkout remains `C:\src\MotoRescue`; do not run native Android
+  builds from the long Desktop path.
+- Passenger and biker dashboards now reload the active rescue on focus and expose
+  only a real, resumable request. Swiping back no longer strands either role.
+- Repeated notification responses are deduplicated, route pushes use canonical
+  navigation destinations, and focus-sensitive polling/timers stop off-screen.
+- Signed-in users are restored to the dashboard for their backend role.
+- Registration now has tested Firebase-user cleanup if backend profile creation
+  fails, plus a friendly duplicate-email error.
+- Expo push HTTP 200 responses are no longer assumed to mean delivery. The backend
+  parses tickets, stores ticket IDs in `pushNotificationReceipts`, checks receipts
+  after 15 minutes, expires pending checks after 24 hours, and conditionally removes
+  stale `DeviceNotRegistered` tokens.
+- Android Firebase config is restored through
+  `moto-rescue-frontend/google-services.json` and `android.googleServicesFile`.
+- Automated validation: 18 backend tests and 6 frontend tests pass; TypeScript,
+  lint, Expo Doctor (18/18), and `git diff --check` pass.
+- npm audit high findings were reduced from 4 to 0 with compatible transitive
+  patches. The remaining 21 moderate findings require an Expo/NativeWind migration;
+  see `DEPENDENCY_AUDIT.md`.
+- Still manual: accepted/started/completed/cancelled push delivery across two
+  devices and one cold-start login restoration check.
+
 ## 22 Temmuz 2026 - Android Maps ve Development Build Durumu
 
 - Android `MapView` acilisindaki `API key not found` crash'i giderildi.
