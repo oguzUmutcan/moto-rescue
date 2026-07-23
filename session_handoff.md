@@ -1,5 +1,54 @@
 ﻿# MotoRescue Session Handoff
 
+## 23 Temmuz 2026 - Cloud Run and Mobile Release Readiness
+
+- The Spring Boot backend is deployed as the public Cloud Run service
+  `moto-rescue-api` in `europe-west1`.
+- Stable mobile API URL:
+  `https://moto-rescue-api-38490668291.europe-west1.run.app`.
+- Current healthy revision is `moto-rescue-api-00003-lnt`; its startup probe
+  passes and Tomcat listens on port `8083`.
+- Requests to `/api/auth/session` reach Spring Boot through both Cloud Run URL
+  forms. No token returns the expected `401 Unauthorized`, and an invalid token
+  returns `Invalid or revoked Firebase ID token`, confirming Firebase token
+  verification is reached.
+- Cloud Run allows unauthenticated invocation at the infrastructure layer; API
+  authorization remains enforced by Firebase ID tokens in Spring Boot.
+- Runtime service account is
+  `motorescue-api@motorescue-d4abc.iam.gserviceaccount.com` with
+  `roles/datastore.user` and `roles/firebaseauth.admin`.
+- The `MotoRescue Places Backend` key successfully called Places autocomplete
+  and is API-restricted to the required Places services. It currently exists as
+  a normal Cloud Run environment variable; moving it to Secret Manager remains
+  a security-hardening task.
+- One transient Firestore DNS/deadline error occurred on an earlier revision
+  while checking Expo push receipts. The current revision showed no repeat
+  during verification.
+- GitHub continuous deployment must use Google Cloud Buildpacks with build
+  context `moto-rescue-backend`; Entrypoint and Function target stay empty.
+- The remote repository's default release branch is `master`, not `main`.
+  Cloud Run's production trigger must therefore match `^master$`. The latest
+  application code is currently commit `59348fb` on
+  `fix/android-maps-development-build` and must be merged into `master`.
+- EAS project linkage is valid:
+  `@oguzumutcan/moto-rescue` /
+  `c9089634-a2e3-4fdd-980f-cf5d278e8087`.
+- `EXPO_PUBLIC_API_URL` is correctly assigned to Development, Preview, and
+  Production and points to the stable Cloud Run URL.
+- Release blocker: the six `EXPO_PUBLIC_FIREBASE_*` variables and
+  `EXPO_PUBLIC_GOOGLE_MAPS_ANDROID_API_KEY` are assigned only to Development.
+  They must also be enabled for Preview and Production before either build.
+- The newest completed EAS APK is still a Development build from commit
+  `8b38dd7`; no APK/AAB containing the latest localization, rescue restoration,
+  public profiles, and Cloud Run URL has been built yet.
+- After fixing EAS environments, build a standalone test APK with
+  `npx eas-cli@latest build --platform android --profile preview`. After the APK
+  passes end-to-end testing, create the Play Store AAB with
+  `npx eas-cli@latest build --platform android --profile production`.
+- Firebase Authentication Authorized Domains requires no Expo or Cloud Run
+  domain for the Android email/password app. Native Google/phone sign-in would
+  instead require the relevant EAS/Play signing SHA fingerprints.
+
 ## 23 Temmuz 2026 - English/Turkish Localization
 
 - English and Turkish can now be selected on the first onboarding screen and in
@@ -13,8 +62,8 @@
   server-generated rescue push notifications are localized.
 - Validation passed: 11 frontend tests, 22 backend tests, TypeScript, lint, Expo
   Doctor 18/18, Android Metro export, and `git diff --check`.
-- The backend was restarted from `C:\src\MotoRescue` and is listening on port
-  8083 with PID `29052`.
+- A local backend can still be run from `C:\src\MotoRescue`, but mobile release
+  builds must use the public Cloud Run URL documented above.
 
 ## 23 Temmuz 2026 - Rescue Restoration and Push Reliability
 
