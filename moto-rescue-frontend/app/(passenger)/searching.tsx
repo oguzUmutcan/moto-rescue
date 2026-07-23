@@ -6,7 +6,7 @@ import {
     Text,
     TouchableOpacity,
     View
-} from "react-native";
+} from "@/components/localized-native";
 import Animated, {
     Easing,
     useAnimatedStyle,

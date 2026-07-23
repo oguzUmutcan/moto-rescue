@@ -1,7 +1,7 @@
 import { useRouter } from "expo-router";
 import { ArrowLeft, Edit2, Phone, User } from "lucide-react-native";
 import React, { useEffect, useRef, useState } from "react";
-import { Alert, StatusBar, Text, TouchableOpacity, View } from "react-native";
+import { Alert, StatusBar, Text, TouchableOpacity, View } from "@/components/localized-native";
 import { createUserWithEmailAndPassword, deleteUser, updateProfile } from "firebase/auth";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { userApi } from "../../api/users";
@@ -11,6 +11,7 @@ import {
   createRegistrationAccount,
   registrationErrorMessage,
 } from "../../utils/registration-workflow";
+import { getActiveLanguage } from "../../localization/i18n";
 
 export default function ConfirmPhoneScreen() {
   const router = useRouter();
@@ -37,7 +38,7 @@ export default function ConfirmPhoneScreen() {
             (await createUserWithEmailAndPassword(auth, accountEmail, accountPassword)).user,
           updateAuthProfile: (user, displayName) => updateProfile(user, { displayName }),
           createBackendProfile: (profileName, profilePhone) =>
-            userApi.create({ name: profileName, phone: profilePhone }),
+            userApi.create({ name: profileName, phone: profilePhone, language: getActiveLanguage() }),
           deleteAuthUser: deleteUser,
         },
       );

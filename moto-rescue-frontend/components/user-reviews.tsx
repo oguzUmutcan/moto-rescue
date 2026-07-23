@@ -2,10 +2,11 @@ import { Search, Star } from "lucide-react-native";
 import { useRouter } from "expo-router";
 import type { Href } from "expo-router";
 import React, { useEffect, useState } from "react";
-import { ScrollView, Text, TouchableOpacity, View } from "react-native";
+import { ScrollView, Text, TouchableOpacity, View } from "@/components/localized-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Review, reviewApi } from "../api/reviews";
 import ProfileAvatar from "./profile-avatar";
+import { formatDate } from "../localization/i18n";
 
 type ReviewMode = "given" | "received";
 
@@ -96,7 +97,7 @@ export default function UserReviews({ mode }: UserReviewsProps) {
                     ))}
                   </View>
                 </View>
-                <Text className="text-[11px] text-[#AEAEB2]">{new Date(review.createdAt).toLocaleDateString()}</Text>
+                <Text className="text-[11px] text-[#AEAEB2]">{formatDate(review.createdAt)}</Text>
               </View>
               {!!review.comment && <Text className="text-[14px] text-[#3C3C43] leading-5 mt-3">{review.comment}</Text>}
             </View>

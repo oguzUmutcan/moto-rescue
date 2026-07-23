@@ -2,7 +2,7 @@ import * as ImagePicker from "expo-image-picker";
 import { getMetadata, ref, uploadBytes } from "firebase/storage";
 import { CheckCircle, UploadCloud } from "lucide-react-native";
 import React, { useEffect, useState } from "react";
-import { ActivityIndicator, Alert, Text, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Alert, Text, TouchableOpacity, View } from "@/components/localized-native";
 import { userApi, UserProfile } from "../api/users";
 import { auth, storage } from "../config/firebase";
 

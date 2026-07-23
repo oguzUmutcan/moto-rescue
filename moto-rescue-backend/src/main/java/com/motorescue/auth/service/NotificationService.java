@@ -62,7 +62,7 @@ public class NotificationService {
                     .forEach(biker -> send(
                             biker.getId(),
                             biker.getString("expoPushToken"),
-                            "New rescue nearby",
+                            localized(biker.getString("language"), "New rescue nearby"),
                             rescue.pickupLabel(),
                             Map.of("type", "rescue_request", "role", "biker", "requestId", rescue.id())
                     ));
@@ -123,7 +123,14 @@ public class NotificationService {
         try {
             DocumentSnapshot user = firestore.collection("users").document(uid).get().get();
             if (!user.exists() || !acceptsNotifications(user)) return;
-            send(uid, user.getString("expoPushToken"), title, body, data);
+            String language = user.getString("language");
+            send(
+                    uid,
+                    user.getString("expoPushToken"),
+                    localized(language, title),
+                    localized(language, body),
+                    data
+            );
         } catch (InterruptedException exception) {
             Thread.currentThread().interrupt();
             LOGGER.warn("Interrupted while loading push recipient {}", uid, exception);
@@ -302,5 +309,24 @@ public class NotificationService {
     }
 
     record PushResult(String ticketId, String message, String error) {
+    }
+
+    static String localized(String language, String message) {
+        if (!"tr".equals(language) || message == null) return message;
+        return switch (message) {
+            case "New rescue nearby" -> "Yakında yeni yardım talebi";
+            case "Biker accepted your request" -> "Motosikletçi talebinizi kabul etti";
+            case "Your biker is on the way." -> "Motosikletçiniz yolda.";
+            case "Ride started" -> "Yolculuk başladı";
+            case "Your rescue ride is now in progress." -> "Yardım yolculuğunuz başladı.";
+            case "Ride completed" -> "Yolculuk tamamlandı";
+            case "Please review your biker when you have a moment." ->
+                    "Uygun olduğunuzda motosikletçinizi değerlendirin.";
+            case "Rescue cancelled" -> "Yardım iptal edildi";
+            case "The passenger cancelled this rescue request." -> "Yolcu yardım talebini iptal etti.";
+            default -> message.endsWith(" is on the way.")
+                    ? message.substring(0, message.length() - " is on the way.".length()) + " yolda."
+                    : message;
+        };
     }
 }

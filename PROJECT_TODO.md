@@ -2,6 +2,11 @@
 
 ## Immediate validation
 
+- [x] Add complete English/Turkish language preferences:
+  - [x] Let users choose a language on the first onboarding screen and in both profile/settings screens.
+  - [x] Apply language changes immediately across screens, alerts, placeholders, navigation labels, dates, errors, and push notifications.
+  - [x] Persist the preference locally and restore the account preference from Firestore after sign-in.
+  - [x] Fall back to the device language before an account can be identified after a clean reinstall.
 - [x] Install the latest EAS development APK on a physical Android device and emulator.
 - [x] Confirm that a rescue push notification reaches the physical Android device.
 - [x] Fix passenger active-rescue restoration when returning to the dashboard:

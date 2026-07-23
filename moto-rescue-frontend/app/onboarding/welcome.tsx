@@ -1,8 +1,9 @@
 import React from "react";
-import { Text, TouchableOpacity, View } from "react-native";
+import { Text, TouchableOpacity, View } from "@/components/localized-native";
 // In Expo, install and import from 'lucide-react-native'
 import { useRouter } from "expo-router";
 import { ChevronRight, Zap } from "lucide-react-native";
+import LanguageSelector from "@/components/language-selector";
 
 export default function WelcomeScreen({
   onNext,
@@ -64,6 +65,9 @@ export default function WelcomeScreen({
 
       {/* Bottom Button Area */}
       <View className="px-6 pb-7">
+        <View className="mb-3">
+          <LanguageSelector />
+        </View>
         <TouchableOpacity
           onPress={handleNext}
           activeOpacity={0.8}

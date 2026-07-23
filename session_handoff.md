@@ -1,5 +1,21 @@
 ﻿# MotoRescue Session Handoff
 
+## 23 Temmuz 2026 - English/Turkish Localization
+
+- English and Turkish can now be selected on the first onboarding screen and in
+  both passenger and biker profile/settings screens. Changes apply immediately.
+- The selected language is stored in SecureStore and in each Firestore user
+  profile. Existing profiles without the field are migrated on their next login.
+- After a clean reinstall, the app initially uses the device language because
+  Android removes app-local SecureStore data; the saved Firestore preference is
+  restored as soon as the user signs in.
+- Screens, tabs, alerts, placeholders, dates, Firebase/backend errors, and
+  server-generated rescue push notifications are localized.
+- Validation passed: 10 frontend tests, 22 backend tests, TypeScript, lint, Expo
+  Doctor 18/18, Android Metro export, and `git diff --check`.
+- The backend was restarted from `C:\src\MotoRescue` and is listening on port
+  8083 with PID `29052`.
+
 ## 23 Temmuz 2026 - Rescue Restoration and Push Reliability
 
 - Authoritative checkout remains `C:\src\MotoRescue`; do not run native Android

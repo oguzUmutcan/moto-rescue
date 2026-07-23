@@ -1,7 +1,7 @@
 import { useRouter } from "expo-router";
 import { ArrowLeft, Check } from "lucide-react-native";
 import React, { useState } from "react";
-import { Alert, Text, TouchableOpacity, View } from "react-native";
+import { Alert, Text, TouchableOpacity, View } from "@/components/localized-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 // --- FIREBASE IMPORTS ---

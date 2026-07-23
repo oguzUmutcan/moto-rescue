@@ -8,17 +8,21 @@ import { auth } from "@/config/firebase";
 import { userApi } from "@/api/users";
 import { addNotificationResponseListener, registerPushNotifications, unregisterPushNotifications } from "@/utils/push-notifications";
 import { notificationRoute, profileRoute } from "@/utils/app-routing";
+import { LanguageProvider, useLanguage } from "@/localization/language-context";
 
-export default function RootLayout() {
+function RootNavigator() {
   const router = useRouter();
+  const { ready: languageReady, syncAccountLanguage } = useLanguage();
   const lastNotificationNavigation = useRef<{ key: string; handledAt: number } | null>(null);
   const notificationNavigationHandled = useRef(false);
 
   useEffect(() => {
+    if (!languageReady) return;
     const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
       if (!user) return;
       userApi.get()
         .then(async (profile) => {
+          await syncAccountLanguage(profile.language);
           if (profile.notificationsEnabled) {
             await registerPushNotifications();
           } else {
@@ -53,11 +57,17 @@ export default function RootLayout() {
       unsubscribeAuth();
       subscription.remove();
     };
-  }, [router]);
+  }, [languageReady, router, syncAccountLanguage]);
 
+  return <Stack screenOptions={{ headerShown: false }} />;
+}
+
+export default function RootLayout() {
   return (
-    <RegistrationProvider>
-      <Stack screenOptions={{ headerShown: false }} />
-    </RegistrationProvider>
+    <LanguageProvider>
+      <RegistrationProvider>
+        <RootNavigator />
+      </RegistrationProvider>
+    </LanguageProvider>
   );
 }

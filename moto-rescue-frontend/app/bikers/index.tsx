@@ -8,7 +8,7 @@ import {
   TouchableOpacity,
   View,
   ScrollView,
-} from "react-native";
+} from "@/components/localized-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { bikerApi, PublicBikerSummary } from "@/api/bikers";

@@ -10,7 +10,7 @@ import {
   Text,
   TouchableOpacity,
   View,
-} from "react-native";
+} from "@/components/localized-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import LocationMap from "../../../components/location-map";
 import type { LocationMapHandle, MapRegion } from "../../../components/location-map.types";

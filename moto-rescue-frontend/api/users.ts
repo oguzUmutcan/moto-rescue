@@ -1,7 +1,7 @@
 import { apiRequest } from "./client";
 
 export type UserProfile = {
-  uid: string; name: string; email: string; phone: string; phoneVerified: boolean;
+  uid: string; name: string; email: string; phone: string; phoneVerified: boolean; language: "en" | "tr" | null;
   role: "passenger" | "biker" | null; emergencyContact: string | null;
   profileEmoji: string | null; bio: string | null; profilePhotoPath: string | null; plateNumber: string | null;
   motorcycleModel: string | null; motorcycleColor: string | null;
@@ -13,11 +13,11 @@ export type UserProfile = {
 
 export type ProfileUpdate = Partial<Pick<UserProfile,
   "name" | "phone" | "emergencyContact" | "profileEmoji" | "bio" | "plateNumber" |
-  "motorcycleModel" | "motorcycleColor" | "availableDays" | "online" | "notificationsEnabled"
+  "motorcycleModel" | "motorcycleColor" | "availableDays" | "online" | "notificationsEnabled" | "language"
 >>;
 
 export const userApi = {
-  create: (input: { name: string; phone: string }) =>
+  create: (input: { name: string; phone: string; language?: "en" | "tr" }) =>
     apiRequest<UserProfile>("/api/users/me", { method: "POST", body: JSON.stringify(input) }),
   get: () => apiRequest<UserProfile>("/api/users/me"),
   setRole: (role: "passenger" | "biker") =>

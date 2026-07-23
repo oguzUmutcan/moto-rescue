@@ -1,14 +1,15 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { ArrowLeft, ShieldCheck, Star } from "lucide-react-native";
 import React, { useEffect, useState } from "react";
-import { ActivityIndicator, ScrollView, Text, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, ScrollView, Text, TouchableOpacity, View } from "@/components/localized-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { bikerApi, PublicBikerProfile } from "@/api/bikers";
 import ProfileAvatar from "@/components/profile-avatar";
+import { formatDate } from "@/localization/i18n";
 
 function formattedDate(value: string | null) {
-  return value ? new Date(value).toLocaleDateString() : "Date unavailable";
+  return value ? formatDate(value) : "Date unavailable";
 }
 
 export default function PublicBikerProfileScreen() {

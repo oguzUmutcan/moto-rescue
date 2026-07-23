@@ -1,6 +1,6 @@
 import { getDownloadURL, ref } from "firebase/storage";
 import React, { useEffect, useState } from "react";
-import { Image, Text, View } from "react-native";
+import { Image, Text, View } from "@/components/localized-native";
 import { storage } from "../config/firebase";
 
 type ProfileAvatarProps = {

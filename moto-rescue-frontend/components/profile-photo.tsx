@@ -1,7 +1,7 @@
 import * as ImagePicker from "expo-image-picker";
 import { deleteObject, getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import React, { useEffect, useState } from "react";
-import { ActivityIndicator, Alert, Image, Text, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Alert, Image, Text, TouchableOpacity, View } from "@/components/localized-native";
 import { userApi } from "../api/users";
 import { auth, storage } from "../config/firebase";
 

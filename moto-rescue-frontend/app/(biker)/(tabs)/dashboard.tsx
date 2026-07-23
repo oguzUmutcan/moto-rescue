@@ -5,7 +5,7 @@ import { getAvailablePosition } from "../../../utils/device-location";
 import { onAuthStateChanged } from "firebase/auth";
 import { Navigation2 } from "lucide-react-native";
 import React, { useEffect, useRef, useState } from "react";
-import { Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Alert, StyleSheet, Text, TouchableOpacity, View } from "@/components/localized-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { auth } from "../../../config/firebase";
 import LocationMap from "../../../components/location-map";

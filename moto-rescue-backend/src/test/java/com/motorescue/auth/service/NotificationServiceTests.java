@@ -53,4 +53,11 @@ class NotificationServiceTests {
 
         assertThat(result.error()).isEqualTo("MalformedExpoResponse");
     }
+
+    @Test
+    void localizesPushMessagesForTurkishRecipients() {
+        assertThat(NotificationService.localized("tr", "Ride started")).isEqualTo("Yolculuk başladı");
+        assertThat(NotificationService.localized("tr", "Ayşe is on the way.")).isEqualTo("Ayşe yolda.");
+        assertThat(NotificationService.localized("en", "Ride started")).isEqualTo("Ride started");
+    }
 }

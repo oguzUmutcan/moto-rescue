@@ -1,9 +1,10 @@
 import { MapPin } from "lucide-react-native";
 import React, { useEffect, useMemo, useState } from "react";
-import { ScrollView, Text, TouchableOpacity, View } from "react-native";
+import { ScrollView, Text, TouchableOpacity, View } from "@/components/localized-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { RescueRequest, rescueApi } from "../../../api/rescues";
 import ProfileAvatar from "../../../components/profile-avatar";
+import { formatDateTime } from "../../../localization/i18n";
 
 type Ride = RescueRequest & { durationMinutes: number | null; distanceKm: number };
 
@@ -52,7 +53,7 @@ export default function BikerHistoryScreen() {
       <ScrollView className="flex-1 px-4 pt-4" contentContainerStyle={{ paddingBottom: 24 }}>
         {visibleRides.length === 0 && <View className="bg-white rounded-2xl p-7"><Text className="text-center text-[#8E8E93]">No rescue history in this category.</Text></View>}
         {visibleRides.map((ride) => <View key={ride.id} className="bg-white rounded-2xl p-4 mb-3 shadow-sm">
-          <View className={`flex-row items-center justify-between ${ride.status === "completed" ? "mb-3" : ""}`}><Text className="text-[12px] text-[#8E8E93] font-semibold">{new Date(ride.createdAt).toLocaleString()}</Text>{ride.status === "completed" ? <Text className="text-[13px] font-black text-[#34C759]">+50 XP</Text> : <Text className="text-[11px] font-black text-[#FF3B30]">Cancelled</Text>}</View>
+          <View className={`flex-row items-center justify-between ${ride.status === "completed" ? "mb-3" : ""}`}><Text className="text-[12px] text-[#8E8E93] font-semibold">{formatDateTime(ride.createdAt)}</Text>{ride.status === "completed" ? <Text className="text-[13px] font-black text-[#34C759]">+50 XP</Text> : <Text className="text-[11px] font-black text-[#FF3B30]">Cancelled</Text>}</View>
           {ride.status === "completed" && <><View className="flex-row items-center gap-3 mb-3"><ProfileAvatar storagePath={ride.passengerProfilePhotoPath} size={40} fallbackEmoji="🙋" /><View><Text className="text-[14px] font-black text-[#1C1C1E]">{ride.passengerName}</Text><Text className="text-[12px] text-[#8E8E93] mt-0.5">{ride.urgency} · {ride.durationMinutes ? `⏱ ${ride.durationMinutes} min` : "Duration unavailable"} · {ride.distanceKm.toFixed(1)} km</Text></View></View><View className="border-t border-[#F2F2F7] pt-3"><View className="flex-row items-center gap-2"><View className="w-2 h-2 rounded-full bg-[#007AFF]" /><Text className="text-[12px] text-[#1C1C1E]">{ride.pickupLabel}</Text></View><View className="flex-row items-center gap-2 mt-1.5"><MapPin size={10} color="#FF3B30" /><Text className="text-[12px] font-semibold text-[#1C1C1E]">{ride.destinationLabel}</Text></View></View></>}
         </View>)}
       </ScrollView>

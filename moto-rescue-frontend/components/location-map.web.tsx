@@ -1,5 +1,5 @@
 import React, { forwardRef, useImperativeHandle } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "@/components/localized-native";
 import type { LocationMapHandle, LocationMapProps } from "./location-map.types";
 
 const LocationMap = forwardRef<LocationMapHandle, LocationMapProps>((_props, ref) => {

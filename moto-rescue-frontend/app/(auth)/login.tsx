@@ -12,7 +12,7 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-} from "react-native";
+} from "@/components/localized-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 // --- CENTRAL FIREBASE IMPORTS ---

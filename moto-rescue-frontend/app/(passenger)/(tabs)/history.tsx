@@ -1,10 +1,11 @@
 import { MapPin, Star } from "lucide-react-native";
 import React, { useEffect, useState } from "react";
-import { ScrollView, Text, TouchableOpacity, View } from "react-native";
+import { ScrollView, Text, TouchableOpacity, View } from "@/components/localized-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { rescueApi } from "../../../api/rescues";
 import { reviewApi } from "../../../api/reviews";
 import ProfileAvatar from "../../../components/profile-avatar";
+import { formatDateTime } from "../../../localization/i18n";
 
 type PassengerRide = {
   id: string;
@@ -27,7 +28,7 @@ export default function PassengerHistoryScreen() {
       const ratings = new Map(reviews.map((review) => [review.rescueId, review.rating]));
       setRides(items.filter((item) => item.status === "completed" || item.status === "cancelled").map((item) => ({
         id: item.id,
-        date: new Date(item.createdAt).toLocaleString(),
+        date: formatDateTime(item.createdAt),
         from: item.pickupLabel,
         to: item.destinationLabel,
         biker: item.bikerName,

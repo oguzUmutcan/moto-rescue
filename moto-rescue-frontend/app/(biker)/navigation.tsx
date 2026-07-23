@@ -2,7 +2,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { useIsFocused } from "@react-navigation/native";
 import { ExternalLink, MapPin } from "lucide-react-native";
 import React, { useEffect, useRef, useState } from "react";
-import { Alert, Linking, Platform, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { Alert, Linking, Platform, Text, TextInput, TouchableOpacity, View } from "@/components/localized-native";
 import { rescueApi, RescueRequest } from "../../api/rescues";
 import ProfileAvatar from "../../components/profile-avatar";
 import { badgeApi } from "../../api/badges";

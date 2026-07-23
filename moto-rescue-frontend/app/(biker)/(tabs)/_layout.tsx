@@ -1,10 +1,12 @@
 import { Tabs } from "expo-router";
 import React from "react";
-import { Text } from "react-native";
+import { Text } from "@/components/localized-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useLanguage } from "@/localization/language-context";
 
 export default function BikerTabsLayout() {
   const insets = useSafeAreaInsets();
+  const { t } = useLanguage();
 
   return (
     <Tabs
@@ -31,7 +33,7 @@ export default function BikerTabsLayout() {
       <Tabs.Screen
         name="dashboard"
         options={{
-          title: "Map",
+          title: t("Map"),
           tabBarIcon: ({ focused }) => (
             <Text style={{ fontSize: 22, opacity: focused ? 1 : 0.4 }}>🗺️</Text>
           ),
@@ -40,7 +42,7 @@ export default function BikerTabsLayout() {
       <Tabs.Screen
         name="history"
         options={{
-          title: "History",
+          title: t("History"),
           tabBarIcon: ({ focused }) => (
             <Text style={{ fontSize: 22, opacity: focused ? 1 : 0.4 }}>📋</Text>
           ),
@@ -49,7 +51,7 @@ export default function BikerTabsLayout() {
       <Tabs.Screen
         name="badges"
         options={{
-          title: "Badges",
+          title: t("Badges"),
           tabBarIcon: ({ focused }) => (
             <Text style={{ fontSize: 22, opacity: focused ? 1 : 0.4 }}>🏆</Text>
           ),
@@ -58,7 +60,7 @@ export default function BikerTabsLayout() {
       <Tabs.Screen
         name="reviews"
         options={{
-          title: "Reviews",
+          title: t("Reviews"),
           tabBarIcon: ({ focused }) => (
             <Text style={{ fontSize: 22, opacity: focused ? 1 : 0.4 }}>⭐</Text>
           ),
@@ -67,7 +69,7 @@ export default function BikerTabsLayout() {
       <Tabs.Screen
         name="profile"
         options={{
-          title: "Profile",
+          title: t("Profile"),
           tabBarIcon: ({ focused }) => (
             <Text style={{ fontSize: 22, opacity: focused ? 1 : 0.4 }}>👤</Text>
           ),
