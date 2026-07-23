@@ -87,7 +87,13 @@ export function LanguageProvider({ children }: PropsWithChildren) {
   }, []);
 
   const value = useMemo(
-    () => ({ ready, language, setLanguage, syncAccountLanguage, t: translate }),
+    () => ({
+      ready,
+      language,
+      setLanguage,
+      syncAccountLanguage,
+      t: (value: string | null | undefined) => translate(value, language),
+    }),
     [ready, language, setLanguage, syncAccountLanguage],
   );
 

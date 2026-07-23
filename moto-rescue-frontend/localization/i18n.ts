@@ -475,16 +475,16 @@ const tr: Record<string, string> = {
   "The upload could not be completed. Please try again.": "Yükleme tamamlanamadı. Lütfen tekrar deneyin.",
 };
 
-function translateDynamic(value: string) {
-  if (activeLanguage !== "tr") return value;
+function translateDynamic(value: string, language: Language) {
+  if (language !== "tr") return value;
   const patterns: [RegExp, (...matches: string[]) => string][] = [
     [/^(\d+) reviews? received$/, (count) => `${count} değerlendirme alındı`],
     [/^(\d+) reviews? submitted$/, (count) => `${count} değerlendirme gönderildi`],
     [/^(\d+) reviews? · (\d+) rescues$/, (reviews, rescues) => `${reviews} değerlendirme · ${rescues} yardım`],
     [/^(\d+) rescues$/, (count) => `${count} yardım`],
     [/^Request failed \((\d+)\)$/, (status) => `İstek başarısız (${status})`],
-    [/^(.+) address could not be found\. Please enter a more specific address\.$/, (field) => `${translate(field)} adresi bulunamadı. Lütfen daha ayrıntılı bir adres girin.`],
-    [/^Member since (.+)$/, (date) => `${translate("Member since")} ${date}`],
+    [/^(.+) address could not be found\. Please enter a more specific address\.$/, (field) => `${translate(field, language)} adresi bulunamadı. Lütfen daha ayrıntılı bir adres girin.`],
+    [/^Member since (.+)$/, (date) => `${translate("Member since", language)} ${date}`],
     [/^(.+) Rescuer (.+)$/, (level, emoji) => `${level} Kurtarıcı ${emoji}`],
     [/^(\d+) stars$/, (count) => `${count} yıldız`],
     [/^(\d+) XP to (.+)$/, (xp, level) => `${level} seviyesine ${xp} XP kaldı`],
@@ -498,12 +498,15 @@ function translateDynamic(value: string) {
   return value;
 }
 
-export function translate(value: string | null | undefined): string {
-  if (value == null || activeLanguage === "en") return value ?? "";
+export function translate(
+  value: string | null | undefined,
+  language: Language = activeLanguage,
+): string {
+  if (value == null || language === "en") return value ?? "";
   const trimmed = value.trim();
   if (!trimmed) return value;
   const normalized = trimmed.replace(/\s+/g, " ");
-  const translated = tr[trimmed] ?? tr[normalized] ?? translateDynamic(normalized);
+  const translated = tr[trimmed] ?? tr[normalized] ?? translateDynamic(normalized, language);
   if (translated === normalized) return value;
   const start = value.slice(0, value.indexOf(trimmed));
   const end = value.slice(value.indexOf(trimmed) + trimmed.length);
@@ -514,10 +517,14 @@ export function hasTurkishTranslation(value: string) {
   return Object.prototype.hasOwnProperty.call(tr, value.trim().replace(/\s+/g, " "));
 }
 
-export function translateError(value: string | null | undefined, fallback = "Something went wrong. Please try again.") {
-  if (!value) return translate(fallback);
-  const localized = translate(value);
-  if (activeLanguage === "en" || localized !== value) return localized;
+export function translateError(
+  value: string | null | undefined,
+  fallback = "Something went wrong. Please try again.",
+  language: Language = activeLanguage,
+) {
+  if (!value) return translate(fallback, language);
+  const localized = translate(value, language);
+  if (language === "en" || localized !== value) return localized;
 
   const codeMessages: [RegExp, string][] = [
     [/auth\/email-already-in-use/i, "This email address is already in use."],
@@ -531,7 +538,7 @@ export function translateError(value: string | null | undefined, fallback = "Som
     [/storage\/(?:retry-limit-exceeded|unknown)/i, "The upload could not be completed. Please try again."],
   ];
   const match = codeMessages.find(([pattern]) => pattern.test(value));
-  return translate(match?.[1] ?? fallback);
+  return translate(match?.[1] ?? fallback, language);
 }
 
 export function formatDate(
