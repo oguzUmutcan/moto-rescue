@@ -29,7 +29,7 @@
 - [ ] Archive or remove the obsolete Desktop checkout after all intended changes are confirmed in the short checkout.
 - [x] Keep APKs and backend log files out of commits.
 - [x] Add an `.easignore` to exclude generated and unnecessary files from EAS uploads.
-- [ ] Commit and push the intended changes on the feature branch, not `master`.
+- [x] Commit and push the intended changes on the feature branch, not `master`.
 
 ## Dependencies and quality
 
