@@ -9,6 +9,7 @@ import { badgeApi } from "../../api/badges";
 import LocationMap from "../../components/location-map";
 import type { LocationMapHandle } from "../../components/location-map.types";
 import * as Location from "expo-location";
+import { KeyboardStickyView } from "react-native-keyboard-controller";
 
 export default function BikerNavigationScreen() {
   const router = useRouter();
@@ -181,7 +182,7 @@ export default function BikerNavigationScreen() {
         <Text className="text-[13px] text-white/90 font-bold mt-1">{inProgress ? "Passenger is on board" : "Passenger is waiting"}</Text>
       </View>
 
-      <View className="absolute bottom-0 left-0 right-0 bg-white rounded-t-[28px] px-5 pt-5 pb-9 shadow-2xl">
+      <KeyboardStickyView className="absolute bottom-0 left-0 right-0 bg-white rounded-t-[28px] px-5 pt-5 pb-9 shadow-2xl">
         <View className="flex-row items-center mb-4">
           <ProfileAvatar storagePath={request.passengerProfilePhotoPath} fallbackEmoji="🙋" />
           <View className="ml-3 flex-1"><Text className="text-[18px] font-black text-[#1C1C1E]">{request.passengerName}</Text><Text className="text-[13px] text-[#8E8E93]">{request.urgency} · {request.needsHelmet ? "Helmet requested" : "No helmet needed"}</Text></View>
@@ -221,7 +222,7 @@ export default function BikerNavigationScreen() {
         <TouchableOpacity onPress={confirmAction} disabled={busy} className={`h-14 rounded-2xl items-center justify-center ${inProgress ? "bg-[#34C759]" : "bg-[#007AFF]"}`}>
           <Text className="text-white text-[18px] font-black">{busy ? "Updating..." : inProgress ? "✓ Complete Ride" : "🏍️ Start Ride"}</Text>
         </TouchableOpacity>
-      </View>
+      </KeyboardStickyView>
     </View>
   );
 }

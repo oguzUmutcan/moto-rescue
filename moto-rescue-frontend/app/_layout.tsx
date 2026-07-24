@@ -1,6 +1,7 @@
 import { Stack, useRouter } from "expo-router";
 import { onAuthStateChanged } from "firebase/auth";
 import { useEffect, useRef } from "react";
+import { KeyboardProvider } from "react-native-keyboard-controller";
 
 import "@/global.css";
 import { RegistrationProvider } from "@/contexts/registration";
@@ -67,10 +68,12 @@ function RootNavigator() {
 
 export default function RootLayout() {
   return (
-    <LanguageProvider>
-      <RegistrationProvider>
-        <RootNavigator />
-      </RegistrationProvider>
-    </LanguageProvider>
+    <KeyboardProvider>
+      <LanguageProvider>
+        <RegistrationProvider>
+          <RootNavigator />
+        </RegistrationProvider>
+      </LanguageProvider>
+    </KeyboardProvider>
   );
 }

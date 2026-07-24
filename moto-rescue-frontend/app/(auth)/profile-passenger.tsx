@@ -5,9 +5,7 @@ import {
   Alert,
   FlatList,
   Keyboard,
-  KeyboardAvoidingView,
   Modal,
-  Platform,
   ScrollView,
   Text,
   TextInput,
@@ -15,6 +13,7 @@ import {
   View,
 } from "@/components/localized-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { COUNTRIES } from "../../constants/countries";
 
 // --- FIREBASE IMPORTS ---
@@ -130,10 +129,7 @@ export default function ProfilePassengerScreen() {
         paddingBottom: insets?.bottom > 0 ? insets.bottom : 24,
       }}
     >
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-        className="flex-1"
-      >
+      <View className="flex-1">
         <View className="flex-row items-center justify-between px-2 pt-2 pb-3 border-b border-[#F2F2F7]">
           <TouchableOpacity
             onPress={() => router.back()}
@@ -149,7 +145,8 @@ export default function ProfilePassengerScreen() {
           <View className="w-12" />
         </View>
 
-        <ScrollView
+        <KeyboardAwareScrollView
+          bottomOffset={16}
           className="flex-1 px-6 pt-6"
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
@@ -272,7 +269,7 @@ export default function ProfilePassengerScreen() {
               info is never shared publicly.
             </Text>
           </View>
-        </ScrollView>
+        </KeyboardAwareScrollView>
 
         <View className="px-6 pb-2 pt-4 bg-white border-t border-[#F2F2F7]/50">
           <TouchableOpacity
@@ -286,7 +283,7 @@ export default function ProfilePassengerScreen() {
             </Text>
           </TouchableOpacity>
         </View>
-      </KeyboardAvoidingView>
+      </View>
 
       {}
       {/* Emoji Picker Modal */}

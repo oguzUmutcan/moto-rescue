@@ -7,7 +7,6 @@ import {
   KeyboardAvoidingView,
   Modal,
   Platform,
-  ScrollView,
   StatusBar,
   Text,
   TextInput,
@@ -16,6 +15,7 @@ import {
 } from "@/components/localized-native";
 import { Image } from "expo-image";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 
 // --- CENTRAL FIREBASE IMPORTS ---
 import {
@@ -121,11 +121,12 @@ export default function LoginScreen() {
       }}
     >
       <StatusBar barStyle="dark-content" />
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-        className="flex-1"
-      >
-        <ScrollView contentContainerStyle={{ flexGrow: 1 }} keyboardShouldPersistTaps="handled">
+      <View className="flex-1">
+        <KeyboardAwareScrollView
+          bottomOffset={16}
+          contentContainerStyle={{ flexGrow: 1 }}
+          keyboardShouldPersistTaps="handled"
+        >
           <View className="px-6 pt-4 mb-6">
             <TouchableOpacity
               onPress={() => router.back()}
@@ -224,8 +225,8 @@ export default function LoginScreen() {
               </TouchableOpacity>
             </View>
           </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
+        </KeyboardAwareScrollView>
+      </View>
 
       {}
       <Modal
