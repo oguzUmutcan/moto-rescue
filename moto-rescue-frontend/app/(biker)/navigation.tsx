@@ -17,6 +17,7 @@ export default function BikerNavigationScreen() {
   const mapRef = useRef<LocationMapHandle>(null);
   const cancellationHandled = useRef(false);
   const [request, setRequest] = useState<RescueRequest | null>(null);
+  const [etaDetails, setEtaDetails] = useState<{ minutes: number; distanceKm: number } | null>(null);
   const [busy, setBusy] = useState(false);
   const [boardingCode, setBoardingCode] = useState("");
 
@@ -155,10 +156,27 @@ export default function BikerNavigationScreen() {
   const target = { latitude: targetLatitude, longitude: targetLongitude };
   return (
     <View className="flex-1 bg-[#E5EBF0]">
-      <LocationMap ref={mapRef} initialRegion={{ ...target, latitudeDelta: 0.025, longitudeDelta: 0.025 }} selectedCoordinate={target} />
+      <LocationMap 
+        ref={mapRef} 
+        initialRegion={{ ...target, latitudeDelta: 0.025, longitudeDelta: 0.025 }} 
+        selectedCoordinate={target}
+        bikerCoordinate={request.bikerLatitude !== null && request.bikerLongitude !== null ? {
+          latitude: request.bikerLatitude,
+          longitude: request.bikerLongitude,
+        } : null}
+        routeOrigin={request.bikerLatitude !== null && request.bikerLongitude !== null ? {
+          latitude: request.bikerLatitude,
+          longitude: request.bikerLongitude,
+        } : null}
+        routeDestination={target}
+        onEtaChange={(minutes, distanceKm) => setEtaDetails({ minutes, distanceKm })}
+      />
 
       <View className={`absolute top-0 left-0 right-0 pt-14 px-5 pb-5 shadow-lg ${inProgress ? "bg-[#34C759]" : "bg-[#007AFF]"}`}>
-        <Text className="text-[12px] text-white/70 font-black tracking-widest uppercase">{inProgress ? "En route to destination" : "Head to pickup"}</Text>
+        <Text className="text-[12px] text-white/70 font-black tracking-widest uppercase">
+          {inProgress ? "En route to destination" : "Head to pickup"}
+          {etaDetails ? ` • ${Math.ceil(etaDetails.minutes)} min (${etaDetails.distanceKm.toFixed(1)} km)` : ""}
+        </Text>
         <Text className="text-[22px] font-black text-white mt-1" numberOfLines={2}>{targetLabel}</Text>
         <Text className="text-[13px] text-white/90 font-bold mt-1">{inProgress ? "Passenger is on board" : "Passenger is waiting"}</Text>
       </View>
