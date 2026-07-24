@@ -1,7 +1,7 @@
 // Note: This code is strictly for the Expo React Native environment.
 // Please ignore any web preview build errors for missing native dependencies.
 import { useRouter } from "expo-router";
-import { ArrowLeft, ChevronDown, Eye, EyeOff, X } from "lucide-react-native";
+import { ArrowLeft, ChevronDown, Eye, EyeOff, Lock, Mail, User, X } from "lucide-react-native";
 import React, { useState } from "react";
 import {
   FlatList,
@@ -97,28 +97,36 @@ export default function RegisterScreen() {
           <Text className="text-[12px] font-bold text-[#8E8E93] tracking-wider uppercase mb-2">
             Full Name
           </Text>
-          <TextInput
-            className="w-full h-14 bg-[#F2F2F7] rounded-[14px] px-4 text-[16px] text-[#1C1C1E] font-medium"
-            placeholder="Type your full name"
-            placeholderTextColor="#C7C7CC"
-            value={name}
-            onChangeText={setName}
-          />
+          <View className="flex-row items-center bg-[#F2F2F7] rounded-[14px] px-4 h-14">
+            <User size={20} color="#8E8E93" />
+            <TextInput
+              className="flex-1 ml-3 text-[16px] text-[#1C1C1E] font-medium"
+              placeholder="Type your full name"
+              placeholderTextColor="#C7C7CC"
+              value={name}
+              onChangeText={setName}
+              autoCapitalize="words"
+              keyboardType="default"
+            />
+          </View>
         </View>
 
         <View className="mb-4">
           <Text className="text-[12px] font-bold text-[#8E8E93] tracking-wider uppercase mb-2">
             Email Address
           </Text>
-          <TextInput
-            className="w-full h-14 bg-[#F2F2F7] rounded-[14px] px-4 text-[16px] text-[#1C1C1E] font-medium"
-            placeholder="name@example.com"
-            placeholderTextColor="#C7C7CC"
-            keyboardType="email-address"
-            autoCapitalize="none"
-            value={email}
-            onChangeText={setEmail}
-          />
+          <View className="flex-row items-center bg-[#F2F2F7] rounded-[14px] px-4 h-14">
+            <Mail size={20} color="#8E8E93" />
+            <TextInput
+              className="flex-1 ml-3 text-[16px] text-[#1C1C1E] font-medium"
+              placeholder="name@example.com"
+              placeholderTextColor="#C7C7CC"
+              keyboardType="email-address"
+              autoCapitalize="none"
+              value={email}
+              onChangeText={setEmail}
+            />
+          </View>
         </View>
 
         <View className="mb-4">
@@ -126,8 +134,9 @@ export default function RegisterScreen() {
             Password
           </Text>
           <View className="flex-row items-center bg-[#F2F2F7] rounded-[14px] px-4 h-14">
+            <Lock size={20} color="#8E8E93" />
             <TextInput
-              className="flex-1 text-[16px] text-[#1C1C1E] font-medium"
+              className="flex-1 ml-3 text-[16px] text-[#1C1C1E] font-medium"
               placeholder="Create a strong password"
               placeholderTextColor="#C7C7CC"
               secureTextEntry={!showPassword}

@@ -23,6 +23,7 @@ import { rescueApi } from "../../../api/rescues";
 import { registerPushNotifications, unregisterPushNotifications } from "../../../utils/push-notifications";
 import LanguageSelector from "../../../components/language-selector";
 import { formatDate } from "../../../localization/i18n";
+import LegalModal, { LegalModalType } from "../../../components/legal-modals";
 
 export default function PassengerProfileScreen() {
   const router = useRouter();
@@ -30,6 +31,7 @@ export default function PassengerProfileScreen() {
 
   const [notifs, setNotifs] = useState(true);
   const [nearby, setNearby] = useState(true);
+  const [legalModalType, setLegalModalType] = useState<LegalModalType>(null);
 
   // State for user data
   const [name, setName] = useState("Loading...");
@@ -256,12 +258,13 @@ export default function PassengerProfileScreen() {
         {/* More */}
         <View className="bg-white rounded-2xl mb-5 shadow-sm overflow-hidden">
           {[
-            { e: "❓", label: "Help & Support" },
-            { e: "📄", label: "Terms of Service" },
-            { e: "🔒", label: "Privacy Policy" },
-          ].map(({ e, label }, i) => (
+            { e: "❓", label: "Help & Support", key: "help" as const },
+            { e: "📄", label: "Terms of Service", key: "terms" as const },
+            { e: "🔒", label: "Privacy Policy", key: "privacy" as const },
+          ].map(({ e, label, key }, i) => (
             <TouchableOpacity
-              key={i}
+              key={key}
+              onPress={() => setLegalModalType(key)}
               className={`flex-row items-center px-4 py-3.5 gap-3 ${i > 0 ? "border-t border-[#F2F2F7]" : ""}`}
             >
               <Text className="text-[18px]">{e}</Text>
@@ -272,6 +275,8 @@ export default function PassengerProfileScreen() {
             </TouchableOpacity>
           ))}
         </View>
+
+        <LegalModal type={legalModalType} onClose={() => setLegalModalType(null)} />
 
         <View className="mb-3">
           <LanguageSelector />

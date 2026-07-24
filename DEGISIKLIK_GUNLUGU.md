@@ -1772,3 +1772,9 @@ npm audit --omit=dev --audit-level=moderate  17 moderate; force fix Expo 57 majo
 npx tsc --noEmit    basarili - Expo Go remote push guard sonrasi
 npm run lint        basarili - Expo Go remote push guard sonrasi
 ```
+## 24 Temmuz 2026 - Keyboard Overlay Bug ve Icon Eksiklikleri Giderildi
+- app/(auth)/register.tsx dosyasinda Full Name, Email ve Password input alanlarina eksik olan User, Mail ve Lock iconlari eklendi ve layout flex-row icine alindi.
+- app/(auth)/profile-passenger.tsx dosyasinda Full Name, Contact Phone ve Email Address input alanlarina User, Phone ve Mail iconlari eklendi.
+- app/(auth)/profile-biker.tsx dosyasinda Full Name, Contact Phone, Short Bio, Motorcycle Model, Motorcycle Color ve License Plate Number input alanlarina ilgili (User, Phone, FileText, Bike, Palette, Hash) iconlar eklendi.
+- Tüm güncellenen sayfalardaki input alanlarinda autoCapitalize ve keyboardType attributelari, field türlerine uygun sekilde guncellendi (örn: Isim icin 'words', Email icin 'none'/'email-address').
+
