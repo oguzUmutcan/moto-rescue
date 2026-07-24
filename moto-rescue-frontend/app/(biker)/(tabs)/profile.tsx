@@ -22,6 +22,7 @@ import { RescueRequest, rescueApi } from "../../../api/rescues";
 import { registerPushNotifications, unregisterPushNotifications } from "../../../utils/push-notifications";
 import LanguageSelector from "../../../components/language-selector";
 import { formatDate } from "../../../localization/i18n";
+import LegalModal, { LegalModalType } from "../../../components/legal-modals";
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
@@ -36,6 +37,7 @@ function rescueDistanceKm(ride: RescueRequest) {
 export default function BikerProfileScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const [legalModalType, setLegalModalType] = useState<LegalModalType>(null);
 
   const [available, setAvailable] = useState([
     false,
@@ -365,14 +367,26 @@ export default function BikerProfileScreen() {
               {identityDocumentStatus === "verified" ? "Verified ✓" : identityDocumentStatus === "pending" ? "Pending" : identityDocumentStatus === "rejected" ? "Rejected" : "Upload"}
             </Text>
           </TouchableOpacity>
-          <TouchableOpacity className="flex-row items-center px-4 py-3 gap-3">
-            <Text className="text-[18px]">❓</Text>
-            <Text className="flex-1 text-[15px] text-[#1C1C1E] font-medium">
-              Help & Support
-            </Text>
-            <ChevronRight size={14} color="#C7C7CC" />
-          </TouchableOpacity>
+          {[
+            { e: "❓", label: "Help & Support", key: "help" as const },
+            { e: "📄", label: "Terms of Service", key: "terms" as const },
+            { e: "🔒", label: "Privacy Policy", key: "privacy" as const },
+          ].map(({ e, label, key }) => (
+            <TouchableOpacity
+              key={key}
+              onPress={() => setLegalModalType(key)}
+              className="flex-row items-center px-4 py-3 gap-3 border-t border-[#F2F2F7]"
+            >
+              <Text className="text-[18px]">{e}</Text>
+              <Text className="flex-1 text-[15px] text-[#1C1C1E] font-medium">
+                {label}
+              </Text>
+              <ChevronRight size={14} color="#C7C7CC" />
+            </TouchableOpacity>
+          ))}
         </View>
+
+        <LegalModal type={legalModalType} onClose={() => setLegalModalType(null)} />
 
         <View className="mb-3">
           <LanguageSelector />

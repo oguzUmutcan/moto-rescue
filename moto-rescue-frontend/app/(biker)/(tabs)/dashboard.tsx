@@ -189,7 +189,7 @@ export default function BikerDashboardScreen() {
               && new Date(ride.completedAt).toDateString() === today
             ).length;
             setTodayRescues(String(completedToday));
-            setRating(data.rating?.toString() || "5.0");
+            setRating(data.rating != null ? Number(data.rating).toFixed(1) : "5.0");
             setTotalRescues(data.totalRescues?.toString() || "0");
           } else {
             setName(user.displayName || "Biker");
