@@ -2,6 +2,7 @@ import * as Location from "expo-location";
 import { useRouter } from "expo-router";
 import { useIsFocused } from "@react-navigation/native";
 import { getAvailablePosition } from "../../../utils/device-location";
+import { startBackgroundLocationTracking, stopBackgroundLocationTracking } from "../../../utils/background-location";
 import { onAuthStateChanged } from "firebase/auth";
 import { Navigation2 } from "lucide-react-native";
 import React, { useEffect, useRef, useState } from "react";
@@ -136,30 +137,44 @@ export default function BikerDashboardScreen() {
   }, [activeRequest, online]);
 
   useEffect(() => {
-    if (!online) return;
-    let subscription: Location.LocationSubscription | null = null;
+    if (!online) {
+      void stopBackgroundLocationTracking();
+      return;
+    }
     let active = true;
-    void getAvailablePosition()
-      .then((position) => userApi.updateLocation(position.coords.latitude, position.coords.longitude))
-      .then(() => Location.watchPositionAsync(
-        { accuracy: Location.Accuracy.High, timeInterval: 5000, distanceInterval: 20 },
-        (position) => {
-          if (active) void userApi.updateLocation(position.coords.latitude, position.coords.longitude)
-            .catch((error) => console.error("Could not publish online location", error));
-        },
-      ))
-      .then((value) => { if (active) subscription = value; else value.remove(); })
+    void startBackgroundLocationTracking()
+      .then((success) => {
+        if (!active) return;
+        if (!success) {
+          console.warn("Background location permission denied.");
+          setOnline(false);
+          void userApi.update({ online: false }).catch(() => undefined);
+          Alert.alert(
+            "Location unavailable",
+            "Background location access is required to remain online and accept rescues."
+          );
+        } else {
+          // Immediately send a location ping when going online
+          void getAvailablePosition()
+            .then((position) => userApi.updateLocation(position.coords.latitude, position.coords.longitude))
+            .catch(() => undefined);
+        }
+      })
       .catch((error) => {
         if (!active) return;
-        console.warn("Online location tracking stopped", error);
+        console.warn("Error starting background location tracking", error);
         setOnline(false);
         void userApi.update({ online: false }).catch(() => undefined);
         Alert.alert(
           "Location unavailable",
-          error instanceof Error ? error.message : "Location access is required to remain online.",
+          error instanceof Error ? error.message : "Location access is required to remain online."
         );
       });
-    return () => { active = false; subscription?.remove(); };
+
+    return () => { 
+      active = false; 
+      void stopBackgroundLocationTracking(); 
+    };
   }, [online]);
 
   // 2. Fetch user data and live stats

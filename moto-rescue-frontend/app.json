@@ -9,7 +9,10 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "UIBackgroundModes": ["location", "fetch"]
+      }
     },
     "android": {
       "googleServicesFile": "./google-services.json",
@@ -55,6 +58,15 @@
           "photosPermission": "MotoRescue uses your selected photo as your profile picture.",
           "cameraPermission": "MotoRescue uses your camera to take profile and verification photos.",
           "microphonePermission": false
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "MotoRescue needs your location in the background to match you with passengers and provide live ETAs while you drive.",
+          "locationAlwaysPermission": "MotoRescue needs your location in the background to match you with passengers and provide live ETAs while you drive.",
+          "locationWhenInUsePermission": "MotoRescue needs your location to show where you are on the map.",
+          "isAndroidBackgroundLocationEnabled": true
         }
       ]
     ],
