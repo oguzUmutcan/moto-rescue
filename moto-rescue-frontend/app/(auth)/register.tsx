@@ -5,10 +5,7 @@ import { ArrowLeft, ChevronDown, Eye, EyeOff, Lock, Mail, User, X } from "lucide
 import React, { useState } from "react";
 import {
   FlatList,
-  KeyboardAvoidingView,
   Modal,
-  Platform,
-  ScrollView,
   Text,
   TextInput,
   TouchableOpacity,
@@ -16,6 +13,7 @@ import {
 } from "@/components/localized-native";
 import { Image } from "expo-image";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { COUNTRIES } from "../../constants/countries";
 import { useRegistration } from "../../contexts/registration";
 
@@ -69,10 +67,7 @@ export default function RegisterScreen() {
   );
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-      className="flex-1 bg-white"
-    >
+    <View className="flex-1 bg-white">
       <View
         className="px-4 border-b border-[#F2F2F7] z-10 bg-white"
         style={{ paddingTop: insets.top + 10, paddingBottom: 12 }}
@@ -82,7 +77,8 @@ export default function RegisterScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView
+      <KeyboardAwareScrollView
+        bottomOffset={16}
         className="flex-1 px-6 pt-6"
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
@@ -203,7 +199,7 @@ export default function RegisterScreen() {
             Create Account
           </Text>
         </TouchableOpacity>
-      </ScrollView>
+      </KeyboardAwareScrollView>
 
       {/* Country Modal */}
       <Modal
@@ -234,6 +230,6 @@ export default function RegisterScreen() {
           </View>
         </View>
       </Modal>
-    </KeyboardAvoidingView>
+    </View>
   );
 }

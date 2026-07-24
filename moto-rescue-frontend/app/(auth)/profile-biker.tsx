@@ -15,9 +15,7 @@ import React, { useEffect, useState } from "react";
 import {
   Alert,
   Keyboard,
-  KeyboardAvoidingView,
   Modal,
-  Platform,
   ScrollView,
   Text,
   TextInput,
@@ -25,6 +23,7 @@ import {
   View,
 } from "@/components/localized-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 
 // --- FIREBASE IMPORTS ---
 import { auth } from "../../config/firebase";
@@ -158,10 +157,7 @@ export default function ProfileBikerScreen() {
         paddingBottom: insets?.bottom > 0 ? insets.bottom : 24,
       }}
     >
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-        className="flex-1"
-      >
+      <View className="flex-1">
         <View className="flex-row items-center justify-between px-2 pt-2 pb-3 border-b border-[#F2F2F7]">
           <TouchableOpacity
             onPress={() => router.back()}
@@ -177,7 +173,8 @@ export default function ProfileBikerScreen() {
           <View className="w-12" />
         </View>
 
-        <ScrollView
+        <KeyboardAwareScrollView
+          bottomOffset={16}
           className="flex-1 px-6 pt-6"
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
@@ -374,7 +371,7 @@ export default function ProfileBikerScreen() {
               private and cannot be viewed by other app users.
             </Text>
           </View>
-        </ScrollView>
+        </KeyboardAwareScrollView>
 
         <View className="px-6 pb-2 pt-4 bg-white border-t border-[#F2F2F7]/50">
           <TouchableOpacity
@@ -388,7 +385,7 @@ export default function ProfileBikerScreen() {
             </Text>
           </TouchableOpacity>
         </View>
-      </KeyboardAvoidingView>
+      </View>
 
       {}
       {/* Emoji Picker Modal */}

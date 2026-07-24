@@ -5,8 +5,7 @@ import { ChevronDown, LocateFixed, Map, MapPin, X, Zap } from "lucide-react-nati
 import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator, Alert,
-  Dimensions, Keyboard, KeyboardAvoidingView,
-  Modal, Platform,
+  Modal,
   ScrollView,
   Switch,
   Text,
@@ -14,6 +13,7 @@ import {
   TouchableOpacity,
   View,
 } from "@/components/localized-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { rescueApi } from "../../api/rescues";
 import { placesApi } from "../../api/places";
 import { auth } from "../../config/firebase";
@@ -163,20 +163,9 @@ export default function RequestFormScreen() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [mapTarget, setMapTarget] = useState<"pickup" | "destination" | null>(null);
   const [mapSelection, setMapSelection] = useState<Coordinates | null>(null);
-  const [keyboardHeight, setKeyboardHeight] = useState(0);
-  const formScrollRef = useRef<ScrollView>(null);
   const locationContext = pickupLabel.split(",").slice(-2).join(",").trim();
   const pickupSearch = useAddressSuggestions(manualPickup, manualPickupCoordinates === null, currentPickup, locationContext);
   const destinationSearch = useAddressSuggestions(destination, destinationCoordinates === null, currentPickup, locationContext);
-
-  useEffect(() => {
-    if (Platform.OS !== "android") return;
-    const show = Keyboard.addListener("keyboardDidShow", (event) => {
-      setKeyboardHeight(event.endCoordinates.height);
-    });
-    const hide = Keyboard.addListener("keyboardDidHide", () => setKeyboardHeight(0));
-    return () => { show.remove(); hide.remove(); };
-  }, []);
 
   useEffect(() => {
     let active = true;
@@ -292,10 +281,7 @@ export default function RequestFormScreen() {
   };
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-      className="flex-1 justify-end bg-black/40"
-    >
+    <View className="flex-1 justify-end bg-black/40">
       <View
         className="bg-white rounded-t-[24px] pt-3 px-5 pb-8 shadow-2xl"
         style={{
@@ -310,7 +296,12 @@ export default function RequestFormScreen() {
           </TouchableOpacity>
         </View>
 
-        <ScrollView ref={formScrollRef} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} automaticallyAdjustKeyboardInsets contentContainerStyle={{ paddingBottom: 12 }}>
+        <KeyboardAwareScrollView
+          bottomOffset={16}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingBottom: 12 }}
+        >
           <Text className="text-[11px] font-bold text-[#8E8E93] tracking-widest uppercase mb-1.5">Pickup</Text>
           <View className="flex-row gap-2 mb-2">
             <TouchableOpacity onPress={() => setPickupMode("current")} className={`flex-1 rounded-xl px-3 py-3 flex-row items-center ${pickupMode === "current" ? "bg-[#007AFF]" : "bg-[#F2F2F7]"}`}>
@@ -351,7 +342,6 @@ export default function RequestFormScreen() {
             <TextInput
               value={destination}
               onChangeText={(text) => { setDestination(text); setDestinationCoordinates(null); }}
-              onFocus={() => setTimeout(() => formScrollRef.current?.scrollTo({ y: 210, animated: true }), 250)}
               placeholder="Search destination"
               returnKeyType="search"
               className="flex-1 px-2.5 py-3.5 text-[#1C1C1E]"
@@ -396,7 +386,7 @@ export default function RequestFormScreen() {
             <Zap size={20} color="white" fill="white" />
             <Text className="text-white text-[18px] font-black ml-2">{isSubmitting ? "Locating addresses..." : "Request Rescue"}</Text>
           </TouchableOpacity>
-        </ScrollView>
+        </KeyboardAwareScrollView>
       </View>
 
       <Modal visible={mapTarget !== null} animationType="slide" onRequestClose={() => setMapTarget(null)}>
@@ -418,6 +408,6 @@ export default function RequestFormScreen() {
           </View>
         </View>
       </Modal>
-    </KeyboardAvoidingView>
+    </View>
   );
 }
