@@ -4,10 +4,9 @@ import {
   Linking,
   Modal,
   ScrollView,
-  Text,
-  TouchableOpacity,
   View,
 } from "react-native";
+import { Text, TouchableOpacity } from "@/components/localized-native";
 
 export type LegalModalType = "help" | "terms" | "privacy" | null;
 
