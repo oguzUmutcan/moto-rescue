@@ -1,8 +1,14 @@
 import { useRouter } from "expo-router";
 import {
   ArrowLeft,
+  Bike,
+  FileText,
+  Hash,
+  Palette,
+  Phone,
   ShieldCheck,
   Smile,
+  User,
   X,
 } from "lucide-react-native";
 import React, { useEffect, useState } from "react";
@@ -211,15 +217,18 @@ export default function ProfileBikerScreen() {
             <Text className="text-[12px] font-bold text-[#8E8E93] tracking-wider uppercase mb-2">
               Contact Phone
             </Text>
-            <TextInput
-              className="w-full bg-[#F2F2F7] rounded-[14px] px-4 py-4 text-[16px] text-[#1C1C1E] font-medium"
-              placeholder="+90 555 111 2233"
-              placeholderTextColor="#C7C7CC"
-              keyboardType="phone-pad"
-              value={phone}
-              onChangeText={(value) => setPhone(value.replace(/[^\d+]/g, "").replace(/(?!^)\+/g, "").slice(0, 16))}
-              editable={!isLoading}
-            />
+            <View className="flex-row items-center bg-[#F2F2F7] rounded-[14px] px-4 h-14">
+              <Phone size={20} color="#8E8E93" />
+              <TextInput
+                className="flex-1 ml-3 text-[16px] text-[#1C1C1E] font-medium"
+                placeholder="+90 555 111 2233"
+                placeholderTextColor="#C7C7CC"
+                keyboardType="phone-pad"
+                value={phone}
+                onChangeText={(value) => setPhone(value.replace(/[^\d+]/g, "").replace(/(?!^)\+/g, "").slice(0, 16))}
+                editable={!isLoading}
+              />
+            </View>
             <Text className="text-[12px] text-[#8E8E93] mt-1.5">Passengers can use this number only after you accept their rescue.</Text>
           </View>
 
@@ -227,75 +236,93 @@ export default function ProfileBikerScreen() {
             <Text className="text-[12px] font-bold text-[#8E8E93] tracking-wider uppercase mb-2">
               Full Name
             </Text>
-            <TextInput
-              className="w-full bg-[#F2F2F7] rounded-[14px] px-4 py-4 text-[16px] text-[#1C1C1E] font-medium"
-              placeholder="Yacine Benamar"
-              placeholderTextColor="#C7C7CC"
-              value={name}
-              onChangeText={setName}
-              editable={!isLoading}
-            />
+            <View className="flex-row items-center bg-[#F2F2F7] rounded-[14px] px-4 h-14">
+              <User size={20} color="#8E8E93" />
+              <TextInput
+                className="flex-1 ml-3 text-[16px] text-[#1C1C1E] font-medium"
+                placeholder="Yacine Benamar"
+                placeholderTextColor="#C7C7CC"
+                value={name}
+                onChangeText={setName}
+                editable={!isLoading}
+                autoCapitalize="words"
+              />
+            </View>
           </View>
 
           <View className="mb-4">
             <Text className="text-[12px] font-bold text-[#8E8E93] tracking-wider uppercase mb-2">
               Short Bio
             </Text>
-            <TextInput
-              className="w-full bg-[#F2F2F7] rounded-[14px] px-4 py-4 text-[16px] text-[#1C1C1E] font-medium"
-              placeholder="e.g. Algiers local. Happy to help..."
-              placeholderTextColor="#C7C7CC"
-              multiline
-              numberOfLines={3}
-              textAlignVertical="top"
-              value={bio}
-              onChangeText={setBio}
-              style={{ minHeight: 80 }}
-              editable={!isLoading}
-            />
+            <View className="flex-row bg-[#F2F2F7] rounded-[14px] px-4 py-4">
+              <FileText size={20} color="#8E8E93" className="mt-0.5" />
+              <TextInput
+                className="flex-1 ml-3 text-[16px] text-[#1C1C1E] font-medium"
+                placeholder="e.g. Algiers local. Happy to help..."
+                placeholderTextColor="#C7C7CC"
+                multiline
+                numberOfLines={3}
+                textAlignVertical="top"
+                value={bio}
+                onChangeText={setBio}
+                style={{ minHeight: 80 }}
+                editable={!isLoading}
+              />
+            </View>
           </View>
 
           <View className="mb-4">
             <Text className="text-[12px] font-bold text-[#8E8E93] tracking-wider uppercase mb-2">
               Motorcycle Model
             </Text>
-            <TextInput
-              className="w-full bg-[#F2F2F7] rounded-[14px] px-4 py-4 text-[16px] text-[#1C1C1E] font-medium"
-              placeholder="Yamaha YBR 125"
-              placeholderTextColor="#C7C7CC"
-              value={motorcycleModel}
-              onChangeText={setMotorcycleModel}
-              editable={!isLoading}
-            />
+            <View className="flex-row items-center bg-[#F2F2F7] rounded-[14px] px-4 h-14">
+              <Bike size={20} color="#8E8E93" />
+              <TextInput
+                className="flex-1 ml-3 text-[16px] text-[#1C1C1E] font-medium"
+                placeholder="Yamaha YBR 125"
+                placeholderTextColor="#C7C7CC"
+                value={motorcycleModel}
+                onChangeText={setMotorcycleModel}
+                editable={!isLoading}
+                autoCapitalize="words"
+              />
+            </View>
           </View>
 
           <View className="mb-4">
             <Text className="text-[12px] font-bold text-[#8E8E93] tracking-wider uppercase mb-2">
               Motorcycle Color
             </Text>
-            <TextInput
-              className="w-full bg-[#F2F2F7] rounded-[14px] px-4 py-4 text-[16px] text-[#1C1C1E] font-medium"
-              placeholder="Dark Blue"
-              placeholderTextColor="#C7C7CC"
-              value={motorcycleColor}
-              onChangeText={setMotorcycleColor}
-              editable={!isLoading}
-            />
+            <View className="flex-row items-center bg-[#F2F2F7] rounded-[14px] px-4 h-14">
+              <Palette size={20} color="#8E8E93" />
+              <TextInput
+                className="flex-1 ml-3 text-[16px] text-[#1C1C1E] font-medium"
+                placeholder="Dark Blue"
+                placeholderTextColor="#C7C7CC"
+                value={motorcycleColor}
+                onChangeText={setMotorcycleColor}
+                editable={!isLoading}
+                autoCapitalize="words"
+              />
+            </View>
           </View>
 
           <View className="mb-6">
             <Text className="text-[12px] font-bold text-[#8E8E93] tracking-wider uppercase mb-2">
               License Plate Number
             </Text>
-            <TextInput
-              className="w-full bg-[#F2F2F7] rounded-[14px] px-4 py-4 text-[16px] text-[#1C1C1E] font-medium"
-              placeholder="16-DZ-12345"
-              placeholderTextColor="#C7C7CC"
-              autoCapitalize="characters"
-              value={plateNumber}
-              onChangeText={setPlateNumber}
-              editable={!isLoading}
-            />
+            <View className="flex-row items-center bg-[#F2F2F7] rounded-[14px] px-4 h-14">
+              <Hash size={20} color="#8E8E93" />
+              <TextInput
+                className="flex-1 ml-3 text-[16px] text-[#1C1C1E] font-medium"
+                placeholder="16-DZ-12345"
+                placeholderTextColor="#C7C7CC"
+                autoCapitalize="characters"
+                value={plateNumber}
+                onChangeText={setPlateNumber}
+                editable={!isLoading}
+              />
+            </View>
           </View>
 
           <View className="mb-8">

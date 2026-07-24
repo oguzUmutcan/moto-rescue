@@ -1,5 +1,5 @@
 import { useRouter } from "expo-router";
-import { ArrowLeft, ChevronDown, Info, Smile, X } from "lucide-react-native";
+import { ArrowLeft, ChevronDown, Info, Mail, Phone, Smile, User, X } from "lucide-react-native";
 import React, { useEffect, useState } from "react";
 import {
   Alert,
@@ -180,45 +180,55 @@ export default function ProfilePassengerScreen() {
             <Text className="text-[12px] font-bold text-[#8E8E93] tracking-wider uppercase mb-2">
               Full Name
             </Text>
-            <TextInput
-              className="w-full bg-[#F2F2F7] rounded-[14px] px-4 py-4 text-[16px] text-[#1C1C1E] font-medium"
-              placeholder="Yacine Benamar"
-              placeholderTextColor="#C7C7CC"
-              value={name}
-              onChangeText={setName}
-              editable={!isLoading}
-            />
+            <View className="flex-row items-center bg-[#F2F2F7] rounded-[14px] px-4 h-14">
+              <User size={20} color="#8E8E93" />
+              <TextInput
+                className="flex-1 ml-3 text-[16px] text-[#1C1C1E] font-medium"
+                placeholder="Yacine Benamar"
+                placeholderTextColor="#C7C7CC"
+                value={name}
+                onChangeText={setName}
+                editable={!isLoading}
+                autoCapitalize="words"
+              />
+            </View>
           </View>
 
           <View className="mb-4">
             <Text className="text-[12px] font-bold text-[#8E8E93] tracking-wider uppercase mb-2">
               Contact Phone
             </Text>
-            <TextInput
-              className="w-full bg-[#F2F2F7] rounded-[14px] px-4 py-4 text-[16px] text-[#1C1C1E] font-medium"
-              placeholder="+90 555 111 2233"
-              placeholderTextColor="#C7C7CC"
-              keyboardType="phone-pad"
-              value={phone}
-              onChangeText={(value) => setPhone(value.replace(/[^\d+]/g, "").replace(/(?!^)\+/g, "").slice(0, 16))}
-              editable={!isLoading}
-            />
+            <View className="flex-row items-center bg-[#F2F2F7] rounded-[14px] px-4 h-14">
+              <Phone size={20} color="#8E8E93" />
+              <TextInput
+                className="flex-1 ml-3 text-[16px] text-[#1C1C1E] font-medium"
+                placeholder="+90 555 111 2233"
+                placeholderTextColor="#C7C7CC"
+                keyboardType="phone-pad"
+                value={phone}
+                onChangeText={(value) => setPhone(value.replace(/[^\d+]/g, "").replace(/(?!^)\+/g, "").slice(0, 16))}
+                editable={!isLoading}
+              />
+            </View>
           </View>
 
           <View className="mb-4">
             <Text className="text-[12px] font-bold text-[#8E8E93] tracking-wider uppercase mb-2">
               Email Address
             </Text>
-            <TextInput
-              className="w-full bg-[#F2F2F7] rounded-[14px] px-4 py-4 text-[16px] text-[#1C1C1E] font-medium"
-              placeholder="yacine@gmail.com"
-              placeholderTextColor="#C7C7CC"
-              keyboardType="email-address"
-              autoCapitalize="none"
-              value={email}
-              onChangeText={setEmail}
-              editable={!isLoading}
-            />
+            <View className="flex-row items-center bg-[#F2F2F7] rounded-[14px] px-4 h-14">
+              <Mail size={20} color="#8E8E93" />
+              <TextInput
+                className="flex-1 ml-3 text-[16px] text-[#1C1C1E] font-medium"
+                placeholder="yacine@gmail.com"
+                placeholderTextColor="#C7C7CC"
+                keyboardType="email-address"
+                autoCapitalize="none"
+                value={email}
+                onChangeText={setEmail}
+                editable={!isLoading}
+              />
+            </View>
           </View>
 
           <View className="mb-6">
