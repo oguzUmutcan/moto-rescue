@@ -1,7 +1,7 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Star } from "lucide-react-native";
 import React, { useEffect, useState } from "react";
-import { Alert, KeyboardAvoidingView, Platform, Text, TextInput, TouchableOpacity, View } from "@/components/localized-native";
+import { Alert, KeyboardAvoidingView, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from "@/components/localized-native";
 import { reviewApi } from "../../api/reviews";
 import { rescueApi } from "../../api/rescues";
 import ProfileAvatar from "../../components/profile-avatar";
@@ -41,33 +41,35 @@ export default function ReviewRideScreen() {
   };
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} className="flex-1 bg-[#F2F2F7] justify-center px-5">
-      <View className="bg-white rounded-[28px] p-6 shadow-lg">
-        <View className="self-center"><ProfileAvatar storagePath={bikerProfilePhotoPath} size={80} /></View>
-        <Text className="text-[25px] font-black text-[#1C1C1E] text-center mt-4">How was your ride?</Text>
-        <Text className="text-[15px] text-[#8E8E93] text-center mt-1">Rate {bikerName}</Text>
-        <View className="flex-row justify-center gap-3 my-6">
-          {[1, 2, 3, 4, 5].map((value) => (
-            <TouchableOpacity key={value} onPress={() => setRating(value)} accessibilityLabel={`${value} stars`}>
-              <Star size={39} color="#FF9500" fill={value <= rating ? "#FF9500" : "transparent"} />
-            </TouchableOpacity>
-          ))}
+    <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} className="flex-1 bg-[#F2F2F7]">
+      <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: "center", paddingHorizontal: 20 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+        <View className="bg-white rounded-[28px] p-6 shadow-lg my-6">
+          <View className="self-center"><ProfileAvatar storagePath={bikerProfilePhotoPath} size={80} /></View>
+          <Text className="text-[25px] font-black text-[#1C1C1E] text-center mt-4">How was your ride?</Text>
+          <Text className="text-[15px] text-[#8E8E93] text-center mt-1">Rate {bikerName}</Text>
+          <View className="flex-row justify-center gap-3 my-6">
+            {[1, 2, 3, 4, 5].map((value) => (
+              <TouchableOpacity key={value} onPress={() => setRating(value)} accessibilityLabel={`${value} stars`}>
+                <Star size={39} color="#FF9500" fill={value <= rating ? "#FF9500" : "transparent"} />
+              </TouchableOpacity>
+            ))}
+          </View>
+          <TextInput
+            value={comment}
+            onChangeText={setComment}
+            placeholder="Share a comment about your rider (optional)"
+            multiline
+            maxLength={500}
+            textAlignVertical="top"
+            className="h-28 bg-[#F2F2F7] rounded-2xl px-4 py-3 text-[#1C1C1E]"
+          />
+          <Text className="text-right text-[11px] text-[#AEAEB2] mt-1">{comment.length}/500</Text>
+          <TouchableOpacity onPress={submit} disabled={submitting} className="h-14 bg-[#FF9500] rounded-2xl items-center justify-center mt-4">
+            <Text className="text-white text-[17px] font-black">{submitting ? "Saving..." : "Submit Review"}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={finish} className="py-4"><Text className="text-center text-[#8E8E93] font-bold">Not now</Text></TouchableOpacity>
         </View>
-        <TextInput
-          value={comment}
-          onChangeText={setComment}
-          placeholder="Share a comment about your rider (optional)"
-          multiline
-          maxLength={500}
-          textAlignVertical="top"
-          className="h-28 bg-[#F2F2F7] rounded-2xl px-4 py-3 text-[#1C1C1E]"
-        />
-        <Text className="text-right text-[11px] text-[#AEAEB2] mt-1">{comment.length}/500</Text>
-        <TouchableOpacity onPress={submit} disabled={submitting} className="h-14 bg-[#FF9500] rounded-2xl items-center justify-center mt-4">
-          <Text className="text-white text-[17px] font-black">{submitting ? "Saving..." : "Submit Review"}</Text>
-        </TouchableOpacity>
-        <TouchableOpacity onPress={finish} className="py-4"><Text className="text-center text-[#8E8E93] font-bold">Not now</Text></TouchableOpacity>
-      </View>
+      </ScrollView>
     </KeyboardAvoidingView>
   );
 }

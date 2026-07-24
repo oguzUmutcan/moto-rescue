@@ -295,14 +295,11 @@ export default function RequestFormScreen() {
     <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : undefined}
       className="flex-1 justify-end bg-black/40"
-      style={{ paddingBottom: Platform.OS === "android" ? keyboardHeight : 0 }}
     >
       <View
         className="bg-white rounded-t-[24px] pt-3 px-5 pb-8 shadow-2xl"
         style={{
-          maxHeight: keyboardHeight > 0
-            ? (Dimensions.get("window").height - keyboardHeight) * 0.82
-            : "92%",
+          maxHeight: "92%",
         }}
       >
         <View className="w-9 h-1 rounded-full bg-[#D1D1D6] self-center mb-4" />
