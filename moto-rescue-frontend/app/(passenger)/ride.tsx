@@ -12,6 +12,7 @@ export default function PassengerRideScreen() {
   const isFocused = useIsFocused();
   const { requestId } = useLocalSearchParams<{ requestId: string }>();
   const [request, setRequest] = useState<RescueRequest | null>(null);
+  const [etaDetails, setEtaDetails] = useState<{ minutes: number; distanceKm: number } | null>(null);
   const completionHandled = useRef(false);
 
   useEffect(() => {
@@ -81,13 +82,33 @@ export default function PassengerRideScreen() {
           latitude: request.bikerLatitude,
           longitude: request.bikerLongitude,
         } : null}
+        routeOrigin={request.bikerLatitude !== null && request.bikerLongitude !== null ? {
+          latitude: request.bikerLatitude,
+          longitude: request.bikerLongitude,
+        } : null}
+        routeDestination={inProgress ? {
+          latitude: request.destinationLatitude || request.latitude,
+          longitude: request.destinationLongitude || request.longitude,
+        } : {
+          latitude: request.latitude,
+          longitude: request.longitude,
+        }}
+        onEtaChange={(minutes, distanceKm) => setEtaDetails({ minutes, distanceKm })}
       />
 
       <View className="absolute top-0 left-0 right-0 bg-white rounded-b-3xl shadow-lg pt-14 px-5 pb-5">
-        <Text className="text-[12px] text-[#8E8E93] font-black tracking-widest uppercase">{inProgress ? "Ride in progress" : "Biker on the way"}</Text>
+        <Text className="text-[12px] text-[#8E8E93] font-black tracking-widest uppercase">
+          {inProgress ? "Ride in progress" : "Biker on the way"}
+          {etaDetails ? ` • ${Math.ceil(etaDetails.minutes)} min (${etaDetails.distanceKm.toFixed(1)} km)` : ""}
+        </Text>
         <View className="flex-row items-center mt-2">
           <ProfileAvatar storagePath={request.bikerProfilePhotoPath} />
-          <View className="ml-3 flex-1"><Text className="text-[18px] font-black text-[#1C1C1E]">{request.bikerName ?? "Assigned biker"}</Text><Text className="text-[13px] text-[#34C759] font-bold">{inProgress ? "Taking you to destination" : "Heading to your pickup"}</Text></View>
+          <View className="ml-3 flex-1">
+            <Text className="text-[18px] font-black text-[#1C1C1E]">{request.bikerName ?? "Assigned biker"}</Text>
+            <Text className="text-[13px] text-[#34C759] font-bold">
+              {inProgress ? "Taking you to destination" : "Heading to your pickup"}
+            </Text>
+          </View>
           {!inProgress && (
             <TouchableOpacity onPress={() => void callBiker()} accessibilityRole="button" accessibilityLabel="Call biker" className="w-12 h-12 rounded-full bg-[#EDFAF3] items-center justify-center">
               <Phone size={22} color="#248A3D" />

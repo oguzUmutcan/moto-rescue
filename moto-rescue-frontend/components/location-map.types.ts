@@ -13,5 +13,8 @@ export type LocationMapProps = {
   initialRegion: MapRegion;
   selectedCoordinate?: { latitude: number; longitude: number } | null;
   bikerCoordinate?: { latitude: number; longitude: number } | null;
+  routeOrigin?: { latitude: number; longitude: number } | null;
+  routeDestination?: { latitude: number; longitude: number } | null;
+  onEtaChange?: (etaMinutes: number, distanceKm: number) => void;
   onCoordinateSelect?: (coordinate: { latitude: number; longitude: number }) => void;
 };
