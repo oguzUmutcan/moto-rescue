@@ -7,6 +7,7 @@ import {
   KeyboardAvoidingView,
   Modal,
   Platform,
+  ScrollView,
   StatusBar,
   Text,
   TextInput,
@@ -121,107 +122,109 @@ export default function LoginScreen() {
     >
       <StatusBar barStyle="dark-content" />
       <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
         className="flex-1"
       >
-        <View className="px-6 pt-4 mb-6">
-          <TouchableOpacity
-            onPress={() => router.back()}
-            className="p-2 -ml-2 w-12"
-            disabled={isLoading}
-          >
-            <ArrowLeft size={24} color="#1C1C1E" />
-          </TouchableOpacity>
-        </View>
-
-        <View className="flex-1 px-6 justify-center">
-          <View className="items-center mb-8 mt-2">
-            <Image
-              source={require("../../assets/images/icon.png")}
-              style={{ width: 80, height: 80, borderRadius: 22 }}
-            />
-            <Text className="text-[22px] font-black text-[#1C1C1E] mt-3">
-              MotoRescue
-            </Text>
+        <ScrollView contentContainerStyle={{ flexGrow: 1 }} keyboardShouldPersistTaps="handled">
+          <View className="px-6 pt-4 mb-6">
+            <TouchableOpacity
+              onPress={() => router.back()}
+              className="p-2 -ml-2 w-12"
+              disabled={isLoading}
+            >
+              <ArrowLeft size={24} color="#1C1C1E" />
+            </TouchableOpacity>
           </View>
 
-          <View className="mb-8">
-            <Text className="text-[32px] font-black text-[#1C1C1E] mb-2">
-              Welcome Back
-            </Text>
-            <Text className="text-[16px] text-[#8E8E93]">
-              Sign in to continue your journey.
-            </Text>
-          </View>
-
-          <View className="space-y-4 mb-8">
-            <View className="flex-row items-center bg-[#F2F2F7] rounded-2xl px-4 h-14">
-              <Mail size={20} color="#8E8E93" />
-              <TextInput
-                placeholder="Email Address"
-                value={email}
-                onChangeText={setEmail}
-                className="flex-1 ml-3 text-[16px] text-[#1C1C1E]"
-                keyboardType="email-address"
-                autoCapitalize="none"
-                editable={!isLoading}
+          <View className="flex-1 px-6 justify-center">
+            <View className="items-center mb-8 mt-2">
+              <Image
+                source={require("../../assets/images/icon.png")}
+                style={{ width: 80, height: 80, borderRadius: 22 }}
               />
+              <Text className="text-[22px] font-black text-[#1C1C1E] mt-3">
+                MotoRescue
+              </Text>
             </View>
-            <View style={{ height: 16 }} />
-            <View className="flex-row items-center bg-[#F2F2F7] rounded-2xl px-4 h-14">
-              <Lock size={20} color="#8E8E93" />
-              <TextInput
-                placeholder="Password"
-                value={password}
-                onChangeText={setPassword}
-                className="flex-1 ml-3 text-[16px] text-[#1C1C1E]"
-                secureTextEntry={!showPassword}
-                editable={!isLoading}
-              />
-              <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-                {showPassword ? (
-                  <EyeOff size={20} color="#8E8E93" />
-                ) : (
-                  <Eye size={20} color="#8E8E93" />
-                )}
+
+            <View className="mb-8">
+              <Text className="text-[32px] font-black text-[#1C1C1E] mb-2">
+                Welcome Back
+              </Text>
+              <Text className="text-[16px] text-[#8E8E93]">
+                Sign in to continue your journey.
+              </Text>
+            </View>
+
+            <View className="space-y-4 mb-8">
+              <View className="flex-row items-center bg-[#F2F2F7] rounded-2xl px-4 h-14">
+                <Mail size={20} color="#8E8E93" />
+                <TextInput
+                  placeholder="Email Address"
+                  value={email}
+                  onChangeText={setEmail}
+                  className="flex-1 ml-3 text-[16px] text-[#1C1C1E]"
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  editable={!isLoading}
+                />
+              </View>
+              <View style={{ height: 16 }} />
+              <View className="flex-row items-center bg-[#F2F2F7] rounded-2xl px-4 h-14">
+                <Lock size={20} color="#8E8E93" />
+                <TextInput
+                  placeholder="Password"
+                  value={password}
+                  onChangeText={setPassword}
+                  className="flex-1 ml-3 text-[16px] text-[#1C1C1E]"
+                  secureTextEntry={!showPassword}
+                  editable={!isLoading}
+                />
+                <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+                  {showPassword ? (
+                    <EyeOff size={20} color="#8E8E93" />
+                  ) : (
+                    <Eye size={20} color="#8E8E93" />
+                  )}
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            <TouchableOpacity
+              onPress={handleLogin}
+              activeOpacity={0.8}
+              disabled={isLoading}
+              className={`w-full h-14 rounded-2xl items-center justify-center shadow-sm ${
+                isLoading ? "bg-[#007AFF]/60" : "bg-[#007AFF]"
+              }`}
+            >
+              <Text className="text-[17px] font-extrabold text-white">
+                {isLoading ? "Signing In..." : "Sign In"}
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              className="mt-6 items-center p-2"
+              onPress={() => setShowForgotModal(true)}
+              disabled={isLoading}
+            >
+              <Text className="text-[#007AFF] font-semibold text-[15px]">
+                Forgot Password?
+              </Text>
+            </TouchableOpacity>
+
+            <View className="flex-row justify-center mt-auto mb-4 pt-6">
+              <Text className="text-[#8E8E93] text-[15px]">
+                Don&apos;t have an account?{" "}
+              </Text>
+              <TouchableOpacity onPress={() => router.navigate("/(auth)/register")}>
+                <Text className="text-[#007AFF] text-[15px] font-bold">
+                  Sign Up
+                </Text>
               </TouchableOpacity>
             </View>
           </View>
-
-          <TouchableOpacity
-            onPress={handleLogin}
-            activeOpacity={0.8}
-            disabled={isLoading}
-            className={`w-full h-14 rounded-2xl items-center justify-center shadow-sm ${
-              isLoading ? "bg-[#007AFF]/60" : "bg-[#007AFF]"
-            }`}
-          >
-            <Text className="text-[17px] font-extrabold text-white">
-              {isLoading ? "Signing In..." : "Sign In"}
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            className="mt-6 items-center p-2"
-            onPress={() => setShowForgotModal(true)}
-            disabled={isLoading}
-          >
-            <Text className="text-[#007AFF] font-semibold text-[15px]">
-              Forgot Password?
-            </Text>
-          </TouchableOpacity>
-
-          <View className="flex-row justify-center mt-auto mb-4 pt-6">
-            <Text className="text-[#8E8E93] text-[15px]">
-              Don&apos;t have an account?{" "}
-            </Text>
-            <TouchableOpacity onPress={() => router.navigate("/(auth)/register")}>
-              <Text className="text-[#007AFF] text-[15px] font-bold">
-                Sign Up
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+        </ScrollView>
       </KeyboardAvoidingView>
 
       {}
@@ -232,7 +235,7 @@ export default function LoginScreen() {
         onRequestClose={() => setShowForgotModal(false)}
       >
         <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
           className="flex-1 justify-center items-center bg-black/50 px-6"
         >
           <View className="bg-white w-full max-w-[400px] rounded-[24px] p-6 shadow-xl">
