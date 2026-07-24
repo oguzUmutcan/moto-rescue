@@ -1,7 +1,16 @@
-﻿# MotoRescue Session Handoff
+# MotoRescue Session Handoff
 
 feat/backend-api-consolidation
 =======
+## 24 Temmuz 2026 - Keyboard Form Fixes & Full Localization
+
+- **Android Keyboard Overlap Fixes**: The double-offset issues when the Android keyboard opened have been completely resolved. Android now relies on `softwareKeyboardLayoutMode: "resize"` natively. Forms such as `login`, `register`, `request-form`, and `review` have been wrapped in `ScrollView` with `keyboardShouldPersistTaps="handled"`, ensuring the UI properly shifts without unnecessary extra padding or hidden inputs.
+- **Full Localization**: The entire app has been verified and fully localized to Turkish. Missing texts from `ride`, `navigation`, `request-form`, and `review` screens were added.
+- **Dynamic Translations**: Complex dynamic translations for ETA strings (e.g., `• 4 dk (2.1 km)`), XP levels (`Altın seviyesine 500 XP kaldı`), and Badge Unlock notifications (`🎖️ Rozet kazanıldı!`) were successfully added via regex patterns in `i18n.ts`.
+- **Backend Badge Definitions**: The backend-provided badge names (First Rescue, Top Rated Rider, etc.) and descriptions are now fully translated in the frontend dictionary.
+- **Legal Modals Localized**: The `Help & Support`, `Terms of Service`, and `Privacy Policy` modals in `profile.tsx` were updated to use `localized-native` text components, and their lengthy text clauses were fully translated.
+- **Polylines & ETA**: Route polylines and real ETA calculations are now successfully integrated using the Google Maps Directions API, removing the need to strictly rely on external Google Maps deep links.
+
 ## 23 Temmuz 2026 - English/Turkish Localization
 
 - English and Turkish can now be selected on the first onboarding screen and in
@@ -158,11 +167,10 @@ Notlar:
 
 ## Acik Isler
 
-1. Foreground disi canli location tracking yok.
-2. Uygulama ici rota/polyline ve gercek ETA yok; Google Maps deep link kullaniliyor.
-3. Kalan 25 `npm audit` uyarisi (21 moderate, 4 high) bagimlilik uyumlulugu korunarak ayri planlanmali.
-4. Push notification akisi EAS development APK iki fiziksel cihaza kurulduktan sonra manuel olarak dogrulanmali.
-5. Degisiklikler feature branch uzerinde commitlenip pushlanmali; dogrudan `master` kullanilmamali.
+1. Foreground disi canli location tracking yok. (Background location)
+2. Kalan 25 `npm audit` uyarisi (21 moderate, 4 high) bagimlilik uyumlulugu korunarak ayri planlanmali.
+3. Push notification akisi EAS development APK iki fiziksel cihaza kurulduktan sonra manuel olarak dogrulanmali.
+4. Degisiklikler feature branch uzerinde commitlenip pushlanmali; dogrudan `master` kullanilmamali.
 
 ## Google Cloud API Key Durumu
 
@@ -247,6 +255,5 @@ npx expo-doctor
 
 - Polling push notification icin foreground/fallback mekanizmasi olarak korunuyor.
 - Android Expo Go remote push desteklemez; push token ve teslimat testi development/production build ile yapilmalidir.
-- Foreground disi canli location tracking yok.
-- Uygulama ici rota/polyline ve gercek ETA yok; Google Maps deep link kullaniliyor.
+- Foreground disi canli location tracking yok. (Background location)
 - Telefon numarasi su anda dogrulanmis kimlik kaniti degildir.
