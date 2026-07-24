@@ -13,6 +13,7 @@ import {
   TouchableOpacity,
   View,
 } from "@/components/localized-native";
+import { Image } from "expo-image";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 // --- CENTRAL FIREBASE IMPORTS ---
@@ -134,7 +135,17 @@ export default function LoginScreen() {
         </View>
 
         <View className="flex-1 px-6 justify-center">
-          <View className="mb-10">
+          <View className="items-center mb-8 mt-2">
+            <Image
+              source={require("../../assets/images/icon.png")}
+              style={{ width: 80, height: 80, borderRadius: 22 }}
+            />
+            <Text className="text-[22px] font-black text-[#1C1C1E] mt-3">
+              MotoRescue
+            </Text>
+          </View>
+
+          <View className="mb-8">
             <Text className="text-[32px] font-black text-[#1C1C1E] mb-2">
               Welcome Back
             </Text>

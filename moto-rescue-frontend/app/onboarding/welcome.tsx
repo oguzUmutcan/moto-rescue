@@ -3,6 +3,7 @@ import { Text, TouchableOpacity, View } from "@/components/localized-native";
 // In Expo, install and import from 'lucide-react-native'
 import { useRouter } from "expo-router";
 import { ChevronRight, Zap } from "lucide-react-native";
+import { Image } from "expo-image";
 import LanguageSelector from "@/components/language-selector";
 
 export default function WelcomeScreen({
@@ -27,16 +28,10 @@ export default function WelcomeScreen({
       <View className="flex-1 items-center justify-center px-7 pb-6 text-center">
         {/* Logo Graphic */}
         <View className="relative mb-7">
-          <View className="w-24 h-24 rounded-[28px] bg-white/15 items-center justify-center">
-            <View className="w-16 h-16 rounded-[18px] bg-white items-center justify-center">
-              <Text className="text-[34px]">🏍</Text>
-            </View>
-          </View>
-
-          {/* Orange Zap Badge */}
-          <View className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-[#FF9500] border-[3px] border-[#007AFF] items-center justify-center">
-            <Zap size={13} color="white" fill="white" />
-          </View>
+          <Image
+            source={require("../../assets/images/icon.png")}
+            style={{ width: 120, height: 120, borderRadius: 32 }}
+          />
         </View>
 
         {/* Headings */}
