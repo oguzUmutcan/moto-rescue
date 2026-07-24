@@ -91,7 +91,8 @@ feat/backend-api-consolidation
 
 ## Product decisions
 
-- [ ] Design background location tracking with an explicit battery and privacy policy.
+- [x] Design background location tracking with an explicit battery and privacy policy.
+- [ ] Implement robust background location handling on both iOS and Android.
 - [ ] Design in-app route polylines and real ETA calculations.
 - [ ] Decide whether phone-number verification is required and, if so, select a backend OTP provider that does not depend on Play Integrity.
 

@@ -17,7 +17,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 // --- FIREBASE IMPORTS ---
 import { signOut } from "firebase/auth";
 import { auth } from "../../../config/firebase";
-import { userApi } from "../../../api/users";
+import { userApi, clearCachedProfile } from "../../../api/users";
 import ProfilePhoto from "../../../components/profile-photo";
 import { rescueApi } from "../../../api/rescues";
 import { registerPushNotifications, unregisterPushNotifications } from "../../../utils/push-notifications";
@@ -76,6 +76,7 @@ export default function PassengerProfileScreen() {
   const handleSignOut = async () => {
     try {
       await unregisterPushNotifications().catch((error) => console.warn("Could not clear push token", error));
+      await clearCachedProfile();
       await signOut(auth);
       // Route back to the login screen, clearing the navigation stack
       router.replace("/(auth)/login");
@@ -117,6 +118,7 @@ export default function PassengerProfileScreen() {
 
     try {
       await userApi.delete();
+      await clearCachedProfile();
       await signOut(auth);
       router.replace("/(auth)/login");
     } catch (error: any) {

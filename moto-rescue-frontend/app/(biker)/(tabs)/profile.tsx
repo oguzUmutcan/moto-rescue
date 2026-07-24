@@ -15,7 +15,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 // --- FIREBASE IMPORTS ---
 import { signOut } from "firebase/auth";
 import { auth } from "../../../config/firebase";
-import { userApi } from "../../../api/users";
+import { userApi, clearCachedProfile } from "../../../api/users";
 import ProfilePhoto from "../../../components/profile-photo";
 import { badgeApi } from "../../../api/badges";
 import { RescueRequest, rescueApi } from "../../../api/rescues";
@@ -133,6 +133,7 @@ export default function BikerProfileScreen() {
   const handleSignOut = async () => {
     try {
       await unregisterPushNotifications().catch((error) => console.warn("Could not clear push token", error));
+      await clearCachedProfile();
       await signOut(auth);
       router.replace("/(auth)/login");
     } catch (error: any) {
@@ -173,6 +174,7 @@ export default function BikerProfileScreen() {
 
     try {
       await userApi.delete();
+      await clearCachedProfile();
       await signOut(auth);
       router.replace("/(auth)/login");
     } catch (error: any) {

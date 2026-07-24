@@ -14,6 +14,7 @@ import {
   TouchableOpacity,
   View,
 } from "@/components/localized-native";
+import { Image } from "expo-image";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { COUNTRIES } from "../../constants/countries";
 import { useRegistration } from "../../contexts/registration";
@@ -86,11 +87,21 @@ export default function RegisterScreen() {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
+        <View className="items-center mb-6 mt-2">
+          <Image
+            source={require("../../assets/images/icon.png")}
+            style={{ width: 64, height: 64, borderRadius: 18 }}
+          />
+          <Text className="text-[20px] font-black text-[#1C1C1E] mt-2">
+            MotoRescue
+          </Text>
+        </View>
+
         <Text className="text-[30px] font-black text-[#1C1C1E] tracking-tight mb-2">
           Create Account
         </Text>
         <Text className="text-[15px] text-[#8E8E93] mb-8">
-          Join the MotoRescue community
+          Join the community today
         </Text>
 
         <View className="mb-4">

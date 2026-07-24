@@ -10,6 +10,9 @@ import { addNotificationResponseListener, registerPushNotifications, unregisterP
 import { notificationRoute, profileRoute } from "@/utils/app-routing";
 import { LanguageProvider, useLanguage } from "@/localization/language-context";
 
+// Initialize background location task globally
+import "@/utils/background-location";
+
 function RootNavigator() {
   const router = useRouter();
   const { ready: languageReady, syncAccountLanguage } = useLanguage();
