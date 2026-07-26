@@ -47,7 +47,9 @@ public class ReviewService {
                 String bikerId = rescue.getString("bikerId");
                 if (bikerId == null) throw new ResponseStatusException(HttpStatus.CONFLICT, "Rescue has no assigned biker");
                 DocumentReference bikerRef = firestore.collection("users").document(bikerId);
+                DocumentReference passengerRef = firestore.collection("users").document(token.getUid());
                 DocumentSnapshot biker = transaction.get(bikerRef).get();
+                DocumentSnapshot passenger = transaction.get(passengerRef).get();
                 if (!biker.exists()) throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Biker profile not found");
 
                 Number oldTotal = (Number) biker.get("ratingTotal");
@@ -57,10 +59,16 @@ public class ReviewService {
                 Map<String, Object> review = new HashMap<>();
                 review.put("rescueId", rescueId);
                 review.put("passengerId", token.getUid());
-                review.put("passengerName", rescue.getString("passengerName"));
+                review.put("passengerName", preferredReviewName(
+                        rescue.getString("passengerName"),
+                        passenger.exists() ? passenger.getString("name") : null,
+                        "Passenger"
+                ));
                 review.put("passengerProfilePhotoPath", rescue.getString("passengerProfilePhotoPath"));
                 review.put("bikerId", bikerId);
-                review.put("bikerName", rescue.getString("bikerName"));
+                review.put("bikerName", preferredReviewName(
+                        rescue.getString("bikerName"), biker.getString("name"), "Biker"
+                ));
                 review.put("bikerProfilePhotoPath", rescue.getString("bikerProfilePhotoPath"));
                 review.put("rating", request.rating());
                 review.put("comment", request.comment() == null ? "" : request.comment().trim());
@@ -121,9 +129,9 @@ public class ReviewService {
         String passengerProfilePhotoPath = snapshot.getString("passengerProfilePhotoPath");
         String bikerProfilePhotoPath = snapshot.getString("bikerProfilePhotoPath");
         return new ReviewResponse(snapshot.getId(), snapshot.getString("rescueId"),
-                passengerId, snapshot.getString("passengerName"),
+                passengerId, resolvedReviewName(snapshot.getString("passengerName"), passengerId, "Passenger"),
                 passengerProfilePhotoPath == null ? profilePhotoPath(passengerId) : passengerProfilePhotoPath,
-                bikerId, snapshot.getString("bikerName"),
+                bikerId, resolvedReviewName(snapshot.getString("bikerName"), bikerId, "Biker"),
                 bikerProfilePhotoPath == null ? profilePhotoPath(bikerId) : bikerProfilePhotoPath,
                 rating == null ? 0 : rating.intValue(), snapshot.getString("comment"),
                 createdAt == null ? null : createdAt.toDate().toInstant());
@@ -140,6 +148,34 @@ public class ReviewService {
         } catch (ExecutionException exception) {
             throw unavailable(exception);
         }
+    }
+
+    static String preferredReviewName(String storedName, String profileName, String fallback) {
+        if (isSpecificName(storedName)) return storedName.trim();
+        if (isSpecificName(profileName)) return profileName.trim();
+        return fallback;
+    }
+
+    private String resolvedReviewName(String storedName, String uid, String fallback) {
+        if (isSpecificName(storedName)) return storedName.trim();
+        return preferredReviewName(storedName, profileValue(uid, "name"), fallback);
+    }
+
+    private String profileValue(String uid, String field) {
+        if (uid == null || uid.isBlank()) return null;
+        try {
+            DocumentSnapshot profile = firestore.collection("users").document(uid).get().get();
+            return profile.exists() ? profile.getString(field) : null;
+        } catch (InterruptedException exception) {
+            Thread.currentThread().interrupt();
+            throw unavailable(exception);
+        } catch (ExecutionException exception) {
+            throw unavailable(exception);
+        }
+    }
+
+    private static boolean isSpecificName(String name) {
+        return name != null && !name.isBlank() && !"user".equalsIgnoreCase(name.trim());
     }
 
     private ResponseStatusException unavailable(Exception exception) {

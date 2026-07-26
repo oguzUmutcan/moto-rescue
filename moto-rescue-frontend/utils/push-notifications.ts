@@ -64,3 +64,15 @@ export function addNotificationResponseListener(listener: (data: PushData) => vo
     listener(response.notification.request.content.data as PushData);
   });
 }
+
+export function addNotificationReceivedListener(listener: (data: PushData) => void) {
+  return Notifications.addNotificationReceivedListener((notification) => {
+    listener(notification.request.content.data as PushData);
+  });
+}
+
+export function getInitialNotificationData(): PushData | null {
+  const response = Notifications.getLastNotificationResponse();
+  if (response) Notifications.clearLastNotificationResponse();
+  return response?.notification.request.content.data as PushData | null;
+}

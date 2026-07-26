@@ -1,12 +1,17 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useIsFocused } from "@react-navigation/native";
 import { AlertCircle, MapPin } from "lucide-react-native";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Alert, StyleSheet, Text, TouchableOpacity, View } from "@/components/localized-native";
 import { rescueApi, RescueRequest } from "../../api/rescues";
 import LocationMap from "../../components/location-map";
 import ProfileAvatar from "../../components/profile-avatar";
 import { auth } from "../../config/firebase";
+import {
+  dismissIncomingRequest,
+  ensureIncomingRequestPresented,
+  handleIncomingRequest,
+} from "../../utils/request-presentation";
 
 function HomeBar() {
   return (
@@ -42,13 +47,26 @@ export default function IncomingRequestScreen() {
   const [secs, setSecs] = useState(30);
   const [request, setRequest] = useState<RescueRequest | null>(null);
   const [accepting, setAccepting] = useState(false);
+  const requestExpiryRef = useRef<number | undefined>(undefined);
+
+  useEffect(() => {
+    if (!requestId) return;
+    ensureIncomingRequestPresented(requestId);
+    return () => dismissIncomingRequest(requestId, requestExpiryRef.current);
+  }, [requestId]);
 
   useEffect(() => {
     if (!isFocused || !requestId) return;
     rescueApi.get(requestId)
-      .then(setRequest)
+      .then((nextRequest) => {
+        setRequest(nextRequest);
+        requestExpiryRef.current = nextRequest.expiresAt
+          ? new Date(nextRequest.expiresAt).getTime()
+          : undefined;
+      })
       .catch((error) => {
         console.error("Could not load rescue request", error);
+        handleIncomingRequest(requestId);
         router.back();
       });
   }, [isFocused, requestId, router]);
@@ -60,6 +78,7 @@ export default function IncomingRequestScreen() {
       setSecs((current) => Math.max(0, current - 1));
     }, 1000);
     const expiryTimer = setTimeout(() => {
+      if (requestId) dismissIncomingRequest(requestId, requestExpiryRef.current);
       router.back();
     }, 30_000);
 
@@ -75,11 +94,17 @@ export default function IncomingRequestScreen() {
     setAccepting(true);
     try {
       await rescueApi.accept(requestId);
+      handleIncomingRequest(requestId);
       router.replace(`/(biker)/navigation?requestId=${encodeURIComponent(requestId)}`);
     } catch (error) {
       Alert.alert("Could not accept request", error instanceof Error ? error.message : "Please try again");
       setAccepting(false);
     }
+  };
+
+  const handleDecline = () => {
+    if (requestId) dismissIncomingRequest(requestId, requestExpiryRef.current);
+    router.back();
   };
 
   const pct = (secs / 30) * 100;
@@ -274,7 +299,7 @@ export default function IncomingRequestScreen() {
             </TouchableOpacity>
 
             <TouchableOpacity
-              onPress={() => router.back()}
+              onPress={handleDecline}
               style={{ width: "100%", paddingVertical: 12, alignItems: "center", justifyContent: "center", marginBottom: 10 }}
             >
               <Text style={{ color: "#8E8E93", fontSize: 15, fontWeight: "700" }}>Decline</Text>

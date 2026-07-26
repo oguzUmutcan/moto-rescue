@@ -2,7 +2,7 @@ import React from "react";
 import { Text, TouchableOpacity, View } from "@/components/localized-native";
 // In Expo, install and import from 'lucide-react-native'
 import { useRouter } from "expo-router";
-import { ChevronRight, Zap } from "lucide-react-native";
+import { ChevronRight } from "lucide-react-native";
 import { Image } from "expo-image";
 import LanguageSelector from "@/components/language-selector";
 

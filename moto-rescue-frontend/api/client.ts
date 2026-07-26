@@ -19,6 +19,7 @@ function resolveApiUrl(): string {
 export const API_URL = resolveApiUrl();
 
 export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
+  await auth.authStateReady();
   const user = auth.currentUser;
   if (!user) throw new Error(translate("You must be signed in."));
   let response: Response;

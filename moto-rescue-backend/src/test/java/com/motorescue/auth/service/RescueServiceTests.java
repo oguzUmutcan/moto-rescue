@@ -10,11 +10,47 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 class RescueServiceTests {
 
     @Test
+    void profileNamesArePreferredOverMissingAuthDisplayNames() {
+        org.assertj.core.api.Assertions.assertThat(
+                RescueService.preferredDisplayName("Alice Passenger", null, "Passenger")
+        ).isEqualTo("Alice Passenger");
+        org.assertj.core.api.Assertions.assertThat(
+                RescueService.preferredDisplayName("User", "Bora Biker", "Biker")
+        ).isEqualTo("Bora Biker");
+        org.assertj.core.api.Assertions.assertThat(
+                RescueService.preferredDisplayName("User", null, "Passenger")
+        ).isEqualTo("Passenger");
+    }
+
+    @Test
     void onlyFreshSearchingRequestsCanBeAccepted() {
         assertThatCode(() -> RescueService.validateAcceptable("searching", false))
                 .doesNotThrowAnyException();
         assertStatus(() -> RescueService.validateAcceptable("accepted", false), HttpStatus.CONFLICT);
         assertStatus(() -> RescueService.validateAcceptable("searching", true), HttpStatus.CONFLICT);
+    }
+
+    @Test
+    void bikerMustRemainFullyEligibleWhenAccepting() {
+        assertThatCode(() -> RescueService.validateBikerEligibility(
+                "biker", true, true, true, true
+        )).doesNotThrowAnyException();
+        assertStatus(
+                () -> RescueService.validateBikerEligibility("biker", false, true, true, true),
+                HttpStatus.CONFLICT
+        );
+        assertStatus(
+                () -> RescueService.validateBikerEligibility("biker", true, false, true, true),
+                HttpStatus.FORBIDDEN
+        );
+        assertStatus(
+                () -> RescueService.validateBikerEligibility("biker", true, true, false, true),
+                HttpStatus.FORBIDDEN
+        );
+        assertStatus(
+                () -> RescueService.validateBikerEligibility("biker", true, true, true, false),
+                HttpStatus.CONFLICT
+        );
     }
 
     @Test

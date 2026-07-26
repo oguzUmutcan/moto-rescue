@@ -1,5 +1,36 @@
 # MotoRescue TODO
 
+## 26 July hardening
+
+- [x] Deny direct Firestore profile/rescue writes and keep application data backend-authoritative.
+- [x] Initialize Firebase Auth with AsyncStorage persistence on native platforms.
+- [x] Wait for persisted authentication before foreground and background API calls.
+- [x] Prevent passengers and bikers from holding overlapping active rescues.
+- [x] Recheck biker eligibility transactionally when a rescue is accepted.
+- [x] Move route geometry and ETA requests behind an authenticated backend endpoint.
+- [x] Batch Expo push requests and run notification delivery outside rescue request threads.
+- [x] Clear all current npm audit findings with Expo 54-compatible patches.
+- [x] Remove lint warnings and add auth, polyline, route, notification-batch, and eligibility tests.
+- [x] Deploy the updated Firestore rules to Firebase project `motorescue-d4abc`.
+- [x] Enable Routes API and allow it on the API-restricted backend
+      `GOOGLE_MAPS_API_KEY`.
+- [x] Rebuild the Android debug client from the short `C:\mr` build mirror.
+- [ ] Install the rebuilt client and repeat the two-device manual smoke tests.
+
+## 26 July dashboard and notification fixes
+
+- [x] Use backend profile names for new rescue and review snapshots.
+- [x] Repair legacy `"User"` labels on read from the current user profile.
+- [x] Turn the passenger search bar into a destination-first rescue shortcut.
+- [x] Add a persistent activity inbox with unread counts and read controls.
+- [x] Auto-present nearby requests to focused, online biker dashboards.
+- [x] Handle foreground, notification-tap, and cold-start rescue notifications.
+- [x] Deduplicate incoming request sheets across polling and push navigation.
+- [x] Deploy backend revision `moto-rescue-api-00006-trx` to Cloud Run.
+- [x] Rebuild and preserve the updated Android debug client.
+- [ ] Repeat the incoming-request flow on two physical accounts/devices,
+      including foreground, background, cold start, decline, and notification tap.
+
 ## Immediate validation
 
 - [x] Install the latest EAS development APK on a physical Android device and emulator.

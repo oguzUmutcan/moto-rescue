@@ -1,6 +1,7 @@
 // Native Expo application. Web preview resolution errors are expected and should be ignored.
 import * as Location from "expo-location";
 import { useRouter } from "expo-router";
+import type { Href } from "expo-router";
 import { useIsFocused } from "@react-navigation/native";
 import { Bell, Navigation2, Search, Zap } from "lucide-react-native";
 import React, { useEffect, useRef, useState } from "react";
@@ -17,6 +18,7 @@ import type { LocationMapHandle, MapRegion } from "../../../components/location-
 import { rescueApi, RescueRequest } from "../../../api/rescues";
 import { passengerRescueRoute } from "../../../utils/app-routing";
 import { getAvailablePosition } from "../../../utils/device-location";
+import { notificationApi } from "../../../api/notifications";
 
 export default function PassengerDashboardScreen() {
   const router = useRouter();
@@ -26,6 +28,7 @@ export default function PassengerDashboardScreen() {
 
   const [initialRegion, setInitialRegion] = useState<MapRegion | null>(null);
   const [activeRequest, setActiveRequest] = useState<RescueRequest | null>(null);
+  const [unreadActivity, setUnreadActivity] = useState(0);
 
   useEffect(() => {
     if (!isFocused) return;
@@ -35,6 +38,11 @@ export default function PassengerDashboardScreen() {
         if (active) setActiveRequest(request);
       })
       .catch((error) => console.error("Could not load active rescue", error));
+    notificationApi.list()
+      .then((items) => {
+        if (active) setUnreadActivity(items.filter((item) => !item.readAt).length);
+      })
+      .catch((error) => console.error("Could not load activity count", error));
     return () => {
       active = false;
     };
@@ -180,15 +188,33 @@ export default function PassengerDashboardScreen() {
       <View className="absolute top-0 w-full bg-white rounded-b-3xl shadow-md z-10">
         <View style={{ paddingTop: insets.top, paddingBottom: 16 }}>
           <View className="flex-row items-center px-4 pt-2 gap-3">
-            <View className="flex-1 h-11 bg-[#F2F2F7] rounded-xl flex-row items-center px-3 gap-2">
+            <TouchableOpacity
+              onPress={() => router.navigate({
+                pathname: "/(passenger)/request-form",
+                params: { focus: "destination" },
+              })}
+              accessibilityLabel="Where are you going?"
+              activeOpacity={0.75}
+              className="flex-1 h-11 bg-[#F2F2F7] rounded-xl flex-row items-center px-3 gap-2"
+            >
               <Search size={16} color="#8E8E93" />
               <Text className="text-[15px] text-[#AEAEB2] font-medium">
                 Where are you going?
               </Text>
-            </View>
-            <TouchableOpacity className="w-11 h-11 rounded-xl bg-[#007AFF] items-center justify-center relative">
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => router.navigate("/(passenger)/notifications" as Href)}
+              accessibilityLabel="Activity notifications"
+              className="w-11 h-11 rounded-xl bg-[#007AFF] items-center justify-center relative"
+            >
               <Bell size={20} color="white" />
-              <View className="absolute top-2.5 right-2.5 w-2 h-2 rounded-full bg-[#FF3B30] border-2 border-[#007AFF]" />
+              {unreadActivity > 0 && (
+                <View className="absolute -top-1 -right-1 min-w-5 h-5 px-1 rounded-full bg-[#FF3B30] border-2 border-white items-center justify-center">
+                  <Text className="text-white text-[9px] font-black">
+                    {unreadActivity > 9 ? "9+" : unreadActivity}
+                  </Text>
+                </View>
+              )}
             </TouchableOpacity>
           </View>
         </View>

@@ -67,7 +67,7 @@ public class PublicBikerService {
                     .get().get().getDocuments().stream()
                     .map(document -> new PublicBikerReview(
                             document.getId(),
-                            anonymizedPassengerName(document.getString("passengerName")),
+                            anonymizedPassengerName(resolvedPassengerName(document)),
                             number(document, "rating").intValue(),
                             document.getString("comment"),
                             instant(document.getTimestamp("createdAt"))
@@ -125,6 +125,24 @@ public class PublicBikerService {
         if (name == null || name.isBlank()) return "Passenger";
         String firstName = name.trim().split("\\s+")[0];
         return firstName.length() <= 1 ? firstName : firstName.charAt(0) + "***";
+    }
+
+    private String resolvedPassengerName(DocumentSnapshot review) {
+        String storedName = review.getString("passengerName");
+        if (storedName != null && !storedName.isBlank() && !"user".equalsIgnoreCase(storedName.trim())) {
+            return storedName;
+        }
+        String passengerId = review.getString("passengerId");
+        if (passengerId == null || passengerId.isBlank()) return storedName;
+        try {
+            DocumentSnapshot passenger = firestore.collection("users").document(passengerId).get().get();
+            return passenger.exists() ? passenger.getString("name") : storedName;
+        } catch (InterruptedException exception) {
+            Thread.currentThread().interrupt();
+            throw unavailable(exception);
+        } catch (ExecutionException exception) {
+            throw unavailable(exception);
+        }
     }
 
     private Number number(DocumentSnapshot document, String field) {

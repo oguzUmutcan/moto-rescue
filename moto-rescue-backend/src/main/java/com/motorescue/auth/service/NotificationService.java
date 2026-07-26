@@ -11,10 +11,12 @@ import com.google.cloud.firestore.Firestore;
 import com.google.cloud.firestore.GeoPoint;
 import com.google.cloud.firestore.QueryDocumentSnapshot;
 import com.motorescue.auth.dto.RescueDtos.RescueResponse;
+import com.motorescue.auth.service.NotificationInboxService.InboxMessage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -28,7 +30,9 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ExecutionException;
+import java.util.stream.Collectors;
 
 @Service
 @ConditionalOnProperty(name = "firebase.enabled", havingValue = "true", matchIfMissing = true)
@@ -37,35 +41,67 @@ public class NotificationService {
     private static final URI EXPO_PUSH_URL = URI.create("https://exp.host/--/api/v2/push/send");
     private static final URI EXPO_RECEIPTS_URL = URI.create("https://exp.host/--/api/v2/push/getReceipts");
     private static final String RECEIPTS_COLLECTION = "pushNotificationReceipts";
+    private static final String ACTIVE_RESCUES_COLLECTION = "activeRescueParticipants";
     private static final Duration RECEIPT_DELAY = Duration.ofMinutes(15);
     private static final Duration RECEIPT_EXPIRY = Duration.ofHours(24);
 
     private final Firestore firestore;
+    private final NotificationInboxService notificationInboxService;
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final HttpClient httpClient;
 
-    public NotificationService(Firestore firestore) {
+    public NotificationService(Firestore firestore, NotificationInboxService notificationInboxService) {
         this.firestore = firestore;
+        this.notificationInboxService = notificationInboxService;
         this.httpClient = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build();
     }
 
+    @Async("notificationExecutor")
     public void notifyNearbyBikers(RescueResponse rescue) {
         GeoPoint pickup = new GeoPoint(rescue.latitude(), rescue.longitude());
         try {
-            firestore.collection("users")
+            List<DocumentSnapshot> nearbyBikers = firestore.collection("users")
                     .whereEqualTo("role", "biker")
                     .whereEqualTo("online", true)
                     .limit(100)
                     .get().get().getDocuments().stream()
-                    .filter(this::acceptsNotifications)
                     .filter(biker -> isNearbyAvailableBiker(biker, pickup))
-                    .forEach(biker -> send(
+                    .map(document -> (DocumentSnapshot) document)
+                    .toList();
+            DocumentReference[] lockReferences = nearbyBikers.stream()
+                    .map(biker -> firestore.collection(ACTIVE_RESCUES_COLLECTION).document(biker.getId()))
+                    .toArray(DocumentReference[]::new);
+            Set<String> activeBikerIds = lockReferences.length == 0
+                    ? Set.of()
+                    : firestore.getAll(lockReferences).get().stream()
+                            .filter(DocumentSnapshot::exists)
+                            .map(DocumentSnapshot::getId)
+                            .collect(Collectors.toSet());
+            List<DocumentSnapshot> recipients = nearbyBikers.stream()
+                    .filter(biker -> !activeBikerIds.contains(biker.getId()))
+                    .toList();
+            List<InboxMessage> inboxMessages = recipients.stream()
+                    .map(biker -> new InboxMessage(
+                            biker.getId(),
+                            "rescue_request",
+                            "biker",
+                            rescue.id(),
+                            localized(biker.getString("language"), "New rescue nearby"),
+                            rescue.pickupLabel()
+                    ))
+                    .toList();
+            notificationInboxService.saveAll(inboxMessages);
+            List<PushMessage> messages = recipients.stream()
+                    .filter(this::acceptsNotifications)
+                    .map(biker -> new PushMessage(
                             biker.getId(),
                             biker.getString("expoPushToken"),
                             localized(biker.getString("language"), "New rescue nearby"),
                             rescue.pickupLabel(),
                             Map.of("type", "rescue_request", "role", "biker", "requestId", rescue.id())
-                    ));
+                    ))
+                    .toList();
+            sendBatch(messages);
         } catch (InterruptedException exception) {
             Thread.currentThread().interrupt();
             LOGGER.warn("Interrupted while sending rescue request notifications", exception);
@@ -74,6 +110,7 @@ public class NotificationService {
         }
     }
 
+    @Async("notificationExecutor")
     public void notifyPassengerAccepted(RescueResponse rescue) {
         sendToUser(
                 rescue.passengerId(),
@@ -83,6 +120,7 @@ public class NotificationService {
         );
     }
 
+    @Async("notificationExecutor")
     public void notifyPassengerStarted(RescueResponse rescue) {
         sendToUser(
                 rescue.passengerId(),
@@ -92,6 +130,7 @@ public class NotificationService {
         );
     }
 
+    @Async("notificationExecutor")
     public void notifyPassengerCompleted(RescueResponse rescue) {
         sendToUser(
                 rescue.passengerId(),
@@ -101,6 +140,7 @@ public class NotificationService {
         );
     }
 
+    @Async("notificationExecutor")
     public void notifyBikerCancelled(RescueResponse rescue) {
         if (rescue.bikerId() == null) return;
         sendToUser(
@@ -122,15 +162,26 @@ public class NotificationService {
     private void sendToUser(String uid, String title, String body, Map<String, Object> data) {
         try {
             DocumentSnapshot user = firestore.collection("users").document(uid).get().get();
-            if (!user.exists() || !acceptsNotifications(user)) return;
+            if (!user.exists()) return;
             String language = user.getString("language");
-            send(
+            String localizedTitle = localized(language, title);
+            String localizedBody = localized(language, body);
+            notificationInboxService.save(new InboxMessage(
+                    uid,
+                    (String) data.get("type"),
+                    (String) data.get("role"),
+                    (String) data.get("requestId"),
+                    localizedTitle,
+                    localizedBody
+            ));
+            if (!acceptsNotifications(user)) return;
+            sendBatch(List.of(new PushMessage(
                     uid,
                     user.getString("expoPushToken"),
-                    localized(language, title),
-                    localized(language, body),
+                    localizedTitle,
+                    localizedBody,
                     data
-            );
+            )));
         } catch (InterruptedException exception) {
             Thread.currentThread().interrupt();
             LOGGER.warn("Interrupted while loading push recipient {}", uid, exception);
@@ -146,17 +197,27 @@ public class NotificationService {
                 && !Boolean.FALSE.equals(user.getBoolean("notificationsEnabled"));
     }
 
-    private void send(String uid, String expoPushToken, String title, String body, Map<String, Object> data) {
-        if (expoPushToken == null || expoPushToken.isBlank()) return;
-        Map<String, Object> message = new HashMap<>();
-        message.put("to", expoPushToken);
-        message.put("title", title);
-        message.put("body", body);
-        message.put("sound", "default");
-        message.put("data", data);
+    private void sendBatch(List<PushMessage> messages) {
+        for (int start = 0; start < messages.size(); start += 100) {
+            sendChunk(messages.subList(start, Math.min(start + 100, messages.size())));
+        }
+    }
 
+    private void sendChunk(List<PushMessage> messages) {
+        if (messages.isEmpty()) return;
         try {
-            String payload = objectMapper.writeValueAsString(List.of(message));
+            List<Map<String, Object>> payloadMessages = messages.stream()
+                    .map(message -> {
+                        Map<String, Object> payload = new HashMap<>();
+                        payload.put("to", message.expoPushToken());
+                        payload.put("title", message.title());
+                        payload.put("body", message.body());
+                        payload.put("sound", "default");
+                        payload.put("data", message.data());
+                        return payload;
+                    })
+                    .toList();
+            String payload = objectMapper.writeValueAsString(payloadMessages);
             HttpRequest request = HttpRequest.newBuilder(EXPO_PUSH_URL)
                     .timeout(Duration.ofSeconds(8))
                     .header("Content-Type", "application/json")
@@ -168,14 +229,21 @@ public class NotificationService {
                 return;
             }
 
-            PushResult ticket = parsePushTicket(response.body());
-            if (ticket.error() != null) {
-                LOGGER.warn("Expo rejected push for user {}: {} ({})", uid, ticket.message(), ticket.error());
-                if ("DeviceNotRegistered".equals(ticket.error())) {
-                    removeTokenIfCurrent(uid, expoPushToken);
+            List<PushResult> tickets = parsePushTickets(response.body());
+            for (int index = 0; index < messages.size(); index++) {
+                PushMessage message = messages.get(index);
+                PushResult ticket = index < tickets.size()
+                        ? tickets.get(index)
+                        : new PushResult(null, "Expo omitted a push ticket", "MalformedExpoResponse");
+                if (ticket.error() != null) {
+                    LOGGER.warn("Expo rejected push for user {}: {} ({})",
+                            message.uid(), ticket.message(), ticket.error());
+                    if ("DeviceNotRegistered".equals(ticket.error())) {
+                        removeTokenIfCurrent(message.uid(), message.expoPushToken());
+                    }
+                } else if (ticket.ticketId() != null) {
+                    savePendingReceipt(ticket.ticketId(), message.uid(), message.expoPushToken());
                 }
-            } else if (ticket.ticketId() != null) {
-                savePendingReceipt(ticket.ticketId(), uid, expoPushToken);
             }
         } catch (JsonProcessingException exception) {
             LOGGER.warn("Could not serialize or parse Expo push data", exception);
@@ -276,9 +344,21 @@ public class NotificationService {
     }
 
     static PushResult parsePushTicket(String responseBody) throws JsonProcessingException {
+        List<PushResult> tickets = parsePushTickets(responseBody);
+        return tickets.isEmpty()
+                ? new PushResult(null, "Expo omitted a push ticket", "MalformedExpoResponse")
+                : tickets.getFirst();
+    }
+
+    static List<PushResult> parsePushTickets(String responseBody) throws JsonProcessingException {
         JsonNode data = new ObjectMapper().readTree(responseBody).path("data");
-        JsonNode ticket = data.isArray() ? data.path(0) : data;
-        return parseResult(ticket);
+        List<PushResult> tickets = new ArrayList<>();
+        if (data.isArray()) {
+            data.forEach(ticket -> tickets.add(parseResult(ticket)));
+        } else if (!data.isMissingNode()) {
+            tickets.add(parseResult(data));
+        }
+        return tickets;
     }
 
     static Map<String, PushResult> parsePushReceipts(String responseBody) throws JsonProcessingException {
@@ -309,6 +389,15 @@ public class NotificationService {
     }
 
     record PushResult(String ticketId, String message, String error) {
+    }
+
+    private record PushMessage(
+            String uid,
+            String expoPushToken,
+            String title,
+            String body,
+            Map<String, Object> data
+    ) {
     }
 
     static String localized(String language, String message) {

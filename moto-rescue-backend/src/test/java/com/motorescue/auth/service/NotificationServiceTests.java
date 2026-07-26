@@ -4,6 +4,7 @@ import com.motorescue.auth.service.NotificationService.PushResult;
 import org.junit.jupiter.api.Test;
 
 import java.util.Map;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -29,6 +30,21 @@ class NotificationServiceTests {
         assertThat(result.ticketId()).isNull();
         assertThat(result.message()).isEqualTo("Device is not registered");
         assertThat(result.error()).isEqualTo("DeviceNotRegistered");
+    }
+
+    @Test
+    void parsesBatchTicketsInRecipientOrder() throws Exception {
+        List<PushResult> results = NotificationService.parsePushTickets("""
+                {"data":[
+                  {"status":"ok","id":"ticket-1"},
+                  {"status":"error","message":"Unregistered",
+                    "details":{"error":"DeviceNotRegistered"}}
+                ]}
+                """);
+
+        assertThat(results).hasSize(2);
+        assertThat(results.get(0).ticketId()).isEqualTo("ticket-1");
+        assertThat(results.get(1).error()).isEqualTo("DeviceNotRegistered");
     }
 
     @Test
