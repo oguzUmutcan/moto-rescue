@@ -18,6 +18,7 @@ export default function PassengerStackLayout() {
         <Stack.Screen name="searching" />
         <Stack.Screen name="ride" />
         <Stack.Screen name="review" />
+        <Stack.Screen name="notifications" />
       </Stack>
     </View>
   );

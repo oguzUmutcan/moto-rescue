@@ -7,6 +7,7 @@ import com.google.cloud.firestore.Firestore;
 import com.google.cloud.firestore.FieldValue;
 import com.google.cloud.firestore.GeoPoint;
 import com.google.cloud.firestore.QueryDocumentSnapshot;
+import com.google.cloud.firestore.Transaction;
 import com.google.firebase.auth.FirebaseToken;
 import com.motorescue.auth.dto.RescueDtos.CreateRescueRequest;
 import com.motorescue.auth.dto.RescueDtos.RescueResponse;
@@ -29,6 +30,7 @@ public class RescueService {
 
     private static final String REQUESTS = "rescueRequests";
     private static final String USERS = "users";
+    private static final String ACTIVE_RESCUES = "activeRescueParticipants";
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
     private static final double ZONE_KM = 6.0;
     private final Firestore firestore;
@@ -44,11 +46,17 @@ public class RescueService {
         if (!"passenger".equalsIgnoreCase(passenger.getString("role"))) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "The passenger role is required");
         }
+        if (active(token) != null) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "You already have an active rescue request");
+        }
         Instant now = Instant.now();
         DocumentReference reference = firestore.collection(REQUESTS).document();
+        DocumentReference passengerLock = activeRescueLock(token.getUid());
         Map<String, Object> data = new HashMap<>();
         data.put("passengerId", token.getUid());
-        data.put("passengerName", displayName(token));
+        data.put("passengerName", preferredDisplayName(
+                passenger.getString("name"), token.getName(), "Passenger"
+        ));
         data.put("passengerProfilePhotoPath", passenger.getString("profilePhotoPath"));
         data.put("pickup", new GeoPoint(request.latitude(), request.longitude()));
         data.put("pickupLabel", request.pickupLabel().trim());
@@ -64,7 +72,23 @@ public class RescueService {
         data.put("createdAt", Timestamp.ofTimeSecondsAndNanos(now.getEpochSecond(), now.getNano()));
         Instant expiresAt = now.plusSeconds(300);
         data.put("expiresAt", Timestamp.ofTimeSecondsAndNanos(expiresAt.getEpochSecond(), expiresAt.getNano()));
-        await(reference.create(data));
+        try {
+            firestore.runTransaction(transaction -> {
+                DocumentSnapshot currentLock = transaction.get(passengerLock).get();
+                assertLockAvailable(transaction, currentLock);
+                transaction.create(reference, data);
+                transaction.set(passengerLock, activeLockData(reference.getId(), "passenger"));
+                return null;
+            }).get();
+        } catch (InterruptedException exception) {
+            Thread.currentThread().interrupt();
+            throw unavailable(exception);
+        } catch (ExecutionException exception) {
+            if (exception.getCause() instanceof ResponseStatusException statusException) {
+                throw statusException;
+            }
+            throw unavailable(exception);
+        }
         RescueResponse response = forUser(token, from(reference.getId(), data));
         notificationService.notifyNearbyBikers(response);
         return response;
@@ -157,30 +181,53 @@ public class RescueService {
 
     public RescueResponse accept(FirebaseToken token, String requestId) {
         requireRole(token.getUid(), "biker");
-        DocumentSnapshot biker = userProfile(token.getUid());
-        GeoPoint bikerLocation = (GeoPoint) biker.get("currentLocation");
-        if (bikerLocation == null || !isFreshLocation(biker.getTimestamp("locationUpdatedAt"), Instant.now()))
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "A recent biker location is required");
+        if (active(token) != null) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "You already have an active rescue");
+        }
         DocumentReference reference = firestore.collection(REQUESTS).document(requestId);
+        DocumentReference bikerReference = firestore.collection(USERS).document(token.getUid());
+        DocumentReference bikerLock = activeRescueLock(token.getUid());
         try {
             firestore.runTransaction(transaction -> {
                 DocumentSnapshot snapshot = transaction.get(reference).get();
+                DocumentSnapshot biker = transaction.get(bikerReference).get();
+                DocumentSnapshot currentLock = transaction.get(bikerLock).get();
                 if (!snapshot.exists()) {
                     throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Rescue request not found");
                 }
+                if (!biker.exists()) {
+                    throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Biker profile is required");
+                }
                 validateAcceptable(snapshot.getString("status"), isExpired(snapshot));
+                GeoPoint bikerLocation = (GeoPoint) biker.get("currentLocation");
+                validateBikerEligibility(
+                        biker.getString("role"),
+                        Boolean.TRUE.equals(biker.getBoolean("online")),
+                        UserService.hasSubmittedIdentityDocument(
+                                biker.getString("identityDocumentStatus"),
+                                biker.getString("identityDocumentFrontPath"),
+                                biker.getString("identityDocumentBackPath")
+                        ),
+                        UserService.hasContactPhone(biker.getString("phone")),
+                        bikerLocation != null
+                                && isFreshLocation(biker.getTimestamp("locationUpdatedAt"), Instant.now())
+                );
+                assertLockAvailable(transaction, currentLock);
                 if (distanceKm(bikerLocation, (GeoPoint) snapshot.get("pickup")) > ZONE_KM) {
                     throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Rescue is outside the 6 km zone");
                 }
                 Map<String, Object> acceptance = new HashMap<>();
                 acceptance.put("status", "accepted");
                 acceptance.put("bikerId", token.getUid());
-                acceptance.put("bikerName", displayName(token));
+                acceptance.put("bikerName", preferredDisplayName(
+                        biker.getString("name"), token.getName(), "Biker"
+                ));
                 acceptance.put("bikerProfilePhotoPath", biker.getString("profilePhotoPath"));
                 acceptance.put("bikerPhoneNumber", biker.getString("phone"));
                 acceptance.put("boardingCode", String.format("%06d", SECURE_RANDOM.nextInt(1_000_000)));
                 acceptance.put("acceptedAt", Timestamp.now());
                 transaction.update(reference, acceptance);
+                transaction.set(bikerLock, activeLockData(requestId, "biker"));
                 return null;
             }).get();
             RescueResponse response = forUser(token, from(getDocument(requestId)));
@@ -205,12 +252,21 @@ public class RescueService {
                 if (!snapshot.exists()) {
                     throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Rescue request not found");
                 }
+                DocumentSnapshot passengerLock = transaction.get(
+                        activeRescueLock(snapshot.getString("passengerId"))
+                ).get();
+                String bikerId = snapshot.getString("bikerId");
+                DocumentSnapshot bikerLock = bikerId == null
+                        ? null
+                        : transaction.get(activeRescueLock(bikerId)).get();
                 validateCancellation(
                         token.getUid(),
                         snapshot.getString("passengerId"),
                         snapshot.getString("status")
                 );
                 transaction.update(reference, "status", "cancelled");
+                deleteLockIfMatches(transaction, passengerLock, requestId);
+                deleteLockIfMatches(transaction, bikerLock, requestId);
                 return null;
             }).get();
             RescueResponse response = forUser(token, from(getDocument(requestId)));
@@ -277,6 +333,12 @@ public class RescueService {
                 if (!snapshot.exists()) {
                     throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Rescue request not found");
                 }
+                DocumentSnapshot passengerLock = "completed".equals(nextStatus)
+                        ? transaction.get(activeRescueLock(snapshot.getString("passengerId"))).get()
+                        : null;
+                DocumentSnapshot bikerLock = "completed".equals(nextStatus)
+                        ? transaction.get(activeRescueLock(token.getUid())).get()
+                        : null;
                 validateBikerTransition(
                         token.getUid(),
                         snapshot.getString("bikerId"),
@@ -287,6 +349,8 @@ public class RescueService {
                 if ("completed".equals(nextStatus)) {
                     transaction.update(firestore.collection(USERS).document(token.getUid()),
                             "totalRescues", FieldValue.increment(1));
+                    deleteLockIfMatches(transaction, passengerLock, requestId);
+                    deleteLockIfMatches(transaction, bikerLock, requestId);
                 }
                 return null;
             }).get();
@@ -313,6 +377,25 @@ public class RescueService {
     static void validateAcceptable(String status, boolean expired) {
         if (!"searching".equals(status) || expired) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Rescue request is no longer available");
+        }
+    }
+
+    static void validateBikerEligibility(String role, boolean online, boolean verifiedDocuments,
+                                         boolean hasContactPhone, boolean hasFreshLocation) {
+        if (!"biker".equals(role)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "The biker role is required");
+        }
+        if (!online) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Go online before accepting a rescue");
+        }
+        if (!verifiedDocuments) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "A verified driver's license is required");
+        }
+        if (!hasContactPhone) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "A valid contact phone number is required");
+        }
+        if (!hasFreshLocation) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "A recent biker location is required");
         }
     }
 
@@ -379,6 +462,42 @@ public class RescueService {
         }
     }
 
+    private DocumentReference activeRescueLock(String uid) {
+        return firestore.collection(ACTIVE_RESCUES).document(uid);
+    }
+
+    private Map<String, Object> activeLockData(String requestId, String role) {
+        return Map.of(
+                "requestId", requestId,
+                "role", role,
+                "updatedAt", Timestamp.now()
+        );
+    }
+
+    private void assertLockAvailable(Transaction transaction, DocumentSnapshot lock)
+            throws ExecutionException, InterruptedException {
+        if (lock == null || !lock.exists()) return;
+        String lockedRequestId = lock.getString("requestId");
+        if (lockedRequestId == null || lockedRequestId.isBlank()) return;
+        DocumentSnapshot lockedRequest = transaction.get(
+                firestore.collection(REQUESTS).document(lockedRequestId)
+        ).get();
+        if (!lockedRequest.exists()) return;
+        String status = lockedRequest.getString("status");
+        boolean active = "accepted".equals(status)
+                || "in_progress".equals(status)
+                || ("searching".equals(status) && !isExpired(lockedRequest));
+        if (active) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "You already have an active rescue");
+        }
+    }
+
+    private void deleteLockIfMatches(Transaction transaction, DocumentSnapshot lock, String requestId) {
+        if (lock != null && lock.exists() && requestId.equals(lock.getString("requestId"))) {
+            transaction.delete(lock.getReference());
+        }
+    }
+
     private boolean isExpired(DocumentSnapshot snapshot) {
         Timestamp expiresAt = snapshot.getTimestamp("expiresAt");
         return expiresAt != null && expiresAt.toDate().toInstant().isBefore(Instant.now());
@@ -395,7 +514,11 @@ public class RescueService {
         return new RescueResponse(
                 id,
                 (String) data.get("passengerId"),
-                (String) data.get("passengerName"),
+                resolvedDisplayName(
+                        (String) data.get("passengerName"),
+                        (String) data.get("passengerId"),
+                        "Passenger"
+                ),
                 (String) data.get("passengerProfilePhotoPath"),
                 pickup.getLatitude(),
                 pickup.getLongitude(),
@@ -409,7 +532,11 @@ public class RescueService {
                 Boolean.TRUE.equals(data.get("needsHelmet")),
                 (String) data.get("status"),
                 (String) data.get("bikerId"),
-                (String) data.get("bikerName"),
+                resolvedDisplayName(
+                        (String) data.get("bikerName"),
+                        (String) data.get("bikerId"),
+                        "Biker"
+                ),
                 (String) data.get("bikerProfilePhotoPath"),
                 (String) data.get("bikerPhoneNumber"),
                 instant((Timestamp) data.get("createdAt")),
@@ -466,8 +593,32 @@ public class RescueService {
         return timestamp == null ? null : timestamp.toDate().toInstant();
     }
 
-    private String displayName(FirebaseToken token) {
-        return token.getName() == null || token.getName().isBlank() ? "User" : token.getName();
+    static String preferredDisplayName(String profileName, String tokenName, String fallback) {
+        if (isSpecificDisplayName(profileName)) return profileName.trim();
+        if (isSpecificDisplayName(tokenName)) return tokenName.trim();
+        return fallback;
+    }
+
+    private String resolvedDisplayName(String storedName, String uid, String fallback) {
+        if (isSpecificDisplayName(storedName)) return storedName.trim();
+        if (uid == null || uid.isBlank()) return fallback;
+        try {
+            DocumentSnapshot profile = firestore.collection(USERS).document(uid).get().get();
+            return preferredDisplayName(
+                    profile.exists() ? profile.getString("name") : null,
+                    null,
+                    fallback
+            );
+        } catch (InterruptedException exception) {
+            Thread.currentThread().interrupt();
+            throw unavailable(exception);
+        } catch (ExecutionException exception) {
+            throw unavailable(exception);
+        }
+    }
+
+    private static boolean isSpecificDisplayName(String name) {
+        return name != null && !name.isBlank() && !"user".equalsIgnoreCase(name.trim());
     }
 
     private void await(com.google.api.core.ApiFuture<?> future) {

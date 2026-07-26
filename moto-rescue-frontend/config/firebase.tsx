@@ -3,6 +3,7 @@ import { getApp, getApps, initializeApp } from "firebase/app";
 import { getAuth, initializeAuth, getReactNativePersistence } from "firebase/auth";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { getStorage } from "firebase/storage";
+import { Platform } from "react-native";
 
 const firebaseConfig = {
   apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
@@ -13,12 +14,14 @@ const firebaseConfig = {
   appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID,
 };
 
-// Initialize Firebase securely (prevents duplicate initializations)
-const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
-const auth = getApps().length === 0 
+// Capture this before initializeApp: checking getApps() afterwards always
+// reports an existing app and would skip React Native persistence.
+const isNewApp = getApps().length === 0;
+const app = isNewApp ? initializeApp(firebaseConfig) : getApp();
+const auth = isNewApp && Platform.OS !== "web"
   ? initializeAuth(app, {
       persistence: getReactNativePersistence(AsyncStorage),
-    }) 
+    })
   : getAuth(app);
 const storage = getStorage(app);
 export { app, auth, storage };

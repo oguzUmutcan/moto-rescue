@@ -1,6 +1,6 @@
 import * as Location from "expo-location";
 import { getAvailablePosition } from "../../utils/device-location";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { ChevronDown, LocateFixed, Map, MapPin, X, Zap } from "lucide-react-native";
 import React, { useEffect, useRef, useState } from "react";
 import {
@@ -150,6 +150,9 @@ function addressLabel(address?: Location.LocationGeocodedAddress): string {
 
 export default function RequestFormScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams<{ focus?: string | string[] }>();
+  const focusTarget = Array.isArray(params.focus) ? params.focus[0] : params.focus;
+  const destinationInputRef = useRef<React.ElementRef<typeof TextInput>>(null);
   const [pickupMode, setPickupMode] = useState<"current" | "manual">("current");
   const [currentPickup, setCurrentPickup] = useState<Coordinates | null>(null);
   const [pickupLabel, setPickupLabel] = useState("Finding current location...");
@@ -195,6 +198,12 @@ export default function RequestFormScreen() {
     })();
     return () => { active = false; };
   }, []);
+
+  useEffect(() => {
+    if (focusTarget !== "destination") return;
+    const timer = setTimeout(() => destinationInputRef.current?.focus(), 400);
+    return () => clearTimeout(timer);
+  }, [focusTarget]);
 
   const geocode = async (label: string, fieldName: string): Promise<Coordinates> => {
     const results = await Location.geocodeAsync(label.trim());
@@ -340,6 +349,7 @@ export default function RequestFormScreen() {
           <View className="flex-row items-center bg-[#F2F2F7] rounded-xl px-3.5 border border-[#D1D1D6]">
             <MapPin size={16} color="#FF3B30" />
             <TextInput
+              ref={destinationInputRef}
               value={destination}
               onChangeText={(text) => { setDestination(text); setDestinationCoordinates(null); }}
               placeholder="Search destination"

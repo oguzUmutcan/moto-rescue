@@ -1,4 +1,3 @@
-import * as Location from "expo-location";
 import { useRouter } from "expo-router";
 import { useIsFocused } from "@react-navigation/native";
 import { getAvailablePosition } from "../../../utils/device-location";
@@ -14,6 +13,7 @@ import type { LocationMapHandle, MapRegion } from "../../../components/location-
 import { rescueApi, RescueRequest } from "../../../api/rescues";
 import { userApi } from "../../../api/users";
 import { bikerRescueRoute } from "../../../utils/app-routing";
+import { claimIncomingRequest } from "../../../utils/request-presentation";
 
 export default function BikerDashboardScreen() {
   const router = useRouter();
@@ -28,6 +28,7 @@ export default function BikerDashboardScreen() {
   const [name, setName] = useState("Loading...");
   const [pendingRequestId, setPendingRequestId] = useState<string | null>(null);
   const [activeRequest, setActiveRequest] = useState<RescueRequest | null>(null);
+  const [activeRequestLoaded, setActiveRequestLoaded] = useState(false);
 
   // ADD NEW STATES FOR STATS
   const [todayRescues, setTodayRescues] = useState("0");
@@ -39,11 +40,15 @@ export default function BikerDashboardScreen() {
   useEffect(() => {
     if (!isFocused) return;
     let active = true;
+    setActiveRequestLoaded(false);
     rescueApi.active()
       .then((request) => {
         if (active) setActiveRequest(request);
       })
-      .catch((error) => console.error("Could not load active rescue", error));
+      .catch((error) => console.error("Could not load active rescue", error))
+      .finally(() => {
+        if (active) setActiveRequestLoaded(true);
+      });
     return () => {
       active = false;
     };
@@ -55,10 +60,12 @@ export default function BikerDashboardScreen() {
       return;
     }
     if (pendingRequestId) {
-      router.navigate({
-        pathname: "/(biker)/incoming",
-        params: { requestId: pendingRequestId },
-      });
+      if (claimIncomingRequest(pendingRequestId, { reopenDismissed: true })) {
+        router.navigate({
+          pathname: "/(biker)/incoming",
+          params: { requestId: pendingRequestId },
+        });
+      }
     }
   };
 
@@ -112,7 +119,7 @@ export default function BikerDashboardScreen() {
   };
 
   useEffect(() => {
-    if (!online || activeRequest) {
+    if (!isFocused || !online || !activeRequestLoaded || activeRequest) {
       setPendingRequestId(null);
       return;
     }
@@ -120,9 +127,19 @@ export default function BikerDashboardScreen() {
     const refresh = async () => {
       try {
         const requests = await rescueApi.open();
-        const nextRequestId = requests[0]?.id ?? null;
         if (active) {
-          setPendingRequestId(nextRequestId);
+          const nextRequest = requests.find((request) =>
+            claimIncomingRequest(request.id, {
+              expiresAt: request.expiresAt ? new Date(request.expiresAt).getTime() : undefined,
+            })
+          );
+          setPendingRequestId(nextRequest?.id ?? null);
+          if (nextRequest) {
+            router.navigate({
+              pathname: "/(biker)/incoming",
+              params: { requestId: nextRequest.id },
+            });
+          }
         }
       } catch (error) {
         console.error("Could not load open rescue requests", error);
@@ -134,7 +151,7 @@ export default function BikerDashboardScreen() {
       active = false;
       clearInterval(timer);
     };
-  }, [activeRequest, online]);
+  }, [activeRequest, activeRequestLoaded, isFocused, online, router]);
 
   useEffect(() => {
     if (!online) {
