@@ -1,10 +1,10 @@
-import React from "react";
 import { Text, TouchableOpacity, View } from "@/components/localized-native";
+import React from "react";
 // In Expo, install and import from 'lucide-react-native'
+import LanguageSelector from "@/components/language-selector";
+import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import { ChevronRight } from "lucide-react-native";
-import { Image } from "expo-image";
-import LanguageSelector from "@/components/language-selector";
 
 export default function WelcomeScreen({
   onNext,
@@ -38,7 +38,7 @@ export default function WelcomeScreen({
         <Text className="text-[38px] font-black text-white leading-tight tracking-tight mb-1.5">
           MotoRescue
         </Text>
-        <Text className="text-[13px] text-white/65 tracking-widest uppercase font-bold mb-9">
+        <Text className="text-[13px] text-white/65 tracking-widest uppercase font-bold mb-9 text-center">
           Community Heroes on Two Wheels
         </Text>
 

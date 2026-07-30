@@ -14,8 +14,7 @@ export default function BikerPitchScreen() {
   };
 
   const handleBack = () => {
-    // Expo Router's built-in way to go to the previous screen
-    router.back();
+    router.replace("/onboarding/passenger");
   };
 
   const features = [

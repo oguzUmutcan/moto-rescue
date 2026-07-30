@@ -1776,5 +1776,93 @@ npm run lint        basarili - Expo Go remote push guard sonrasi
 - app/(auth)/register.tsx dosyasinda Full Name, Email ve Password input alanlarina eksik olan User, Mail ve Lock iconlari eklendi ve layout flex-row icine alindi.
 - app/(auth)/profile-passenger.tsx dosyasinda Full Name, Contact Phone ve Email Address input alanlarina User, Phone ve Mail iconlari eklendi.
 - app/(auth)/profile-biker.tsx dosyasinda Full Name, Contact Phone, Short Bio, Motorcycle Model, Motorcycle Color ve License Plate Number input alanlarina ilgili (User, Phone, FileText, Bike, Palette, Hash) iconlar eklendi.
-- T�m g�ncellenen sayfalardaki input alanlarinda autoCapitalize ve keyboardType attributelari, field t�rlerine uygun sekilde guncellendi (�rn: Isim icin 'words', Email icin 'none'/'email-address').
+- Tüm güncellenen sayfalardaki input alanlarinda autoCapitalize ve keyboardType attributelari, field türlerine uygun sekilde guncellendi (örn: Isim icin 'words', Email icin 'none'/'email-address').
+
+## 26 Temmuz 2026 — Review, yolcu paneli ve biker talep gösterimi sorunları
+
+### Tespit edilen sorunlar
+
+- Review ekranlarında gerçek profil adı yerine bazı kayıtlarda yalnızca
+  `User` görünüyordu.
+- Yolcu panelindeki arama çubuğu ve bildirim zili işlevsizdi.
+- Yeni rescue talepleri uygulama normal şekilde açıldığında biker ekranında
+  otomatik gösterilmiyordu.
+- Polling ile push bildirimi aynı talebi eş zamanlı ilettiğinde veya
+  bildirime dokunulduğunda incoming request sheet birden fazla kez
+  açılabiliyordu.
+
+### Uygulanan düzeltmeler
+
+- Rescue ve review snapshot'larında isim için önce backend profilindeki
+  `name` alanı kullanılmaya başlandı.
+- Eski kayıtlardaki `User` değeri, veri okunurken güncel passenger veya biker
+  profil adıyla tamamlanıyor.
+- Yolcu arama çubuğu rescue formunu açıyor ve destination alanına odaklanıyor.
+- Bildirim zili kalıcı ve kimlik doğrulamalı activity inbox ekranını açıyor.
+  Kabul, başlatma, tamamlama, yakındaki talep ve iptal olayları okunmuş/
+  okunmamış durumuyla saklanıyor.
+- Biker polling, foreground push, notification tap ve cold-start response
+  kaynakları tek bir presentation gate üzerinden birleştirildi.
+- Uygulama odaktayken uygun ilk talep otomatik açılıyor; aynı request için
+  tekrar sheet açılması, reddedilen talebin süresi dolmadan yeniden
+  gösterilmesi ve kabul edilmiş talebin tekrar açılması engellendi.
+- Expo SDK 54 için foreground bildirim, bildirime dokunma ve cold-start
+  response yaşam döngüsü birlikte ele alındı.
+
+### Doğrulama
+
+```text
+Backend testleri   başarılı — 32 test
+Frontend testleri  başarılı — 19 test
+TypeScript         başarılı
+Lint               başarılı — 0 hata, 0 uyarı
+npm audit          başarılı — 0 güvenlik açığı
+```
+
+## 26 Temmuz 2026 — EAS development build bağımlılık kurulum hatası
+
+### Sorun ve kök neden
+
+- İlk development build
+  `3f1e8ff3-b356-434a-9c72-a7179a9e955e`, **Install dependencies**
+  aşamasında başarısız oldu.
+- EAS ortamındaki Node `20.19.4` ve npm `10.8.2`,
+  `npm ci --include=dev` çalıştırdığında `package.json` ile
+  `package-lock.json` dosyalarının senkron olmadığını bildirdi.
+- Hata çıktısında `concat-map`, `minimatch`, `brace-expansion` ve
+  `balanced-match` paketlerinin lockfile içinde eksik olduğu raporlandı.
+- Kök neden, lockfile'ın npm 11 ile üretilmiş olması ve önceki aralık bazlı
+  transitive override tanımlarının npm 10 tarafından aynı dependency tree
+  olarak yeniden üretilememesiydi.
+- `@testing-library/react-native@14.0.1` için görülen Node sürümü
+  `EBADENGINE` mesajı yalnızca uyarıydı; build'i durduran neden bu değildi.
+
+### Uygulanan çözüm
+
+- Transitive güvenlik override'ları npm 10 ile uyumlu, sürüm aralığı
+  içermeyen tanımlara çevrildi.
+- `package-lock.json`, EAS ile aynı npm `10.8.2` sürümü kullanılarak sıfırdan
+  üretildi.
+- Düzeltme `9887027` commit'iyle
+  `fix/review-dashboard-notifications` branch'ine gönderildi.
+- Normal ve Linux/x64 hedefli EAS eşdeğeri temiz kurulumlar başarıyla
+  tamamlandı:
+
+```text
+npx npm@10.8.2 ci --include=dev --ignore-scripts --no-audit
+npx npm@10.8.2 ci --include=dev --ignore-scripts --no-audit --os=linux --cpu=x64
+```
+
+### Sonuç
+
+- Yeni development build
+  `79a9dd1a-e418-4ea7-8e8c-c2a589f69eb7` başarıyla tamamlandı.
+- Build profili `development`, dağıtım türü `internal` ve kaynak commit
+  `9887027ff62b85be7ce8f738bc09ea78ab94c334` olarak doğrulandı.
+- APK:
+  `https://expo.dev/artifacts/eas/IBSz6sITsH5LU7RlSfEiDYGI3L3mrgZbYWT872aGCKk.apk`
+- EAS artifact bağlantısının son kullanma tarihi 9 Ağustos 2026'dır.
+- Node-engine uyarısı mevcut APK'yı engellemiyor; ileride EAS Node sürümü
+  test kütüphanesinin gereksinimiyle hizalanmalı veya uyumlu test
+  kütüphanesi sürümü seçilmelidir.
 
