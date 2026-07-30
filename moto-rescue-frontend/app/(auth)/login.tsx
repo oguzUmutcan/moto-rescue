@@ -129,7 +129,7 @@ export default function LoginScreen() {
         >
           <View className="px-6 pt-4 mb-6">
             <TouchableOpacity
-              onPress={() => router.back()}
+              onPress={() => router.replace("/onboarding/bikers")}
               className="p-2 -ml-2 w-12"
               disabled={isLoading}
             >

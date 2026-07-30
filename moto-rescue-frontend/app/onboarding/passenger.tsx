@@ -13,8 +13,7 @@ export default function App() {
     router.navigate("/onboarding/bikers");
   };
   const handleBack = () => {
-    console.log("Back Button Pressed");
-    router.back();
+    router.replace("/");
   };
 
   const features = [
