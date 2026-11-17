@@ -1,0 +1,118 @@
+@startuml MotoRescue_ER
+!pragma layout smetana
+
+hide circle
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam linetype ortho
+skinparam entity {
+  BorderColor #0F766E
+  BackgroundColor #F0FDFA
+  FontColor #134E4A
+}
+
+entity "users" as USER {
+  * uid : string <<PK>>
+  --
+  role : string
+  name : string
+  email : string
+  phone : string
+  language : string
+  profilePhotoPath : string
+  identityDocumentStatus : string
+  online : boolean
+  currentLocation : GeoPoint
+  rating : double
+  ratingCount : long
+  totalRescues : long
+  createdAt : timestamp
+}
+
+entity "rescueRequests" as RESCUE_REQUEST {
+  * requestId : string <<PK>>
+  --
+  passengerId : string <<FK>>
+  bikerId : string <<FK, nullable>>
+  pickup : GeoPoint
+  pickupLabel : string
+  destination : GeoPoint
+  destinationLabel : string
+  urgency : string
+  needsHelmet : boolean
+  status : string
+  boardingCode : string
+  bikerLocation : GeoPoint
+  createdAt : timestamp
+  expiresAt : timestamp
+  acceptedAt : timestamp
+  startedAt : timestamp
+  completedAt : timestamp
+}
+
+entity "reviews" as REVIEW {
+  * reviewId : string <<PK>>
+  --
+  rescueId : string <<FK, UNIQUE>>
+  passengerId : string <<FK>>
+  bikerId : string <<FK>>
+  rating : integer
+  comment : string
+  createdAt : timestamp
+}
+
+entity "userNotifications" as USER_NOTIFICATION {
+  * notificationId : string <<PK>>
+  --
+  uid : string <<FK>>
+  requestId : string <<FK, nullable>>
+  type : string
+  role : string
+  title : string
+  body : string
+  readAt : timestamp
+  createdAt : timestamp
+}
+
+entity "activeRescueParticipants" as ACTIVE_PARTICIPANT {
+  * uid : string <<PK, FK>>
+  --
+  requestId : string <<FK>>
+  role : string
+  updatedAt : timestamp
+}
+
+USER ||--o{ RESCUE_REQUEST : "passengerId ile oluşturur"
+USER |o--o{ RESCUE_REQUEST : "bikerId ile üstlenir"
+RESCUE_REQUEST ||--o| REVIEW : "0 veya 1 değerlendirme"
+USER ||--o{ REVIEW : "passengerId ile yazar"
+USER ||--o{ REVIEW : "bikerId ile alır"
+USER ||--o{ USER_NOTIFICATION : "bildirimleri alır"
+RESCUE_REQUEST |o--o{ USER_NOTIFICATION : "talep bildirimlerini üretir"
+USER ||--o| ACTIVE_PARTICIPANT : "en fazla 1 aktif kilit"
+RESCUE_REQUEST ||--o{ ACTIVE_PARTICIPANT : "aktifken 1-2 katılımcı"
+
+note bottom of RESCUE_REQUEST
+  Durum akışı:
+  searching -> accepted -> in_progress -> completed
+  searching/accepted -> cancelled
+end note
+
+note bottom of REVIEW
+  Firestore'da belge kimliği rescueId ile aynıdır;
+  böylece her kurtarma için en fazla bir yorum tutulur.
+end note
+
+note bottom of ACTIVE_PARTICIPANT
+  Yarış durumlarını engelleyen teknik kilit koleksiyonudur.
+  Kurtarma tamamlanınca veya iptal edilince kayıtlar silinir.
+end note
+
+legend bottom
+  İlişkiler Firestore tarafından fiziksel foreign key olarak zorlanmaz;
+  uygulama servisleri tarafından mantıksal olarak korunur.
+  Rozet ve seviye bilgileri kalıcı koleksiyon değildir, verilerden hesaplanır.
+endlegend
+
+@enduml
