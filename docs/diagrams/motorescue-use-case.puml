@@ -1,0 +1,81 @@
+@startuml MotoRescue_UseCase
+left to right direction
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam packageStyle rectangle
+skinparam nodesep 25
+skinparam ranksep 35
+skinparam actor {
+  BorderColor #334155
+  BackgroundColor #E2E8F0
+  FontColor #0F172A
+}
+skinparam usecase {
+  BorderColor #2563EB
+  BackgroundColor #EFF6FF
+  FontColor #172554
+}
+
+actor "Yolcu" as Passenger
+actor "Motorcu" as Biker
+
+rectangle "MotoRescue Sistemi" {
+  package "Ortak İşlemler" {
+    usecase "Kayıt ol, giriş yap\nve profili yönet" as UCAccount #F1F5F9
+    usecase "Bildirimleri ve\ngeçmişi görüntüle" as UCArchive #F1F5F9
+  }
+
+  package "Yolcu İşlemleri" {
+    usecase "Yardım talebi\noluştur" as UCCreate #EFF6FF
+    usecase "Talebi takip et\nveya iptal et" as UCTrack #EFF6FF
+    usecase "Kurtarmayı\ndeğerlendir" as UCReview #EFF6FF
+  }
+
+  package "Motorcu İşlemleri" {
+    usecase "Kimliği doğrula ve\nçevrimiçi ol" as UCVerify #F0FDFA
+    usecase "Yakındaki talebi\ngörüntüle ve kabul et" as UCAccept #F0FDFA
+    usecase "Navigasyon kullan ve\ncanlı konum paylaş" as UCNavigation #F0FDFA
+    usecase "Biniş koduyla\nkurtarmayı başlat" as UCStart #F0FDFA
+    usecase "Kurtarmayı\ntamamla" as UCComplete #F0FDFA
+    usecase "Rozetleri ve alınan\ndeğerlendirmeleri görüntüle" as UCStats #F0FDFA
+  }
+
+  package "Sistem Otomasyonu" {
+    usecase "Durum değişikliğini\nanlık bildir" as UCNotify #FFF7ED
+  }
+}
+
+Passenger -- UCAccount
+Passenger -- UCArchive
+Passenger -- UCCreate
+Passenger -- UCTrack
+Passenger -- UCReview
+
+Biker -- UCAccount
+Biker -- UCArchive
+Biker -- UCVerify
+Biker -- UCAccept
+Biker -- UCNavigation
+Biker -- UCStart
+Biker -- UCComplete
+Biker -- UCStats
+
+UCAccount -[hidden]right- UCCreate
+UCCreate -[hidden]right- UCVerify
+UCVerify -[hidden]right- UCNotify
+
+UCAccept ..> UCNotify : <<include>>
+UCStart ..> UCNotify : <<include>>
+UCComplete ..> UCNotify : <<include>>
+
+actor "Firebase\nAuthentication" as FirebaseAuth <<Harici Sistem>>
+actor "Google Maps /\nPlaces" as Maps <<Harici Sistem>>
+actor "Expo Push\nNotification" as Push <<Harici Sistem>>
+
+UCAccount -- FirebaseAuth
+UCCreate -- Maps
+UCNavigation -- Maps
+UCNotify -- Push
+
+@enduml

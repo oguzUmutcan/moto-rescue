@@ -1,0 +1,175 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="app.diagrams.net" modified="2026-09-22T11:30:00.000Z" agent="Codex" version="26.0.9" type="device" compressed="false">
+  <diagram id="motorescue-use-case" name="01 - Use Case">
+    <mxGraphModel dx="1920" dy="1200" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1920" pageHeight="1200" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+
+        <mxCell id="uc-title" value="MotoRescue • Use Case Diagramı" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontFamily=Inter;fontSize=32;fontStyle=1;fontColor=#0F172A;" vertex="1" parent="1">
+          <mxGeometry x="410" y="25" width="1100" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="uc-subtitle" value="Yolcu ve motorcu rollerinin temel sistem etkileşimleri" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontFamily=Inter;fontSize=16;fontColor=#64748B;" vertex="1" parent="1">
+          <mxGeometry x="410" y="75" width="1100" height="30" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="uc-system" value="MOTORESCUE SİSTEMİ" style="rounded=1;whiteSpace=wrap;html=1;verticalAlign=top;align=left;spacingTop=16;spacingLeft=20;fontFamily=Inter;fontSize=16;fontStyle=1;fontColor=#334155;fillColor=#FFFFFF;strokeColor=#94A3B8;strokeWidth=2;arcSize=12;" vertex="1" parent="1">
+          <mxGeometry x="250" y="205" width="1420" height="890" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="uc-common-panel" value="ORTAK İŞLEMLER" style="rounded=1;whiteSpace=wrap;html=1;verticalAlign=top;align=left;spacingTop=12;spacingLeft=16;fontFamily=Inter;fontSize=14;fontStyle=1;fontColor=#475569;fillColor=#F8FAFC;strokeColor=#CBD5E1;strokeWidth=1;arcSize=12;" vertex="1" parent="1">
+          <mxGeometry x="470" y="270" width="980" height="175" as="geometry"/>
+        </mxCell>
+        <mxCell id="uc-passenger-panel" value="YOLCU İŞLEMLERİ" style="rounded=1;whiteSpace=wrap;html=1;verticalAlign=top;align=left;spacingTop=12;spacingLeft=16;fontFamily=Inter;fontSize=14;fontStyle=1;fontColor=#1E40AF;fillColor=#EFF6FF;strokeColor=#BFDBFE;strokeWidth=1;arcSize=12;" vertex="1" parent="1">
+          <mxGeometry x="330" y="485" width="560" height="520" as="geometry"/>
+        </mxCell>
+        <mxCell id="uc-biker-panel" value="MOTORCU İŞLEMLERİ" style="rounded=1;whiteSpace=wrap;html=1;verticalAlign=top;align=left;spacingTop=12;spacingLeft=16;fontFamily=Inter;fontSize=14;fontStyle=1;fontColor=#0F766E;fillColor=#ECFDF5;strokeColor=#A7F3D0;strokeWidth=1;arcSize=12;" vertex="1" parent="1">
+          <mxGeometry x="970" y="485" width="560" height="520" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="actor-user" value="Kullanıcı" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fontFamily=Inter;fontSize=16;fontStyle=1;fontColor=#334155;fillColor=#E2E8F0;strokeColor=#475569;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="910" y="115" width="100" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="actor-passenger" value="Yolcu" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fontFamily=Inter;fontSize=18;fontStyle=1;fontColor=#1E3A8A;fillColor=#DBEAFE;strokeColor=#2563EB;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="70" y="680" width="110" height="90" as="geometry"/>
+        </mxCell>
+        <mxCell id="actor-biker" value="Motorcu" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fontFamily=Inter;fontSize=18;fontStyle=1;fontColor=#134E4A;fillColor=#CCFBF1;strokeColor=#0F766E;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="1740" y="680" width="110" height="90" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="uc-account" value="Kayıt ol, giriş yap&lt;br&gt;ve profili yönet" style="ellipse;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Inter;fontSize=17;fontStyle=1;fontColor=#334155;fillColor=#FFFFFF;strokeColor=#64748B;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="545" y="320" width="320" height="88" as="geometry"/>
+        </mxCell>
+        <mxCell id="uc-archive" value="Bildirimleri ve kurtarma&lt;br&gt;geçmişini görüntüle" style="ellipse;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Inter;fontSize=17;fontStyle=1;fontColor=#334155;fillColor=#FFFFFF;strokeColor=#64748B;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="1055" y="320" width="320" height="88" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="uc-create" value="Yardım talebi oluştur&lt;br&gt;ve rota belirle" style="ellipse;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Inter;fontSize=17;fontStyle=1;fontColor=#1E3A8A;fillColor=#FFFFFF;strokeColor=#3B82F6;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="445" y="555" width="330" height="82" as="geometry"/>
+        </mxCell>
+        <mxCell id="uc-track" value="Talebi ve motorcunun&lt;br&gt;canlı konumunu takip et" style="ellipse;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Inter;fontSize=17;fontStyle=1;fontColor=#1E3A8A;fillColor=#FFFFFF;strokeColor=#3B82F6;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="445" y="700" width="330" height="82" as="geometry"/>
+        </mxCell>
+        <mxCell id="uc-review" value="Talebi iptal et veya&lt;br&gt;tamamlanan kurtarmayı değerlendir" style="ellipse;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Inter;fontSize=17;fontStyle=1;fontColor=#1E3A8A;fillColor=#FFFFFF;strokeColor=#3B82F6;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="425" y="845" width="370" height="88" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="uc-verify" value="Kimlik belgesini doğrula&lt;br&gt;ve çevrimiçi ol" style="ellipse;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Inter;fontSize=16;fontStyle=1;fontColor=#134E4A;fillColor=#FFFFFF;strokeColor=#14B8A6;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="1080" y="525" width="340" height="66" as="geometry"/>
+        </mxCell>
+        <mxCell id="uc-accept" value="Yakındaki talebi görüntüle&lt;br&gt;ve kabul et" style="ellipse;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Inter;fontSize=16;fontStyle=1;fontColor=#134E4A;fillColor=#FFFFFF;strokeColor=#14B8A6;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="1080" y="605" width="340" height="66" as="geometry"/>
+        </mxCell>
+        <mxCell id="uc-navigation" value="Navigasyon kullan ve&lt;br&gt;canlı konum paylaş" style="ellipse;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Inter;fontSize=16;fontStyle=1;fontColor=#134E4A;fillColor=#FFFFFF;strokeColor=#14B8A6;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="1080" y="685" width="340" height="66" as="geometry"/>
+        </mxCell>
+        <mxCell id="uc-start" value="Biniş koduyla&lt;br&gt;kurtarmayı başlat" style="ellipse;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Inter;fontSize=16;fontStyle=1;fontColor=#134E4A;fillColor=#FFFFFF;strokeColor=#14B8A6;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="1080" y="765" width="340" height="66" as="geometry"/>
+        </mxCell>
+        <mxCell id="uc-complete" value="Kurtarmayı tamamla" style="ellipse;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Inter;fontSize=16;fontStyle=1;fontColor=#134E4A;fillColor=#FFFFFF;strokeColor=#14B8A6;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="1080" y="845" width="340" height="66" as="geometry"/>
+        </mxCell>
+        <mxCell id="uc-stats" value="Rozetleri ve alınan&lt;br&gt;değerlendirmeleri görüntüle" style="ellipse;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Inter;fontSize=16;fontStyle=1;fontColor=#134E4A;fillColor=#FFFFFF;strokeColor=#14B8A6;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="1080" y="925" width="340" height="66" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="uc-tech-note" value="Teknik servisler: Firebase Authentication • Firestore • Google Places/Directions • Expo Push" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Inter;fontSize=14;fontColor=#64748B;fillColor=#F8FAFC;strokeColor=#CBD5E1;dashed=1;dashPattern=4 4;arcSize=20;" vertex="1" parent="1">
+          <mxGeometry x="570" y="1030" width="780" height="42" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="edge-user-account" style="edgeStyle=none;html=1;rounded=0;strokeColor=#64748B;strokeWidth=2;endArrow=none;startArrow=none;" edge="1" parent="1" source="actor-user" target="uc-account">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="edge-user-archive" style="edgeStyle=none;html=1;rounded=0;strokeColor=#64748B;strokeWidth=2;endArrow=none;startArrow=none;" edge="1" parent="1" source="actor-user" target="uc-archive">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="edge-passenger-create" style="edgeStyle=none;html=1;rounded=0;strokeColor=#2563EB;strokeWidth=2;endArrow=none;startArrow=none;" edge="1" parent="1" source="actor-passenger" target="uc-create"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="edge-passenger-track" style="edgeStyle=none;html=1;rounded=0;strokeColor=#2563EB;strokeWidth=2;endArrow=none;startArrow=none;" edge="1" parent="1" source="actor-passenger" target="uc-track"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="edge-passenger-review" style="edgeStyle=none;html=1;rounded=0;strokeColor=#2563EB;strokeWidth=2;endArrow=none;startArrow=none;" edge="1" parent="1" source="actor-passenger" target="uc-review"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="edge-biker-verify" style="edgeStyle=none;html=1;rounded=0;strokeColor=#0F766E;strokeWidth=2;endArrow=none;startArrow=none;" edge="1" parent="1" source="actor-biker" target="uc-verify"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="edge-biker-accept" style="edgeStyle=none;html=1;rounded=0;strokeColor=#0F766E;strokeWidth=2;endArrow=none;startArrow=none;" edge="1" parent="1" source="actor-biker" target="uc-accept"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="edge-biker-navigation" style="edgeStyle=none;html=1;rounded=0;strokeColor=#0F766E;strokeWidth=2;endArrow=none;startArrow=none;" edge="1" parent="1" source="actor-biker" target="uc-navigation"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="edge-biker-start" style="edgeStyle=none;html=1;rounded=0;strokeColor=#0F766E;strokeWidth=2;endArrow=none;startArrow=none;" edge="1" parent="1" source="actor-biker" target="uc-start"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="edge-biker-complete" style="edgeStyle=none;html=1;rounded=0;strokeColor=#0F766E;strokeWidth=2;endArrow=none;startArrow=none;" edge="1" parent="1" source="actor-biker" target="uc-complete"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="edge-biker-stats" style="edgeStyle=none;html=1;rounded=0;strokeColor=#0F766E;strokeWidth=2;endArrow=none;startArrow=none;" edge="1" parent="1" source="actor-biker" target="uc-stats"><mxGeometry relative="1" as="geometry"/></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+
+  <diagram id="motorescue-er" name="02 - ER Diagram">
+    <mxGraphModel dx="2200" dy="1800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2200" pageHeight="1800" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+
+        <mxCell id="er-title" value="MotoRescue • Firestore ER Diagramı" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontFamily=Inter;fontSize=34;fontStyle=1;fontColor=#0F172A;" vertex="1" parent="1">
+          <mxGeometry x="500" y="25" width="1200" height="55" as="geometry"/>
+        </mxCell>
+        <mxCell id="er-subtitle" value="Koleksiyonlar ve uygulama servislerinin koruduğu mantıksal ilişkiler" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontFamily=Inter;fontSize=17;fontColor=#64748B;" vertex="1" parent="1">
+          <mxGeometry x="500" y="80" width="1200" height="35" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="users-group" value="" style="group;" vertex="1" connectable="0" parent="1">
+          <mxGeometry x="760" y="145" width="680" height="400" as="geometry"/>
+        </mxCell>
+        <mxCell id="users-card" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#0F766E;strokeWidth=2;arcSize=10;" vertex="1" parent="users-group">
+          <mxGeometry x="0" y="0" width="680" height="400" as="geometry"/>
+        </mxCell>
+        <mxCell id="users-header" value="users" style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=middle;spacingLeft=22;fontFamily=Inter;fontSize=24;fontStyle=1;fontColor=#FFFFFF;fillColor=#0F766E;strokeColor=#0F766E;strokeWidth=2;arcSize=10;" vertex="1" parent="users-group">
+          <mxGeometry x="0" y="0" width="680" height="64" as="geometry"/>
+        </mxCell>
+        <mxCell id="users-body" value="&lt;b&gt;uid&lt;/b&gt; : string  [PK]&lt;br&gt;role : string&lt;br&gt;name : string&lt;br&gt;email : string&lt;br&gt;phone : string&lt;br&gt;language : string&lt;br&gt;profilePhotoPath : string&lt;br&gt;identityDocumentStatus : string&lt;br&gt;online : boolean&lt;br&gt;currentLocation : GeoPoint&lt;br&gt;rating : double&lt;br&gt;ratingCount : long&lt;br&gt;totalRescues : long&lt;br&gt;createdAt : timestamp" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=24;spacingTop=16;fontFamily=Inter;fontSize=17;fontColor=#334155;lineSpacing=8;" vertex="1" parent="users-group">
+          <mxGeometry x="0" y="64" width="680" height="336" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="notifications-group" value="" style="group;" vertex="1" connectable="0" parent="1">
+          <mxGeometry x="60" y="720" width="470" height="355" as="geometry"/>
+        </mxCell>
+        <mxCell id="notifications-card" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#7C3AED;strokeWidth=2;arcSize=10;" vertex="1" parent="notifications-group"><mxGeometry x="0" y="0" width="470" height="355" as="geometry"/></mxCell>
+        <mxCell id="notifications-header" value="userNotifications" style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=middle;spacingLeft=20;fontFamily=Inter;fontSize=22;fontStyle=1;fontColor=#FFFFFF;fillColor=#7C3AED;strokeColor=#7C3AED;strokeWidth=2;arcSize=10;" vertex="1" parent="notifications-group"><mxGeometry x="0" y="0" width="470" height="62" as="geometry"/></mxCell>
+        <mxCell id="notifications-body" value="&lt;b&gt;notificationId&lt;/b&gt; : string  [PK]&lt;br&gt;uid : string  [FK → users]&lt;br&gt;requestId : string  [FK → rescueRequests, nullable]&lt;br&gt;type : string&lt;br&gt;role : string&lt;br&gt;title : string&lt;br&gt;body : string&lt;br&gt;readAt : timestamp&lt;br&gt;createdAt : timestamp" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=20;spacingTop=16;fontFamily=Inter;fontSize=16;fontColor=#334155;" vertex="1" parent="notifications-group"><mxGeometry x="0" y="62" width="470" height="293" as="geometry"/></mxCell>
+
+        <mxCell id="rescue-group" value="" style="group;" vertex="1" connectable="0" parent="1">
+          <mxGeometry x="670" y="690" width="860" height="570" as="geometry"/>
+        </mxCell>
+        <mxCell id="rescue-card" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#2563EB;strokeWidth=2;arcSize=10;" vertex="1" parent="rescue-group"><mxGeometry x="0" y="0" width="860" height="570" as="geometry"/></mxCell>
+        <mxCell id="rescue-header" value="rescueRequests" style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=middle;spacingLeft=24;fontFamily=Inter;fontSize=25;fontStyle=1;fontColor=#FFFFFF;fillColor=#2563EB;strokeColor=#2563EB;strokeWidth=2;arcSize=10;" vertex="1" parent="rescue-group"><mxGeometry x="0" y="0" width="860" height="66" as="geometry"/></mxCell>
+        <mxCell id="rescue-body-left" value="&lt;b&gt;requestId&lt;/b&gt; : string  [PK]&lt;br&gt;passengerId : string  [FK → users]&lt;br&gt;bikerId : string  [FK → users, nullable]&lt;br&gt;pickup : GeoPoint&lt;br&gt;pickupLabel : string&lt;br&gt;destination : GeoPoint&lt;br&gt;destinationLabel : string&lt;br&gt;urgency : string&lt;br&gt;needsHelmet : boolean" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=24;spacingTop=18;fontFamily=Inter;fontSize=17;fontColor=#334155;" vertex="1" parent="rescue-group"><mxGeometry x="0" y="66" width="425" height="400" as="geometry"/></mxCell>
+        <mxCell id="rescue-body-right" value="status : string&lt;br&gt;boardingCode : string&lt;br&gt;bikerLocation : GeoPoint&lt;br&gt;bikerLocationUpdatedAt : timestamp&lt;br&gt;createdAt : timestamp&lt;br&gt;expiresAt : timestamp&lt;br&gt;acceptedAt : timestamp&lt;br&gt;startedAt : timestamp&lt;br&gt;completedAt : timestamp" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=24;spacingTop=18;fontFamily=Inter;fontSize=17;fontColor=#334155;" vertex="1" parent="rescue-group"><mxGeometry x="425" y="66" width="435" height="400" as="geometry"/></mxCell>
+        <mxCell id="rescue-state" value="Durum akışı:  searching → accepted → in_progress → completed   •   searching / accepted → cancelled" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Inter;fontSize=16;fontStyle=1;fontColor=#1E3A8A;fillColor=#EFF6FF;strokeColor=#BFDBFE;arcSize=16;" vertex="1" parent="rescue-group"><mxGeometry x="30" y="490" width="800" height="52" as="geometry"/></mxCell>
+
+        <mxCell id="active-group" value="" style="group;" vertex="1" connectable="0" parent="1">
+          <mxGeometry x="1670" y="745" width="470" height="280" as="geometry"/>
+        </mxCell>
+        <mxCell id="active-card" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#EA580C;strokeWidth=2;arcSize=10;" vertex="1" parent="active-group"><mxGeometry x="0" y="0" width="470" height="280" as="geometry"/></mxCell>
+        <mxCell id="active-header" value="activeRescueParticipants" style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=middle;spacingLeft=20;fontFamily=Inter;fontSize=21;fontStyle=1;fontColor=#FFFFFF;fillColor=#EA580C;strokeColor=#EA580C;strokeWidth=2;arcSize=10;" vertex="1" parent="active-group"><mxGeometry x="0" y="0" width="470" height="62" as="geometry"/></mxCell>
+        <mxCell id="active-body" value="&lt;b&gt;uid&lt;/b&gt; : string  [PK, FK → users]&lt;br&gt;requestId : string  [FK → rescueRequests]&lt;br&gt;role : string&lt;br&gt;updatedAt : timestamp&lt;br&gt;&lt;br&gt;&lt;font color=&quot;#9A3412&quot;&gt;Aktif kurtarma için teknik kilit kaydıdır.&lt;/font&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=20;spacingTop=16;fontFamily=Inter;fontSize=16;fontColor=#334155;" vertex="1" parent="active-group"><mxGeometry x="0" y="62" width="470" height="218" as="geometry"/></mxCell>
+
+        <mxCell id="reviews-group" value="" style="group;" vertex="1" connectable="0" parent="1">
+          <mxGeometry x="750" y="1430" width="700" height="290" as="geometry"/>
+        </mxCell>
+        <mxCell id="reviews-card" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#DB2777;strokeWidth=2;arcSize=10;" vertex="1" parent="reviews-group"><mxGeometry x="0" y="0" width="700" height="290" as="geometry"/></mxCell>
+        <mxCell id="reviews-header" value="reviews" style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=middle;spacingLeft=22;fontFamily=Inter;fontSize=24;fontStyle=1;fontColor=#FFFFFF;fillColor=#DB2777;strokeColor=#DB2777;strokeWidth=2;arcSize=10;" vertex="1" parent="reviews-group"><mxGeometry x="0" y="0" width="700" height="64" as="geometry"/></mxCell>
+        <mxCell id="reviews-body" value="&lt;b&gt;reviewId&lt;/b&gt; : string  [PK, rescueId ile aynı]&lt;br&gt;rescueId : string  [FK → rescueRequests, UNIQUE]&lt;br&gt;passengerId : string  [FK → users]&lt;br&gt;bikerId : string  [FK → users]&lt;br&gt;rating : integer&lt;br&gt;comment : string&lt;br&gt;createdAt : timestamp" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=24;spacingTop=16;fontFamily=Inter;fontSize=17;fontColor=#334155;" vertex="1" parent="reviews-group"><mxGeometry x="0" y="64" width="700" height="226" as="geometry"/></mxCell>
+
+        <mxCell id="er-note" value="Firestore ilişkileri fiziksel foreign key değildir; uygulama servisleri tarafından mantıksal olarak korunur. Rozet ve seviye verileri ayrı koleksiyonda tutulmaz, kurtarma ve puan verilerinden hesaplanır." style="shape=note;whiteSpace=wrap;html=1;align=left;verticalAlign=middle;spacing=18;fontFamily=Inter;fontSize=16;fontColor=#475569;fillColor=#FFF7ED;strokeColor=#FDBA74;size=18;" vertex="1" parent="1">
+          <mxGeometry x="1630" y="1160" width="510" height="190" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="rel-user-passenger" value="passengerId • 1 kullanıcı / 0..N talep" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#2563EB;strokeWidth=2;startArrow=ERone;startFill=0;endArrow=ERmany;endFill=0;fontFamily=Inter;fontSize=15;fontColor=#1E3A8A;labelBackgroundColor=#FFFFFF;exitX=0.34;exitY=1;exitDx=0;exitDy=0;entryX=0.34;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="users-card" target="rescue-card"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="rel-user-biker" value="bikerId • 0..1 motorcu / 0..N talep" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#0F766E;strokeWidth=2;startArrow=ERone;startFill=0;endArrow=ERmany;endFill=0;fontFamily=Inter;fontSize=15;fontColor=#134E4A;labelBackgroundColor=#FFFFFF;exitX=0.66;exitY=1;exitDx=0;exitDy=0;entryX=0.66;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="users-card" target="rescue-card"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="rel-rescue-review" value="rescueId • 1 kurtarma / 0..1 değerlendirme" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#DB2777;strokeWidth=2;startArrow=ERone;startFill=0;endArrow=ERzeroToOne;endFill=0;fontFamily=Inter;fontSize=15;fontColor=#9D174D;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="rescue-card" target="reviews-card"><mxGeometry relative="1" as="geometry"/></mxCell>
+
+        <mxCell id="rel-user-notification" value="uid • 1 kullanıcı / 0..N bildirim" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#7C3AED;strokeWidth=2;startArrow=ERone;startFill=0;endArrow=ERmany;endFill=0;fontFamily=Inter;fontSize=15;fontColor=#5B21B6;labelBackgroundColor=#FFFFFF;exitX=0;exitY=0.45;exitDx=0;exitDy=0;entryX=1;entryY=0.2;entryDx=0;entryDy=0;" edge="1" parent="1" source="users-card" target="notifications-card">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="610" y="325"/><mxPoint x="610" y="790"/></Array></mxGeometry>
+        </mxCell>
+        <mxCell id="rel-rescue-notification" value="requestId • opsiyonel talep bildirimi" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#A78BFA;strokeWidth=2;startArrow=ERone;startFill=0;endArrow=ERmany;endFill=0;fontFamily=Inter;fontSize=15;fontColor=#6D28D9;labelBackgroundColor=#FFFFFF;exitX=0;exitY=0.62;exitDx=0;exitDy=0;entryX=1;entryY=0.72;entryDx=0;entryDy=0;" edge="1" parent="1" source="rescue-card" target="notifications-card"><mxGeometry relative="1" as="geometry"/></mxCell>
+
+        <mxCell id="rel-user-active" value="uid • en fazla 1 aktif kilit" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#EA580C;strokeWidth=2;startArrow=ERone;startFill=0;endArrow=ERzeroToOne;endFill=0;fontFamily=Inter;fontSize=15;fontColor=#9A3412;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.45;exitDx=0;exitDy=0;entryX=0;entryY=0.2;entryDx=0;entryDy=0;" edge="1" parent="1" source="users-card" target="active-card">
+          <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="1590" y="325"/><mxPoint x="1590" y="800"/></Array></mxGeometry>
+        </mxCell>
+        <mxCell id="rel-rescue-active" value="requestId • aktifken 1–2 katılımcı" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#FB923C;strokeWidth=2;startArrow=ERone;startFill=0;endArrow=ERmany;endFill=0;fontFamily=Inter;fontSize=15;fontColor=#C2410C;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.62;exitDx=0;exitDy=0;entryX=0;entryY=0.72;entryDx=0;entryDy=0;" edge="1" parent="1" source="rescue-card" target="active-card"><mxGeometry relative="1" as="geometry"/></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

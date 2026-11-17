@@ -18,6 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Instant;
+import java.time.ZoneId;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -105,6 +106,11 @@ public class UserService {
             )) {
                 throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Submit both sides of your driver's license before going online");
             }
+            @SuppressWarnings("unchecked")
+            List<Boolean> effectiveAvailableDays = request.availableDays() != null
+                    ? request.availableDays()
+                    : (List<Boolean>) current.get("availableDays");
+            validateOnlineSchedule(effectiveAvailableDays, Instant.now());
         }
         if (request.online() != null) updates.put("online", request.online());
         if (request.notificationsEnabled() != null) updates.put("notificationsEnabled", request.notificationsEnabled());
@@ -232,6 +238,23 @@ public class UserService {
         return "verified".equals(status)
                 && frontPath != null && !frontPath.isBlank()
                 && backPath != null && !backPath.isBlank();
+    }
+
+    static void validateOnlineSchedule(List<Boolean> availableDays) {
+        validateOnlineSchedule(availableDays, Instant.now());
+    }
+
+    static void validateOnlineSchedule(List<Boolean> availableDays, Instant now) {
+        if (availableDays != null && availableDays.size() == 7) {
+            java.time.DayOfWeek dayOfWeek = now.atZone(ZoneId.of("Europe/Istanbul")).getDayOfWeek();
+            int dayIndex = dayOfWeek.getValue() - 1;
+            if (!Boolean.TRUE.equals(availableDays.get(dayIndex))) {
+                throw new ResponseStatusException(
+                        HttpStatus.FORBIDDEN,
+                        "You are not scheduled to be online today. Please update your available days in your profile."
+                );
+            }
+        }
     }
 
     static boolean isAutoVerificationDue(String status, Instant submittedAt, Instant now) {
