@@ -26,6 +26,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -151,11 +152,22 @@ public class NotificationService {
         );
     }
 
-    private boolean isNearbyAvailableBiker(DocumentSnapshot biker, GeoPoint pickup) {
+    static boolean isNearbyAvailableBiker(DocumentSnapshot biker, GeoPoint pickup) {
+        return isNearbyAvailableBiker(biker, pickup, Instant.now());
+    }
+
+    static boolean isNearbyAvailableBiker(DocumentSnapshot biker, GeoPoint pickup, Instant now) {
+        Object availableDaysRaw = biker.get("availableDays");
+        if (availableDaysRaw instanceof List<?> availableDays && availableDays.size() == 7) {
+            int dayIndex = now.atZone(ZoneId.of("Europe/Istanbul")).getDayOfWeek().getValue() - 1;
+            if (!Boolean.TRUE.equals(availableDays.get(dayIndex))) {
+                return false;
+            }
+        }
         GeoPoint location = (GeoPoint) biker.get("currentLocation");
         Timestamp updatedAt = biker.getTimestamp("locationUpdatedAt");
         return location != null
-                && RescueService.isFreshLocation(updatedAt, Instant.now())
+                && RescueService.isFreshLocation(updatedAt, now)
                 && RescueService.distanceKm(location, pickup) <= 6.0;
     }
 

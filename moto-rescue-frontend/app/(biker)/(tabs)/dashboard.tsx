@@ -1,9 +1,10 @@
 import { useRouter } from "expo-router";
+import type { Href } from "expo-router";
 import { useIsFocused } from "@react-navigation/native";
 import { getAvailablePosition } from "../../../utils/device-location";
 import { startBackgroundLocationTracking, stopBackgroundLocationTracking } from "../../../utils/background-location";
 import { onAuthStateChanged } from "firebase/auth";
-import { Navigation2 } from "lucide-react-native";
+import { Bell, Navigation2 } from "lucide-react-native";
 import React, { useEffect, useRef, useState } from "react";
 import { Alert, StyleSheet, Text, TouchableOpacity, View } from "@/components/localized-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -12,6 +13,7 @@ import LocationMap from "../../../components/location-map";
 import type { LocationMapHandle, MapRegion } from "../../../components/location-map.types";
 import { rescueApi, RescueRequest } from "../../../api/rescues";
 import { userApi } from "../../../api/users";
+import { notificationApi } from "../../../api/notifications";
 import { bikerRescueRoute } from "../../../utils/app-routing";
 import { claimIncomingRequest } from "../../../utils/request-presentation";
 
@@ -25,6 +27,8 @@ export default function BikerDashboardScreen() {
   const [onlineBusy, setOnlineBusy] = useState(false);
   const [profileLoaded, setProfileLoaded] = useState(false);
   const [identityDocumentStatus, setIdentityDocumentStatus] = useState<"not_submitted" | "pending" | "verified" | "rejected">("not_submitted");
+  const [availableDays, setAvailableDays] = useState<boolean[] | null>(null);
+  const [unreadActivity, setUnreadActivity] = useState(0);
   const [name, setName] = useState("Loading...");
   const [pendingRequestId, setPendingRequestId] = useState<string | null>(null);
   const [activeRequest, setActiveRequest] = useState<RescueRequest | null>(null);
@@ -49,6 +53,19 @@ export default function BikerDashboardScreen() {
       .finally(() => {
         if (active) setActiveRequestLoaded(true);
       });
+    notificationApi.list()
+      .then((items) => {
+        if (active) setUnreadActivity(items.filter((item) => !item.readAt).length);
+      })
+      .catch((error) => console.error("Could not load activity count", error));
+    userApi.get()
+      .then((profile) => {
+        if (active && profile) {
+          setAvailableDays(profile.availableDays ?? null);
+          setIdentityDocumentStatus(profile.identityDocumentStatus);
+        }
+      })
+      .catch((error) => console.error("Could not refresh profile", error));
     return () => {
       active = false;
     };
@@ -71,6 +88,20 @@ export default function BikerDashboardScreen() {
 
   const handleToggleOnline = async () => {
     const newStatus = !online;
+    if (newStatus) {
+      const todayIndex = (new Date().getDay() + 6) % 7; // 0=Pazartesi, ..., 6=Pazar
+      if (availableDays && availableDays.length === 7 && !availableDays[todayIndex]) {
+        Alert.alert(
+          "Not scheduled for today",
+          "You are not scheduled to ride today. Would you like to update your schedule in your profile?",
+          [
+            { text: "Update schedule", onPress: () => router.navigate("/(auth)/profile-biker") },
+            { text: "Cancel", style: "cancel" },
+          ],
+        );
+        return;
+      }
+    }
     const hasVerifiedLicense = identityDocumentStatus === "verified";
     if (newStatus && !hasVerifiedLicense) {
       Alert.alert(
@@ -205,6 +236,7 @@ export default function BikerDashboardScreen() {
           ]);
           if (data) {
             setName(data.name || user.displayName || "Biker");
+            setAvailableDays(data.availableDays ?? null);
             const hasVerifiedLicense = data.identityDocumentStatus === "verified";
             setIdentityDocumentStatus(data.identityDocumentStatus);
             if (data.online && !hasVerifiedLicense) {
@@ -309,7 +341,7 @@ export default function BikerDashboardScreen() {
       <View
         className={`absolute top-0 w-full rounded-b-3xl shadow-md z-10 ${online ? "bg-[#071510]" : "bg-white"}`}
       >
-        <View style={{ paddingTop: insets.top, paddingBottom: insets.bottom }}>
+        <View style={{ paddingTop: insets.top, paddingBottom: 16 }}>
           <View className="flex-row items-center justify-between px-5 pt-2 pb-5">
             <View>
               <Text
@@ -324,22 +356,42 @@ export default function BikerDashboardScreen() {
               </Text>
             </View>
 
-            {/* Online Toggle */}
-            <TouchableOpacity
-              onPress={handleToggleOnline}
-              disabled={!profileLoaded || onlineBusy}
-              activeOpacity={0.8}
-              className={`flex-row items-center rounded-full px-4 py-2.5 ${online ? "bg-[#34C759]" : "bg-[#F2F2F7]"}`}
-            >
-              <View
-                className={`w-2.5 h-2.5 rounded-full mr-2 ${online ? "bg-white" : "bg-[#C7C7CC]"}`}
-              />
-              <Text
-                className={`text-[14px] font-bold ${online ? "text-white" : "text-[#8E8E93]"}`}
+            <View className="flex-row items-center gap-2.5">
+              {/* Notification Bell */}
+              <TouchableOpacity
+                onPress={() => router.navigate("/(biker)/notifications" as Href)}
+                accessibilityLabel="Activity notifications"
+                className={`w-10 h-10 rounded-full items-center justify-center relative ${
+                  online ? "bg-white/10" : "bg-[#F2F2F7]"
+                }`}
               >
-                {online ? "Online" : "Offline"}
-              </Text>
-            </TouchableOpacity>
+                <Bell size={18} color={online ? "#FFFFFF" : "#1C1C1E"} />
+                {unreadActivity > 0 && (
+                  <View className="absolute -top-1 -right-1 min-w-5 h-5 px-1 rounded-full bg-[#FF3B30] border-2 border-white items-center justify-center">
+                    <Text className="text-white text-[9px] font-black">
+                      {unreadActivity > 9 ? "9+" : unreadActivity}
+                    </Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+
+              {/* Online Toggle */}
+              <TouchableOpacity
+                onPress={handleToggleOnline}
+                disabled={!profileLoaded || onlineBusy}
+                activeOpacity={0.8}
+                className={`flex-row items-center rounded-full px-4 py-2.5 ${online ? "bg-[#34C759]" : "bg-[#F2F2F7]"}`}
+              >
+                <View
+                  className={`w-2.5 h-2.5 rounded-full mr-2 ${online ? "bg-white" : "bg-[#C7C7CC]"}`}
+                />
+                <Text
+                  className={`text-[14px] font-bold ${online ? "text-white" : "text-[#8E8E93]"}`}
+                >
+                  {online ? "Online" : "Offline"}
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </View>

@@ -10,6 +10,7 @@ export default function BikerStackLayout() {
       {/* Full screen flows (No tab bar on these) */}
       <Stack.Screen name="incoming" />
       <Stack.Screen name="navigation" />
+      <Stack.Screen name="notifications" />
     </Stack>
   );
 }
