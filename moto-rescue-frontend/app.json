@@ -11,7 +11,10 @@
     "ios": {
       "supportsTablet": true,
       "infoPlist": {
-        "UIBackgroundModes": ["location", "fetch"]
+        "UIBackgroundModes": [
+          "location",
+          "fetch"
+        ]
       }
     },
     "android": {
@@ -58,7 +61,21 @@
         {
           "photosPermission": "MotoRescue uses your selected photo as your profile picture.",
           "cameraPermission": "MotoRescue uses your camera to take profile and verification photos.",
-          "microphonePermission": false
+          "microphonePermission": false,
+          "colors": {
+            "cropToolbarColor": "#071510",
+            "cropToolbarIconColor": "#FFFFFF",
+            "cropToolbarActionTextColor": "#34C759",
+            "cropBackButtonIconColor": "#FFFFFF"
+          },
+          "dark": {
+            "colors": {
+              "cropToolbarColor": "#071510",
+              "cropToolbarIconColor": "#FFFFFF",
+              "cropToolbarActionTextColor": "#34C759",
+              "cropBackButtonIconColor": "#FFFFFF"
+            }
+          }
         }
       ],
       [

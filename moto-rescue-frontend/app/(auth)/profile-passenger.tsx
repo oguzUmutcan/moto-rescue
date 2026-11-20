@@ -19,6 +19,7 @@ import { COUNTRIES } from "../../constants/countries";
 // --- FIREBASE IMPORTS ---
 import { auth } from "../../config/firebase";
 import { userApi } from "../../api/users";
+import ProfilePhoto from "../../components/profile-photo";
 
 const AVATAR_EMOJIS = [
   "🙋",
@@ -53,6 +54,7 @@ export default function ProfilePassengerScreen() {
   const [phone, setPhone] = useState("");
   const [emergencyContact, setEmergencyContact] = useState("");
   const [profileEmoji, setProfileEmoji] = useState("🙋"); // Default Emoji
+  const [profilePhotoPath, setProfilePhotoPath] = useState<string | null>(null);
 
   const [selectedCountry, setSelectedCountry] = useState(COUNTRIES[0]);
   const [isCountryModalVisible, setIsCountryModalVisible] = useState(false);
@@ -151,8 +153,18 @@ export default function ProfilePassengerScreen() {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          {/* Emoji Avatar Selector */}
+          {/* Profile photo and emoji fallback */}
           <View className="items-center mb-8">
+            <View className="mb-3">
+              <ProfilePhoto
+                fallbackEmoji={profileEmoji}
+                storagePath={profilePhotoPath}
+                onStoragePathChange={setProfilePhotoPath}
+              />
+            </View>
+            <Text className="text-[14px] text-[#007AFF] font-bold mb-3">
+              Tap photo to add or change
+            </Text>
             <TouchableOpacity
               onPress={() => !isLoading && setIsEmojiModalVisible(true)}
               activeOpacity={0.8}
@@ -168,7 +180,7 @@ export default function ProfilePassengerScreen() {
               </View>
             </TouchableOpacity>
             <Text className="text-[14px] text-[#007AFF] font-bold">
-              Choose Avatar
+              Choose Fallback Emoji
             </Text>
           </View>
 

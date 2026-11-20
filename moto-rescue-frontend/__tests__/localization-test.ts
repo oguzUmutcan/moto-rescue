@@ -25,6 +25,8 @@ describe("localization", () => {
     setActiveLanguage("tr");
     expect(translateError("FirebaseError: Firebase: Error (auth/email-already-in-use)."))
       .toBe("Bu e-posta adresi zaten kullanımda.");
+    expect(translateError("You are not scheduled to be online today. Please update your available days in your profile."))
+      .toBe("Bugün çevrimiçi olmak için bir çalışma programınız bulunmuyor. Lütfen profilinizden müsait günlerinizi güncelleyin.");
     expect(translateError("An unexpected SDK implementation detail"))
       .toBe("Bir sorun oluştu. Lütfen tekrar deneyin.");
   });
