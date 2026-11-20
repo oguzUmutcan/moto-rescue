@@ -12,7 +12,7 @@ import { auth } from "../../../config/firebase";
 import LocationMap from "../../../components/location-map";
 import type { LocationMapHandle, MapRegion } from "../../../components/location-map.types";
 import { rescueApi, RescueRequest } from "../../../api/rescues";
-import { userApi } from "../../../api/users";
+import { userApi, getCachedProfile } from "../../../api/users";
 import { notificationApi } from "../../../api/notifications";
 import { bikerRescueRoute } from "../../../utils/app-routing";
 import { claimIncomingRequest } from "../../../utils/request-presentation";
@@ -45,6 +45,13 @@ export default function BikerDashboardScreen() {
     if (!isFocused) return;
     let active = true;
     setActiveRequestLoaded(false);
+    void getCachedProfile().then((cached) => {
+      if (active && cached) {
+        if (cached.availableDays) setAvailableDays(cached.availableDays);
+        if (cached.identityDocumentStatus) setIdentityDocumentStatus(cached.identityDocumentStatus);
+        if (cached.online !== undefined) setOnline(cached.online);
+      }
+    });
     rescueApi.active()
       .then((request) => {
         if (active) setActiveRequest(request);
@@ -89,32 +96,47 @@ export default function BikerDashboardScreen() {
   const handleToggleOnline = async () => {
     const newStatus = !online;
     if (newStatus) {
+      // 1. Refresh latest profile (from cache first, then API if needed) to avoid stale checks
+      const cached = await getCachedProfile();
+      let currentAvailableDays = cached?.availableDays ?? availableDays;
+      let currentDocStatus = cached?.identityDocumentStatus ?? identityDocumentStatus;
+
+      try {
+        const fresh = await userApi.get();
+        if (fresh) {
+          currentAvailableDays = fresh.availableDays ?? currentAvailableDays;
+          currentDocStatus = fresh.identityDocumentStatus ?? currentDocStatus;
+          setAvailableDays(currentAvailableDays);
+          setIdentityDocumentStatus(currentDocStatus);
+        }
+      } catch {}
+
       const todayIndex = (new Date().getDay() + 6) % 7; // 0=Pazartesi, ..., 6=Pazar
-      if (availableDays && availableDays.length === 7 && !availableDays[todayIndex]) {
+      if (currentAvailableDays && currentAvailableDays.length === 7 && !currentAvailableDays[todayIndex]) {
         Alert.alert(
           "Not scheduled for today",
           "You are not scheduled to ride today. Would you like to update your schedule in your profile?",
           [
-            { text: "Update schedule", onPress: () => router.navigate("/(auth)/profile-biker") },
+            { text: "Update schedule", onPress: () => router.navigate("/(biker)/(tabs)/profile") },
             { text: "Cancel", style: "cancel" },
           ],
         );
         return;
       }
-    }
-    const hasVerifiedLicense = identityDocumentStatus === "verified";
-    if (newStatus && !hasVerifiedLicense) {
-      Alert.alert(
-        identityDocumentStatus === "pending" ? "Verification pending" : "Driver's license required",
-        identityDocumentStatus === "pending"
-          ? "Your driver's license will be verified automatically about one minute after upload."
-          : "Upload both sides of your driver's license before going online.",
-        [
-          { text: "Upload license", onPress: () => router.navigate("/(auth)/profile-biker") },
-          { text: "Cancel", style: "cancel" },
-        ],
-      );
-      return;
+      const hasVerifiedLicense = currentDocStatus === "verified";
+      if (!hasVerifiedLicense) {
+        Alert.alert(
+          currentDocStatus === "pending" ? "Verification pending" : "Driver's license required",
+          currentDocStatus === "pending"
+            ? "Your driver's license will be verified automatically about one minute after upload."
+            : "Upload both sides of your driver's license before going online.",
+          [
+            { text: "Upload license", onPress: () => router.navigate("/(auth)/profile-biker") },
+            { text: "Cancel", style: "cancel" },
+          ],
+        );
+        return;
+      }
     }
     setOnlineBusy(true);
     try {

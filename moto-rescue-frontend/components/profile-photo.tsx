@@ -48,8 +48,7 @@ export default function ProfilePhoto({ fallbackEmoji, storagePath, onStoragePath
       }
       const pickerOptions: ImagePicker.ImagePickerOptions = {
         mediaTypes: ["images"],
-        allowsEditing: source === "library",
-        aspect: [1, 1],
+        allowsEditing: false,
         quality: 0.8,
       };
       const result = source === "camera"

@@ -464,6 +464,13 @@ const tr: Record<string, string> = {
   "Backend is unreachable. Make sure it is running and that your phone and computer are on the same network.": "Backend'e ulaşılamıyor. Çalıştığından ve telefon ile bilgisayarın aynı ağda olduğundan emin olun.",
   "Invalid role": "Geçersiz rol",
   "availableDays must contain 7 values": "availableDays 7 değer içermelidir",
+  "Not scheduled for today": "Bugün için programınız yok",
+  "You are not scheduled to ride today. Would you like to update your schedule in your profile?": "Bugün sürüş yapmak için bir programınız bulunmuyor. Profilinizden çalışma günlerinizi güncellemek ister misiniz?",
+  "Update schedule": "Programı güncelle",
+  "You are not scheduled to be online today. Please update your available days in your profile.": "Bugün çevrimiçi olmak için bir çalışma programınız bulunmuyor. Lütfen profilinizden müsait günlerinizi güncelleyin.",
+  "You are not scheduled to be online today": "Bugün çevrimiçi olmak için bir çalışma programınız bulunmuyor",
+  "You are not scheduled to ride today": "Bugün sürüş yapmak için bir programınız bulunmuyor",
+  "Please update your available days in your profile": "Lütfen profilinizden müsait günlerinizi güncelleyin",
   "The biker role is required to go online": "Çevrimiçi olmak için motosikletçi rolü gereklidir",
   "Add a valid contact phone number before going online": "Çevrimiçi olmadan önce geçerli bir iletişim telefonu ekleyin",
   "Submit both sides of your driver's license before going online": "Çevrimiçi olmadan önce ehliyetinizin iki yüzünü de gönderin",
@@ -580,6 +587,10 @@ export function translateError(
     [/storage\/object-not-found/i, "The requested file could not be found."],
     [/storage\/unauthorized/i, "You do not have permission to access this file."],
     [/storage\/(?:retry-limit-exceeded|unknown)/i, "The upload could not be completed. Please try again."],
+    [/not scheduled.*(?:online|today|ride)/i, "You are not scheduled to be online today. Please update your available days in your profile."],
+    [/driver(?:'s)? license/i, "Submit both sides of your driver's license before going online"],
+    [/contact phone/i, "Add a valid contact phone number before going online"],
+    [/biker role/i, "The biker role is required to go online"],
   ];
   const match = codeMessages.find(([pattern]) => pattern.test(value));
   return translate(match?.[1] ?? fallback, language);
