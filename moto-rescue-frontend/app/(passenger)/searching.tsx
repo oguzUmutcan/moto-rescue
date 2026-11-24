@@ -1,24 +1,20 @@
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { Text, TouchableOpacity, View } from "@/components/localized-native";
 import { useIsFocused } from "@react-navigation/native";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { CheckCircle, Clock } from "lucide-react-native";
 import React, { useEffect, useState } from "react";
-import {
-    Text,
-    TouchableOpacity,
-    View
-} from "@/components/localized-native";
 import Animated, {
-    Easing,
-    useAnimatedStyle,
-    useSharedValue,
-    withDelay,
-    withRepeat,
-    withTiming,
+  Easing,
+  useAnimatedStyle,
+  useSharedValue,
+  withDelay,
+  withRepeat,
+  withTiming,
 } from "react-native-reanimated";
-import { auth } from "../../config/firebase";
 import { rescueApi, RescueRequest } from "../../api/rescues";
 import LocationMap from "../../components/location-map";
 import ProfileAvatar from "../../components/profile-avatar";
+import { auth } from "../../config/firebase";
 
 // Helper component for the pulsing dots animation
 const AnimatedDot = ({
@@ -97,9 +93,22 @@ export default function PassengerSearchingScreen() {
         if (!active) return;
         setRequest(request);
         setMatched(request.status === "accepted");
-        setSecs(Math.max(0, Math.ceil((new Date(request.expiresAt).getTime() - Date.now()) / 1000)));
-        if (request.status === "in_progress" || request.status === "completed") {
-          router.replace({ pathname: "/(passenger)/ride", params: { requestId } });
+        setSecs(
+          Math.max(
+            0,
+            Math.ceil(
+              (new Date(request.expiresAt).getTime() - Date.now()) / 1000,
+            ),
+          ),
+        );
+        if (
+          request.status === "in_progress" ||
+          request.status === "completed"
+        ) {
+          router.replace({
+            pathname: "/(passenger)/ride",
+            params: { requestId },
+          });
         }
         if (request.status === "cancelled") {
           router.replace("/(passenger)/(tabs)/dashboard");
@@ -139,8 +148,16 @@ export default function PassengerSearchingScreen() {
     <View className="flex-1 bg-[#E5EBF0] relative">
       {request && (
         <LocationMap
-          initialRegion={{ latitude: request.latitude, longitude: request.longitude, latitudeDelta: 0.04, longitudeDelta: 0.04 }}
-          selectedCoordinate={{ latitude: request.latitude, longitude: request.longitude }}
+          initialRegion={{
+            latitude: request.latitude,
+            longitude: request.longitude,
+            latitudeDelta: 0.04,
+            longitudeDelta: 0.04,
+          }}
+          selectedCoordinate={{
+            latitude: request.latitude,
+            longitude: request.longitude,
+          }}
         />
       )}
 
@@ -160,7 +177,10 @@ export default function PassengerSearchingScreen() {
         {matched ? (
           // --- MATCHED STATE ---
           <View className="bg-white rounded-[22px] p-6 shadow-2xl w-full items-center">
-            <ProfileAvatar storagePath={request?.bikerProfilePhotoPath ?? null} size={72} />
+            <ProfileAvatar
+              storagePath={request?.bikerProfilePhotoPath ?? null}
+              size={72}
+            />
             <Text className="text-[22px] font-black text-[#1C1C1E] mb-1.5">
               Hero Found!
             </Text>
@@ -236,8 +256,14 @@ export default function PassengerSearchingScreen() {
 
         {/* Cancel Request Button */}
         {request?.status !== "in_progress" && (
-          <TouchableOpacity onPress={handleCancel} activeOpacity={0.7} className="mt-4 bg-white/90 rounded-xl px-6 py-3">
-            <Text className="text-[14px] font-bold text-[#FF3B30]">Cancel Request</Text>
+          <TouchableOpacity
+            onPress={handleCancel}
+            activeOpacity={0.7}
+            className="mt-4 bg-white/90 rounded-xl px-6 py-3"
+          >
+            <Text className="text-[14px] font-bold text-[#FF3B30]">
+              Cancel Request
+            </Text>
           </TouchableOpacity>
         )}
       </View>
