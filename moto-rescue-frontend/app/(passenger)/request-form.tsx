@@ -35,7 +35,6 @@ const URGENCY_OPTIONS = [
   "✈️ Airport / Travel",
   "🏛️ Official Appointment",
   "⚠️ Other urgent need",
-  "🐶 Pet emergency",
 ];
 
 type Coordinates = { latitude: number; longitude: number };
